@@ -9,11 +9,10 @@
 // declare, so nothing enters the repository or D1 that a page would not show, and it states a value nobody has yet
 // as "MISSING: <why>", never a guess.
 
-import { matter } from "@drdustinedwards/site-helpers/matter";
-
 import { gitBlobSha } from "../../lib/content/hashes.mjs";
 import { foldText } from "../../lib/cv/view.mjs";
 import { KINDS, kindKeys } from "./kinds.mjs";
+import { parseFrontMatter, wideDashError } from "../../lib/content/front-matter.mjs";
 
 export const REGISTRY_DIR = "content/registry";
 
@@ -81,12 +80,7 @@ export async function compileRegistryItem({
   sourcePath,
 }) {
   /** @type {string[]} */
-  const errors = pipeline
-    .findWideDashes(raw)
-    .map(
-      (hit) =>
-        `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
-    );
+  const errors = pipeline.findWideDashes(raw).map(wideDashError);
 
   const address = parseRegistrySlug(slug);
   if (!address) {
@@ -109,20 +103,8 @@ export async function compileRegistryItem({
       ],
     };
   }
-  if (!raw.startsWith("---")) errors.push("the file must start with a --- front matter block");
-
-  let parsed;
-  try {
-    parsed = matter(raw);
-  } catch (error) {
-    return {
-      ok: false,
-      errors: [
-        ...errors,
-        `the front matter is not valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
-      ],
-    };
-  }
+  const parsed = parseFrontMatter(raw, errors);
+  if (!parsed) return { ok: false, errors };
   const data = /** @type {Record<string, unknown>} */ (parsed.data);
   if (parsed.content.trim() !== "")
     errors.push(`the body must be empty: a ${spec.singular} is its front matter and nothing else`);

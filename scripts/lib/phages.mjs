@@ -12,7 +12,7 @@ import {
   phageSetErrors,
   sortPhages,
 } from "../../app/lib/phages/compile.mjs";
-import { paperExists } from "./content-source.mjs";
+import { paperExists, throwOnCompileErrors } from "./content-source.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The D1 rows sync:content writes. */
@@ -54,14 +54,7 @@ export async function compileAllPhages(options = {}) {
  */
 export async function buildPhages() {
   const compiled = await compileAllPhages();
-  const failed = compiled.filter((c) => !c.compiled.ok);
-  if (failed.length > 0) {
-    throw new Error(
-      failed
-        .map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`)
-        .join("\n"),
-    );
-  }
+  throwOnCompileErrors(compiled);
   const ok = compiled.flatMap((c) => (c.compiled.ok ? [c.compiled] : []));
   const setErrors = phageSetErrors(ok.map((c) => c.phage));
   if (setErrors.length > 0)

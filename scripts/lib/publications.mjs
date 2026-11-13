@@ -10,6 +10,7 @@ import { compilePublication } from "../../app/lib/publications/compile.mjs";
 import { citationSeedsFrom } from "../../app/lib/publications/cited-by.mjs";
 import { PUBLICATIONS_DIR, parsePublication } from "../../app/lib/publications/parse.mjs";
 import { sortPublications } from "../../app/lib/publications/record.mjs";
+import { throwOnCompileErrors } from "./content-source.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PUBLICATIONS_SOURCE_DIR = PUBLICATIONS_DIR;
@@ -96,14 +97,7 @@ export async function compileAllPublications(options = {}) {
  */
 export async function buildPublications() {
   const compiled = await compileAllPublications();
-  const failed = compiled.filter((c) => !c.compiled.ok);
-  if (failed.length > 0) {
-    throw new Error(
-      failed
-        .map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`)
-        .join("\n"),
-    );
-  }
+  throwOnCompileErrors(compiled);
   const ok = compiled.flatMap((c) => (c.compiled.ok ? [{ file: c.file, ...c.compiled }] : []));
   const rows = ok.map((c) => ({
     slug: c.record.slug,

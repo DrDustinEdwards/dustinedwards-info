@@ -24,12 +24,12 @@
     ]
   },
   "baseline": {
-    "measured_at": "ea0239a",
+    "measured_at": "ee478c4",
     "knip": {},
     "jscpd": {
-      "clones": 46,
-      "lines": 662,
-      "percentage": 0.47,
+      "clones": 31,
+      "lines": 429,
+      "percentage": 0.3,
       "unread": 0
     },
     "shared copies": {

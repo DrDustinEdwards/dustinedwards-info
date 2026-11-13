@@ -19,7 +19,7 @@ import {
   writes,
   type SourceStub,
 } from "./source-stub";
-import { routeContext, carrelRequest, recordPurges } from "./route-helpers";
+import { routeContext, recordPurges, carrelSend, carrelGet } from "./route-helpers";
 import { seedPages, seedProcedures, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -43,31 +43,12 @@ const EDITED = llmsFile.replace(
 /** Built from its code point, so this file carries no literal wide dash. */
 const WIDE_DASH = String.fromCharCode(0x2014);
 
-const headersFor = (key: string) => ({
-  authorization: `Bearer ${key}`,
-  "content-type": "application/json",
-  "cf-connecting-ip": "203.0.113.9",
-});
-const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
-const get = (url: string) =>
-  carrelRequest(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
-function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return carrelRequest(
-    argsFor(
-      new Request(url, {
-        method,
-        headers: headersFor(testEnv.CARREL_SITE_KEY),
-        body: JSON.stringify(body),
-      }),
-    ),
-  );
-}
 const put = async (
   source: string,
   expectedVersion?: string | null,
   changeId = `chg-llms-${crypto.randomUUID()}`,
 ) =>
-  send("PUT", `${PREFIX}/content/${ID}/draft`, {
+  carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
     source,
     expectedVersion: expectedVersion === undefined ? await versionOf(LLMS_PATH) : expectedVersion,
     changeId,
@@ -166,7 +147,7 @@ describe("an edit through the adapter is live at the next request", () => {
       expect(purge.mock.calls.flatMap(([options]) => options.tags)).toContain(LLMS_CACHE_TAG);
 
       // And the file read back through Carrel is the edit.
-      const read = (await (await get(`${PREFIX}/content/${ID}`)).json()) as {
+      const read = (await (await carrelGet(`${PREFIX}/content/${ID}`)).json()) as {
         source: string;
         kind: string;
         path: string;
@@ -176,7 +157,7 @@ describe("an edit through the adapter is live at the next request", () => {
   );
 
   it("lists the one document, and an unchanged save commits nothing", async () => {
-    const list = (await (await get(`${PREFIX}/content?limit=50`)).json()) as {
+    const list = (await (await carrelGet(`${PREFIX}/content?limit=50`)).json()) as {
       items: Array<{ id: string; kind: string }>;
     };
     expect(list.items.filter((i) => i.kind === "document")).toEqual([
@@ -199,7 +180,7 @@ describe("an edit through the adapter is live at the next request", () => {
   });
 
   it("publish with a source is the same save, and a document cannot be unpublished or created", async () => {
-    const published = await send("POST", `${PREFIX}/content/${ID}/publish`, {
+    const published = await carrelSend("POST", `${PREFIX}/content/${ID}/publish`, {
       source: EDITED,
       expectedVersion: await versionOf(LLMS_PATH),
       changeId: "chg-pub",
@@ -207,14 +188,14 @@ describe("an edit through the adapter is live at the next request", () => {
     expect(published.status, await published.clone().text()).toBe(200);
     expect(await served().then((r) => r.text())).toBe(EDITED);
 
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, {
+    const down = await carrelSend("POST", `${PREFIX}/content/${ID}/unpublish`, {
       expectedVersion: await versionOf(LLMS_PATH),
       changeId: "chg-down",
     });
     expect(down.status).toBe(422);
     expect(((await down.json()) as { message: string }).message).toMatch(/cannot be unpublished/);
 
-    const other = await send("PUT", `${PREFIX}/content/document.other/draft`, {
+    const other = await carrelSend("PUT", `${PREFIX}/content/document.other/draft`, {
       source: llmsFile,
       expectedVersion: await versionOf(LLMS_PATH),
       changeId: "chg-new",
@@ -399,7 +380,7 @@ versionCases({
   id: ID,
   file: LLMS_PATH,
   edit: () => EDITED,
-  get,
-  send,
+  get: carrelGet,
+  send: carrelSend,
   timeout: 120000,
 });
