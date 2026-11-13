@@ -63,7 +63,7 @@ export function readState(raw) {
 }
 
 /**
- * YAML turns an unquoted 2026-07-30 into a Date while the stamp writes a string, so both sides
+ * The reader turns an unquoted 2026-07-30 into a Date while the stamp writes a string, so both sides
  * reduce a date to its ISO day before comparing.
  *
  * @param {Record<string, unknown>} data

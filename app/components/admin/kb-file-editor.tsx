@@ -3,9 +3,11 @@ import { Form, Link, useNavigation } from "react-router";
 
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
+import { ButtonLink } from "capsomer/react/link";
 import { MarkdownEditor } from "capsomer/react/markdown-editor";
 import { Panel } from "capsomer/react/panel";
 import { Row, RowList } from "capsomer/react/row-list";
+import { SaveBar } from "capsomer/react/save-bar";
 
 import { PageHead } from "capsomer/react/page-head";
 import { crumbLink } from "~/components/admin/shell-parts";
@@ -34,29 +36,23 @@ export function KbCheckSave({
   actionData,
   errors,
   onFile = false,
+  sticky = false,
 }: {
   busy: string;
   actionData?: KbEditorActionData;
   errors: string[];
   onFile?: boolean;
+  /** The bar stays on the window's bottom edge while a long form scrolls. */
+  sticky?: boolean;
 }) {
   const checked = actionData?.intent === "check" ? actionData : null;
   return (
     <>
-      <div className="app-actions">
+      <SaveBar pending={busy === "save"} submit="Save" name="intent" value="save" sticky={sticky}>
         <Button type="submit" name="intent" value="check" pending={busy === "check"}>
           Check
         </Button>
-        <Button
-          type="submit"
-          name="intent"
-          value="save"
-          variant="primary"
-          pending={busy === "save"}
-        >
-          Save
-        </Button>
-      </div>
+      </SaveBar>
       <div role="status">
         {checked?.ok ? <Banner tone="ok">Passes every check. Nothing was saved.</Banner> : null}
       </div>
@@ -119,9 +115,9 @@ export function KbFileEditor({
         ]}
         title={file.title}
         actions={
-          <Link to={{ search: "" }} className="cap-btn" data-variant="quiet">
+          <ButtonLink to={{ search: "" }} variant="quiet">
             Back to the form
-          </Link>
+          </ButtonLink>
         }
         lead={
           <>

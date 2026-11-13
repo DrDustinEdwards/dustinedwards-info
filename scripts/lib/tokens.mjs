@@ -8,7 +8,12 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { walkFiles } from "@dustinedwards/devkit/node";
-import { stripCss } from "capsomer/token-check";
+import { normalizeHex } from "@drdustinedwards/site-helpers/text";
+import { readDeclarations, resolveToken, stripCss } from "capsomer/token-check";
+
+/* CSS reading and the var() walk are Capsomer's (capsomer/token-check), and the hex form is Prelum's (text), shared
+ * with every site's gate. */
+export { normalizeHex, resolveToken, stripCss };
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -127,29 +132,18 @@ export const THEME_SELECTORS = {
 };
 
 /**
- * Every declaration under the first match of `selector` in app.css, in order. Palette blocks carry
- * no nested braces, so the first closing brace ends the block.
+ * Every declaration under the first match of `selector` in app.css, in order (Capsomer's reader).
  *
  * @param {string} label
  * @param {string} selector
  * @returns {Record<string, string[]>}
  */
 export function tokenDeclarations(label, selector) {
-  const css = stripCss(readFileSync(CSS_PATH, "utf8"));
-
-  const at = css.indexOf(selector);
-  if (at === -1) throw new Error(`${label}: selector not found in app.css: ${selector}`);
-  const open = css.indexOf("{", at + selector.length - 1);
-  const close = css.indexOf("}", open);
-  if (open === -1 || close === -1) throw new Error(`${label}: unterminated block`);
-
-  /** @type {Record<string, string[]>} */
-  const out = {};
-  for (const m of css.slice(open + 1, close).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-    (out[m[1]] ??= []).push(m[2].trim());
+  try {
+    return readDeclarations(readFileSync(CSS_PATH, "utf8"), selector);
+  } catch (error) {
+    throw new Error(`${label}: ${/** @type {Error} */ (error).message} in app.css`);
   }
-  if (Object.keys(out).length === 0) throw new Error(`${label}: parsed zero tokens`);
-  return out;
 }
 
 /**
