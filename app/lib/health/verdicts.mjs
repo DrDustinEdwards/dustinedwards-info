@@ -1,5 +1,3 @@
-import { errorMessage } from "@dustinedwards/site-runtime/log";
-
 /**
  * A derived index against its source: the sizes, what it lacks and what it holds beyond the source,
  * each sorted. Kept apart so a missing key and an extra one cannot cancel out in a count.
@@ -350,39 +348,3 @@ export function ftsEqualityVerdict(counts) {
 
 /** Measured: ask-index-drift maxed at 2332 ms over 12 samples, so 3 s clears it without false alarms. */
 export const CHECK_TIMEOUT_MS = 3000;
-
-/**
- * A timeout is a failed check. It does not cancel the work: only the RESPONSE is bounded, and abandoned
- * work keeps accumulating under sustained timeouts.
- *
- * @param {Promise<{ ok: boolean, detail: string, counts?: { expected: number, present: number } }>} promise
- * @param {number} ms
- * @param {string} name
- * @returns {Promise<{ ok: boolean, detail: string, counts?: { expected: number, present: number } }>}
- */
-export function withTimeout(promise, ms, name) {
-  return new Promise((resolve) => {
-    const timer = setTimeout(
-      () =>
-        resolve({
-          ok: false,
-          detail: `check ${name} did not answer within ${ms}ms and is reported failed`,
-        }),
-      ms,
-    );
-
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        resolve({
-          ok: false,
-          detail: `check threw: ${errorMessage(error)}`,
-        });
-      },
-    );
-  });
-}

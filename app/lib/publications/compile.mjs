@@ -8,7 +8,7 @@ import { gitBlobSha } from "../content/hashes.mjs";
 import { keyForUrl, urlForKey } from "../search/ask-keys.mjs";
 import { citationTags, REQUIRED_CITATION_TAGS } from "@drdustinedwards/site-helpers/scholar";
 import { citedByFetchedAt, citedByFor } from "./cited-by.mjs";
-import { decodeEntities } from "./entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { organismsIn, paperBibtex, paperRis } from "./exports.mjs";
 import { parsePublication, publicationPath } from "./parse.mjs";
 import { paperAskUrl, paperMarkdownPath, paperPath, paperPdfPath } from "./paths.mjs";
@@ -93,7 +93,7 @@ function derivedProblems(record, built) {
   }
   if (`/${key}` !== paperMarkdownPath(slug))
     errors.push(`Ask key: ${key} is not the twin's path ${paperMarkdownPath(slug)}`);
-  const askUrl = paperAskUrl(decodeEntities(record.title));
+  const askUrl = paperAskUrl(unescapeHtml(record.title));
   if (!askUrl.startsWith("/search?q=") || askUrl.length > ASK_URL_MAX)
     errors.push("Ask link: the quoted title does not build a /search URL");
   return errors;

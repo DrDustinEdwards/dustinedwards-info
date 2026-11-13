@@ -15,7 +15,7 @@ import { citationTags } from "@drdustinedwards/site-helpers/scholar";
 import { accessionLabel, accessionUrl } from "~/lib/publications/accessions.mjs";
 import { publicationBySlug } from "~/lib/publications/by-slug";
 import { TOPICS } from "~/lib/publications/topics.mjs";
-import { decodeEntities } from "~/lib/publications/entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { updateNoticeText } from "~/lib/publications/update-notice.mjs";
 import {
   paperAskUrl,
@@ -86,13 +86,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [{ title: `Publication, ${SITE.name}` }];
 
   const { paper, slug, pagePath, pdfPath } = loaderData;
-  const title = decodeEntities(paper.title);
+  const title = unescapeHtml(paper.title);
   const abstractUrl = `${SITE_ORIGIN}${pagePath}`;
   const pdfUrl = pdfPath ? `${SITE_ORIGIN}${pdfPath}` : null;
 
   const summary = paper.abstract
-    ? decodeEntities(paper.abstract).replace(/\s+/g, " ").trim()
-    : `${title}. ${decodeEntities(paper.journal ?? "")} ${paper.year}`.trim();
+    ? unescapeHtml(paper.abstract).replace(/\s+/g, " ").trim()
+    : `${title}. ${unescapeHtml(paper.journal ?? "")} ${paper.year}`.trim();
 
   return [
     ...siteHead({
@@ -127,7 +127,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
   const { paper, slug, hosted, pagePath, pdfPath, cited, citedBy, citedByFetchedAt, topics } =
     loaderData;
   const pageUrl = `${SITE_ORIGIN}${pagePath}`;
-  const trail = paperTrail(decodeEntities(paper.title), pagePath);
+  const trail = paperTrail(unescapeHtml(paper.title), pagePath);
 
   return (
     <>
@@ -138,11 +138,11 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
 
           {/* The H1 is the title: Scholar reads the first heading as the paper title. */}
           <h1 className="paper-title cap-layout-grid">
-            {italicizeOrganisms(decodeEntities(paper.title))}
+            {italicizeOrganisms(unescapeHtml(paper.title))}
           </h1>
 
           {/* Every author visible: `citation_author` lists them, and Scholar penalizes content that disagrees with its meta tags. */}
-          <AuthorList authors={paper.authors} isOwner={isSiteOwner} format={decodeEntities} />
+          <AuthorList authors={paper.authors} isOwner={isSiteOwner} format={unescapeHtml} />
         </header>
 
         <div className="paper-rail u-rail">
@@ -154,7 +154,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
                 label: "Journal",
                 value: paper.journal
                   ? [
-                      decodeEntities(paper.journal),
+                      unescapeHtml(paper.journal),
                       paper.volume ? `volume ${paper.volume}` : null,
                       paper.issue ? `issue ${paper.issue}` : null,
                       paper.pages ? `pages ${paper.pages}` : null,
@@ -186,7 +186,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
             <a href={`${PUBLICATIONS_PATH}/${slug}.bib`}>BibTeX</a>
             <a href={`${PUBLICATIONS_PATH}/${slug}.ris`}>RIS</a>
             {/* The quoted title alone, because the classic index ANDs its terms. */}
-            <a href={paperAskUrl(decodeEntities(paper.title))}>Ask about this paper</a>
+            <a href={paperAskUrl(unescapeHtml(paper.title))}>Ask about this paper</a>
           </p>
 
           {/* Only at 1 or more: a cold cache shows nothing rather than a zero that looks measured. */}
@@ -214,7 +214,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           {paper.abstract ? (
             <section className="paper-abstract" aria-labelledby="abstract-heading">
               <h2 id="abstract-heading">Abstract</h2>
-              <p>{italicizeOrganisms(decodeEntities(paper.abstract))}</p>
+              <p>{italicizeOrganisms(unescapeHtml(paper.abstract))}</p>
             </section>
           ) : null}
 

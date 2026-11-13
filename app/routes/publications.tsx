@@ -11,7 +11,7 @@ import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { getEnv } from "~/lib/context";
 import { coinsTitle } from "@drdustinedwards/site-helpers/scholar";
 import { CITATION_OPTIONS } from "~/lib/publications/exports.mjs";
-import { decodeEntities } from "~/lib/publications/entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import {
   PUBLICATIONS,
   legacyAddress,
@@ -148,7 +148,7 @@ function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
         {/* Display only. The stored title stays plain for search and JSON-LD. An h2: each paper sits straight under the
             page's h1, and a skipped level breaks a screen reader's heading outline (WCAG 1.3.1, technique H42). */}
         <h2 className="paper-row-title">
-          <Link to={paperPath(slug)}>{italicizeOrganisms(decodeEntities(p.title))}</Link>
+          <Link to={paperPath(slug)}>{italicizeOrganisms(unescapeHtml(p.title))}</Link>
         </h2>
         <AuthorList authors={p.authors} isOwner={isSiteOwner} collapse={3} />
         <p className="paper-row-links">
@@ -176,7 +176,7 @@ function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
         {p.abstract ? (
           <details className="paper-abstract-peek">
             <summary>Abstract</summary>
-            <p>{italicizeOrganisms(decodeEntities(p.abstract))}</p>
+            <p>{italicizeOrganisms(unescapeHtml(p.abstract))}</p>
           </details>
         ) : null}
       </div>

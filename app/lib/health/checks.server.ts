@@ -16,9 +16,10 @@ import {
   registryDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
-  withTimeout,
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus, type AskIndexStatus } from "~/lib/search/ask.server";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
+import { withTimeout } from "@dustinedwards/site-runtime/time";
 import { timed } from "@dustinedwards/site-runtime/server-timing";
 import { type Timings } from "~/lib/timing";
 import { SourceError, listDirectory, listPostFiles } from "~/lib/source/store.server";
@@ -368,6 +369,21 @@ async function guardOne(
 ): Promise<HealthCheck> {
   // The async wrapper turns a SYNCHRONOUS throw in run into a rejection withTimeout can guard.
   const started = (async () => run())();
-  const { ok, detail, counts } = await withTimeout(started, CHECK_TIMEOUT_MS, name);
-  return counts ? { name, ok, detail, counts } : { name, ok, detail };
+  let timeout: Error | undefined;
+  try {
+    const { ok, detail, counts } = await withTimeout(
+      started,
+      CHECK_TIMEOUT_MS,
+      `check ${name} did not answer within ${CHECK_TIMEOUT_MS}ms and is reported failed`,
+      (error) => (timeout = error),
+    );
+    return counts ? { name, ok, detail, counts } : { name, ok, detail };
+  } catch (error) {
+    // A timeout and a throw are both a failed check, never a failed response.
+    return {
+      name,
+      ok: false,
+      detail: timeout ? timeout.message : `check threw: ${errorMessage(error)}`,
+    };
+  }
 }
