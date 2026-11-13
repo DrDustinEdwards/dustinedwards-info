@@ -353,7 +353,7 @@ const ALLOWED_HOSTS = ["tool-call-log.invalid"];
 const NAMED_NOT_FETCHED = [
   '"https://claude.ai"',
   '"https://dustinedwards.info"',
-  '"https://dustinedwards.info/dustin-edwards-favicon.svg"',
+  '"https://dustinedwards.info/icon.svg"',
 ];
 const unnamed = (text) =>
   NAMED_NOT_FETCHED.reduce((t, literal) => t.replaceAll(literal, '""'), text);

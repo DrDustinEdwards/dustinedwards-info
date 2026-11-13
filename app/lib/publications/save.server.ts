@@ -18,7 +18,13 @@ import {
 } from "~/lib/cache-purge.server";
 import { refreshCvSearch } from "~/lib/cv/save.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/source/store.server";
+import {
+  blobGuard,
+  commitFiles,
+  publicFileEntry,
+  fileHistory,
+  readFile,
+} from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
@@ -276,6 +282,7 @@ export async function savePublication(
     noun: "publication",
     incomingDraft: compiled.draft,
     priorRaw: existing?.content ?? null,
+    history: await fileHistory(env, path),
     isDraft: fileIsDraft,
   });
 
