@@ -5,6 +5,7 @@ import { Form, Link, useNavigation } from "react-router";
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
 import { Panel } from "capsomer/react/panel";
+import { useDebouncedPreview } from "capsomer/react/form-hooks";
 import { Tabs, TabsList, TabsTrigger } from "capsomer/react/tabs";
 
 import { PageHead } from "capsomer/react/page-head";
@@ -36,57 +37,40 @@ const PREVIEW_DELAY_MS = 900;
 /** The width at which the preview sits beside the form; below it, the preview is a tab. Matches app/admin.css. */
 const SIDE_BY_SIDE = "(min-width: 72rem)";
 
+/** Asks the server to draw the entry; a failure is an answer too, so it shows as a result. */
+async function readPreview(request: string, signal: AbortSignal): Promise<PreviewResult> {
+  const [slug, original, model] = JSON.parse(request) as [string, string, string];
+  const body = new FormData();
+  body.set("original", original);
+  body.set("model", model);
+  try {
+    const response = await fetch(`/admin/kb/preview/${slug}`, { method: "POST", body, signal });
+    const json = (await response.json().catch(() => null)) as PreviewResult | null;
+    return json ?? { error: `The preview request failed with HTTP ${response.status}.` };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 /**
- * The entry the form describes, rendered as its public page by the server a beat after the form stops changing. A
- * sequence number keeps a slow answer from landing over a newer one. Busy is derived: the form's current request is
- * not yet the one an answer settled. The frame's document is built when a drawable answer lands, so a failed one
+ * The entry the form describes, rendered as its public page by the server a beat after the form stops changing
+ * (Capsomer's useDebouncedPreview). The frame's document is built from the newest drawable answer, so a failed one
  * keeps the last good page in view.
  */
 function useEntryPreview(slug: string | null, original: string, model: string, active: boolean) {
-  const [result, setResult] = useState<PreviewResult | null>(null);
-  const [doc, setDoc] = useState("");
-  const [settled, setSettled] = useState<string | null>(null);
-  const seq = useRef(0);
   const request = slug && active ? JSON.stringify([slug, original, model]) : null;
-  useEffect(() => {
-    if (!slug || !request) return;
-    const mine = (seq.current += 1);
-    async function draw(path: string, asked: string) {
-      const body = new FormData();
-      body.set("original", original);
-      body.set("model", model);
-      try {
-        const response = await fetch(`/admin/kb/preview/${path}`, { method: "POST", body });
-        const json = (await response.json().catch(() => null)) as PreviewResult | null;
-        if (mine !== seq.current) return;
-        const answer = json ?? {
-          error: `The preview request failed with HTTP ${response.status}.`,
-        };
-        setResult(answer);
-        if ("html" in answer) {
-          const styles = answer.styles
-            .map(
-              (href) =>
-                `<link rel="stylesheet" href="${new URL(href, window.location.href).href}">`,
-            )
-            .join("");
-          const theme = document.documentElement.getAttribute("data-theme");
-          setDoc(
-            `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}><head><meta charset="utf-8"><base target="_blank">${styles}</head><body>${answer.html}</body></html>`,
-          );
-        }
-      } catch (error) {
-        if (mine === seq.current)
-          setResult({ error: error instanceof Error ? error.message : String(error) });
-      } finally {
-        if (mine === seq.current) setSettled(asked);
-      }
-    }
-    // draw catches its own failures, so the promise it returns has nothing left to report.
-    const timer = window.setTimeout(() => void draw(slug, request), PREVIEW_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, [slug, original, model, request]);
-  return { result, doc, busy: request !== null && request !== settled };
+  const { result, busy } = useDebouncedPreview(request, readPreview, PREVIEW_DELAY_MS);
+  const [good, setGood] = useState<Extract<PreviewResult, { html: string }> | null>(null);
+  if (result && "html" in result && result !== good) setGood(result);
+  const doc = useMemo(() => {
+    if (!good) return "";
+    const styles = good.styles
+      .map((href) => `<link rel="stylesheet" href="${new URL(href, window.location.href).href}">`)
+      .join("");
+    const theme = document.documentElement.getAttribute("data-theme");
+    return `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}><head><meta charset="utf-8"><base target="_blank">${styles}</head><body>${good.html}</body></html>`;
+  }, [good]);
+  return { result, doc, busy };
 }
 
 /**
