@@ -1,20 +1,18 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { LICENSE_LINK, TERMS_PATH } from "~/lib/license.mjs";
-import { CONTENT_PAGE_PATHS, LEGAL_PAGE_PATHS } from "~/lib/content-pages.mjs";
 import { pageSourcePath } from "~/lib/pages/compile.mjs";
 import { deletePageRow } from "~/lib/pages/save.server";
 import { contentPageJsonLd } from "~/lib/pages/page-json-ld";
 import { LICENSE_URL } from "~/lib/seo";
-import ContentPage, { loader as pageLoader } from "~/routes/content-page";
-import { loader as twinLoader } from "~/routes/content-page[.md]";
+import { loader as pageLoader } from "~/routes/content-page";
 import { loader as csvLoader } from "~/routes/protocols[.csv]";
 
 import privacy from "../../content/pages/privacy.md?raw";
 import terms from "../../content/pages/terms.md?raw";
 
 import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext, carrelRequest } from "./route-helpers";
+import { routeContext, carrelRequest } from "./route-helpers";
 import { seedPages, seedProcedures } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -62,44 +60,6 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   await gh.restore();
-});
-
-describe("/privacy is a registered page", () => {
-  it("is a legal page in the registry, served from its row with a twin, in Carrel's page kind", async () => {
-    expect(CONTENT_PAGE_PATHS).toContain("/privacy");
-    expect(LEGAL_PAGE_PATHS).toEqual(["/privacy", TERMS_PATH]);
-    expect((await pageData("/privacy")).page).toMatchObject({ path: "/privacy", title: "Privacy" });
-    const twin = (await twinLoader(argsFor(new Request(`${ORIGIN}/privacy.md`)))) as Response;
-    expect(twin.status).toBe(200);
-    expect(await twin.text()).toMatch(/^# Privacy\n\nWhat this site records/);
-  });
-});
-
-describe("the layout draws the banner and the date", () => {
-  const render = async (path: string) =>
-    renderRoute(path, ContentPage, { loaderData: await pageData(path) });
-
-  it("draws neither when the front matter states neither", async () => {
-    const html = await render("/privacy");
-    expect(html).not.toContain("legal-banner");
-    expect(html).not.toContain("legal-updated");
-  });
-
-  it("draws the single word Draft and the date once a save states them, and nothing else", async () => {
-    const source = terms.replace(/^---\n/, "---\nbanner: Draft\nlast_updated: 2026-10-06\n");
-    const saved = await send("PUT", `${PREFIX}/content/${TERMS_ID}/draft`, {
-      source,
-      expectedVersion: await versionOf(TERMS_FILE),
-      changeId: "chg-legal-fields",
-    });
-    expect(saved.status, await saved.clone().text()).toBe(200);
-
-    const html = await render(TERMS_PATH);
-    expect(html).toContain('<p class="legal-banner">Draft</p>');
-    expect(html).toContain('Last updated <time dateTime="2026-10-06">October 6, 2026</time>');
-    const twin = (await twinLoader(argsFor(new Request(`${ORIGIN}/terms.md`)))) as Response;
-    expect(await twin.text()).toMatch(/^# Terms\n\nDraft\n\nLast updated: October 6, 2026\n\n/);
-  });
 });
 
 describe("/terms can never be unpublished or deleted", () => {
@@ -154,13 +114,6 @@ describe("/terms can never be unpublished or deleted", () => {
 });
 
 describe("the license wiring behind TERMS_PATH", () => {
-  it("TERMS_PATH resolves to a published page", async () => {
-    expect(TERMS_PATH).toBe("/terms");
-    const { page, draft } = await pageData(TERMS_PATH);
-    expect(page.path).toBe(TERMS_PATH);
-    expect(draft).toBe(false);
-  });
-
   it("a download carries the Link rel=license header", async () => {
     const response = (await csvLoader(argsFor(new Request(`${ORIGIN}/protocols.csv`)))) as Response;
     expect(response.status).toBe(200);

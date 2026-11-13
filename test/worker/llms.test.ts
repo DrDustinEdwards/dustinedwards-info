@@ -309,16 +309,6 @@ describe("a save is held to what CI holds", () => {
       await status("published");
     }
   });
-
-  it("REFUSES a stale version, names the current one, and commits nothing", async () => {
-    const response = await put(EDITED, "b".repeat(40));
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({
-      error: "version-conflict",
-      currentVersion: await versionOf(LLMS_PATH),
-    });
-    expect(await commits()).toHaveLength(0);
-  });
 });
 
 describe("get_llms, sync_llms and the llms-drift check", () => {

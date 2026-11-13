@@ -135,66 +135,6 @@ describe("a protocol that names its host strains by id", () => {
   );
 });
 
-describe("a change to a strain reaches the protocols that name it", () => {
-  it(
-    "a registry save rewrites the protocol's row from its file, and purges the registry and the procedures",
-    { timeout: 120_000 },
-    async () => {
-      await save();
-      purge.mockClear();
-      const edited = (registryFiles[FOLIORUM] ?? "")
-        .replace('collection_number: "B-24224"', 'collection_number: "B-24225"')
-        .replace("NRRL B-24224", "NRRL B-24225");
-      expect(edited).not.toBe(registryFiles[FOLIORUM]);
-      await saveRegistryItem(gitEnv(), {
-        slug: "strain/foliorum",
-        raw: edited,
-        isNew: false,
-        actor: carrel,
-      });
-      expect((await stored()).hostStrains[1]?.collectionNumber).toBe("B-24225");
-      const tags = purge.mock.calls.flatMap(([options]) => options.tags);
-      expect(tags).toContain("registry");
-      expect(tags).toContain("procedures");
-    },
-  );
-
-  it(
-    "a strain made a draft stops the save, naming the protocol that can no longer name it",
-    { timeout: 120_000 },
-    async () => {
-      await save();
-      const draft = (registryFiles[FOLIORUM] ?? "").replace("name: ", "draft: true\nname: ");
-      await expect(
-        saveRegistryItem(gitEnv(), {
-          slug: "strain/foliorum",
-          raw: draft,
-          isNew: false,
-          actor: carrel,
-        }),
-      ).rejects.toThrow(/phage-isolation no longer compiles[\s\S]*is a draft in the lab registry/);
-    },
-  );
-
-  it(
-    "sync_registry recompiles every protocol that names a strain, so an edit made through git reaches it",
-    { timeout: 120_000 },
-    async () => {
-      await save();
-      await putSource(
-        FOLIORUM,
-        (registryFiles[FOLIORUM] ?? "")
-          .replace('collection_number: "B-24224"', 'collection_number: "B-24226"')
-          .replace("NRRL B-24224", "NRRL B-24226"),
-      );
-      const synced = await runTool(operatorEnv(), operator, "sync_registry", {});
-      expect(synced.ok, JSON.stringify(synced)).toBe(true);
-      if (synced.ok) expect(synced.data).toMatchObject({ protocolsRefreshed: 1 });
-      expect((await stored()).hostStrains[1]?.collectionNumber).toBe("B-24226");
-    },
-  );
-});
-
 describe("a protocol that names a strain only as an organism", () => {
   const organismOnly = isolation.replace(
     "host_strain:\n  - strain: smegmatis\n  - strain: foliorum\n",

@@ -5,7 +5,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  classify,
   contentKey,
   digestFromKey,
   dimensionsFromKey,
@@ -15,28 +14,6 @@ import {
 const DIGEST = Uint8Array.from({ length: 32 }, (_, i) => i).buffer;
 const HEX16 = "0001020304050607";
 const P = "dustin-edwards-";
-
-await test("classify() accepts every served extension and refuses executable ones", () => {
-  const accepted = [
-    "png",
-    "jpg",
-    "jpeg",
-    "webp",
-    "avif",
-    "gif",
-    "svg",
-    "ico",
-    "pdf",
-    "webmanifest",
-    "txt",
-  ];
-  for (const extension of accepted) {
-    assert.equal(classify(`/media/${P}${HEX16}.${extension}`).extension, extension);
-  }
-  for (const extension of ["exe", "html"]) {
-    assert.throws(() => classify(`/media/${P}${HEX16}.${extension}`), /unclassified asset/);
-  }
-});
 
 const RASTER_KEY = contentKey(DIGEST, "webp", { width: 1600, height: 900 });
 

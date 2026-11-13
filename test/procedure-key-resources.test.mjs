@@ -148,12 +148,6 @@ await test("a reagent named by two materials is listed once, a lab-prepared reag
   ]);
 });
 
-await test("a recipe or a computational procedure has no table, and an empty table prints nothing", () => {
-  assert.deepEqual(keyResources(/** @type {any} */ ({ profile: "recipe" })), []);
-  assert.deepEqual(keyResources(/** @type {any} */ ({ profile: "computational" })), []);
-  assert.deepEqual(keyResourcesMarkdown([]), []);
-});
-
 await test("a pipe in a citation cannot split a twin row", () => {
   const lines = keyResourcesMarkdown([
     {
@@ -163,19 +157,4 @@ await test("a pipe in a citation cannot split a twin row", () => {
     },
   ]);
   assert.ok(lines.includes("| A \\| B | S | N/A |"));
-});
-
-await test("a protocol's host strains are listed with their collection and number, as the registry states them", async () => {
-  const isolation = (await compiledProtocols()).get("phage-isolation");
-  assert.ok(isolation?.ok, JSON.stringify(isolation?.errors));
-  const strains = keyResources(isolation.record).find((g) => g.id === "strains");
-  assert.deepEqual(
-    strains?.rows.find((r) => r.href === "/research/lab/strains/smegmatis"),
-    {
-      resource: "Mycobacterium smegmatis mc²155",
-      href: "/research/lab/strains/smegmatis",
-      source: "ATCC",
-      identifier: "ATCC 700084",
-    },
-  );
 });

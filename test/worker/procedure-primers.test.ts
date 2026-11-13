@@ -13,7 +13,7 @@ import { loader as twinLoader } from "~/routes/procedure[.md]";
 import coi from "../../content/procedures/coi-primers.md?raw";
 
 import { routeContext, recordPurges } from "./route-helpers";
-import { putSource, removeSource, source, stubSources, type SourceStub } from "./source-stub";
+import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles } from "./seed";
 
 /* A protocol reads its primer tables from the lab registry (docs/REGISTRY.md): the file names the primers by id and holds no
@@ -292,84 +292,6 @@ describe("a published version keeps the sequence it was published with", () => {
       });
       expect((await stored()).primers[0]?.sequence).toBe("GGTCAACAAATCATAAAGATATTGA");
       expect((await frozen()).primers[0]?.sequence).toBe("GGTCAACAAATCATAAAGATATTGG");
-    },
-  );
-});
-
-describe("a change to a reagent reaches the protocols whose materials name it", () => {
-  const GOTAQ = "content/registry/reagent/gotaq-flexi-dna-polymerase.md";
-
-  it(
-    "a registry save rewrites the protocol's row from its file, so the material shows the reagent's new name",
-    { timeout: 120_000 },
-    async () => {
-      await save();
-      const display = async () =>
-        (
-          JSON.parse(
-            (
-              await env.DB.prepare("SELECT record FROM procedures WHERE slug = ?1")
-                .bind(SLUG)
-                .first<{ record: string }>()
-            )?.record ?? "{}",
-          ) as {
-            materials: Array<{ display: string; reagent: { name: string } | null }>;
-          }
-        ).materials[0];
-      expect((await display())?.display).toBe("GoTaq® Flexi DNA polymerase");
-      const raw = (await source(GOTAQ)) ?? "";
-      expect(raw).toContain("GoTaq® Flexi DNA polymerase");
-      await saveRegistryItem(gitEnv(), {
-        slug: "reagent/gotaq-flexi-dna-polymerase",
-        raw: raw.replace(
-          'name: "GoTaq® Flexi DNA polymerase"',
-          'name: "GoTaq® Flexi DNA polymerase (renamed)"',
-        ),
-        isNew: false,
-        actor: carrel,
-      });
-      const after = await display();
-      expect(after?.display).toBe("GoTaq® Flexi DNA polymerase (renamed)");
-      expect(after?.reagent?.name).toBe("GoTaq® Flexi DNA polymerase (renamed)");
-    },
-  );
-});
-
-describe("a change to an equipment item reaches the protocols whose list names it", () => {
-  it(
-    "a registry save rewrites the protocol's row, so the table shows the new manufacturer",
-    { timeout: 120_000 },
-    async () => {
-      const extraction = (await import("../../content/procedures/phage-dna-extraction.md?raw"))
-        .default as string;
-      await putSource(procedurePath("phage-dna-extraction"), extraction);
-      const saved = await runTool(operatorEnv(), operator, "save_procedure", {
-        slug: "phage-dna-extraction",
-        raw: extraction,
-      });
-      expect(saved.ok, JSON.stringify(saved)).toBe(true);
-      const maker = async () =>
-        (
-          JSON.parse(
-            (
-              await env.DB.prepare(
-                "SELECT record FROM procedures WHERE slug = 'phage-dna-extraction'",
-              ).first<{ record: string }>()
-            )?.record ?? "{}",
-          ) as {
-            equipment: Array<{ name: string; item: { manufacturer: string | null } | null }>;
-          }
-        ).equipment.find((e) => e.name === "heat block")?.item?.manufacturer;
-      expect(await maker()).toBeNull();
-      const raw = (await source("content/registry/equipment/heat-block.md")) ?? "";
-      expect(raw).toContain("manufacturer:");
-      await saveRegistryItem(gitEnv(), {
-        slug: "equipment/heat-block",
-        raw: raw.replace(/^manufacturer: .*$/m, 'manufacturer: "Test Maker"'),
-        isNew: false,
-        actor: carrel,
-      });
-      expect(await maker()).toBe("Test Maker");
     },
   );
 });

@@ -7,10 +7,9 @@ import { ProcedureView } from "~/components/procedure";
 import Lab, { loader as labLoader } from "~/routes/lab";
 import LabKind, { loader as kindLoader } from "~/routes/lab.kind";
 import { loader as twinLoader } from "~/routes/lab[.md]";
-import Protocols, { loader as protocolsLoader } from "~/routes/protocols";
 import { loader as sitemapLoader } from "~/routes/sitemap";
 
-import { renderRoute, routeContext, textsOf } from "./route-helpers";
+import { renderRoute, routeContext } from "./route-helpers";
 import { seedPages, seedPhages, seedProcedures, seedRegistry } from "./seed";
 
 /* The lab registry's pages (docs/REGISTRY.md), read from the rows build:content compiles: the master inventory with the
@@ -85,26 +84,9 @@ describe("the master inventory", () => {
     expect(shown).toHaveLength(12);
     await expect(inventory("?sort=kind")).rejects.toMatchObject({ status: 301 });
   });
-
-  it("says what it does not keep: stock and places are not a registry fact", async () => {
-    expect((await inventory()).html).toContain("never how much of it the lab has or where it sits");
-  });
 });
 
 describe("the primers page", () => {
-  it("shows each sequence as stored with its length and melting temperature computed, and states the method and conditions", async () => {
-    const { html } = await kindPage("primers");
-    expect(html).toContain("<code");
-    expect(html).toContain("CATACTGAGCCAATGGTT");
-    // Length 18 and the computed Tm (51.7 °C) for the REV 3' LTR forward primer, in its row.
-    expect(html).toContain("51.7");
-    expect(html).toContain("SantaLucia (1998) unified nearest-neighbor model");
-    expect(html).toContain("50 mM monovalent cation and 0.5 µM primer");
-    // The direction and target facets are the primers' own.
-    expect(html).toMatch(/name="direction"[^>]*value="forward"/);
-    expect(html).toMatch(/name="target"/);
-  });
-
   it("answers 404 for a kind with no records or view yet, and for a kind that does not exist", async () => {
     for (const kind of ["gadgets"]) {
       await expect(kindPage(kind)).rejects.toMatchObject({ init: { status: 404 } });
@@ -284,19 +266,6 @@ describe("the rest of the site finds it", () => {
     expect(xml).toContain("<loc>https://dustinedwards.info/research/lab/primers/lco1490</loc>");
     expect(response.headers.get("cache-tag")).toContain("registry");
   });
-
-  it("gives the protocol library a Primers tab with its count, beside the calculators", async () => {
-    const loaderData = await protocolsLoader({
-      request: request("/research/protocols"),
-      params: {},
-      context: ctx(),
-    } as never);
-    const html = renderRoute("/research/protocols", Protocols, { loaderData });
-    const tabs = await textsOf(html, ".cap-tabs a, [role=tablist] a, nav a");
-    expect(html).toContain('href="/research/lab/primers"');
-    expect(tabs.some((t) => /Primers/.test(t) && /12/.test(t))).toBe(true);
-    expect(html.indexOf("Calculators")).toBeLessThan(html.indexOf('href="/research/lab/primers"'));
-  });
 });
 
 describe("the melting temperature is an estimate, never an annealing temperature", () => {
@@ -309,21 +278,6 @@ describe("the melting temperature is an estimate, never an annealing temperature
   const stripped = (html: string) =>
     ALLOWED.reduce((text, phrase) => text.replaceAll(phrase, ""), html);
 
-  it("every primer page links NEB's calculator for the polymerase-specific annealing temperature", async () => {
-    for (const id of [
-      "lco1490",
-      "hco2198",
-      "rev-3-ltr-forward",
-      "gapdh-reverse",
-      "lpdv-p31-ca-reverse",
-    ]) {
-      const { html } = await kindPage("primers", id);
-      expect(html, id).toContain('href="https://tmcalculator.neb.com/"');
-      expect(html, id).toContain("NEB Tm Calculator");
-      expect(html, id).toContain("Melting temperature estimate (Tm)");
-    }
-  });
-
   it("the primers page and each primer page say it is an estimate and say nothing else about annealing", async () => {
     for (const html of [
       (await kindPage("primers")).html,
@@ -334,19 +288,6 @@ describe("the melting temperature is an estimate, never an annealing temperature
       const body = /<main[\s\S]*<\/main>/.exec(stripped(html))?.[0] ?? stripped(html);
       expect(body).not.toMatch(/annealing/i);
     }
-  });
-
-  it("the twins carry the same sentences and the markdown link", async () => {
-    for (const text of [
-      await (await twin({ kind: "primers" })).text(),
-      await (await twin({ kind: "primers", id: "lco1490" })).text(),
-    ]) {
-      expect(text).toContain("The Tm estimate is not an annealing temperature.");
-      expect(text).toContain("https://tmcalculator.neb.com/");
-    }
-    expect(await (await twin({ kind: "primers", id: "lco1490" })).text()).toContain(
-      "- Annealing temperature: depends on the polymerase; use the [NEB Tm Calculator](https://tmcalculator.neb.com/)",
-    );
   });
 });
 

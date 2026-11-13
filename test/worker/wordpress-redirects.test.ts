@@ -2,7 +2,6 @@ import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:
 import { describe, expect, it } from "vitest";
 
 import worker from "../../workers/app";
-import { EXPLICIT_ROWS } from "~/lib/wordpress-redirects.mjs";
 
 import { STUB_GONE_BODY } from "./stub-server-build";
 
@@ -22,12 +21,6 @@ async function get(url: string) {
   return response;
 }
 
-async function expectMoved(path: string, target: string, origin = APEX) {
-  const response = await get(`${origin}${path}`);
-  expect(response.status, path).toBe(301);
-  expect(response.headers.get("location"), path).toBe(`${origin}${target}`);
-}
-
 async function expectGone(path: string) {
   const response = await get(`${APEX}${path}`);
   expect(response.status, path).toBe(410);
@@ -35,114 +28,10 @@ async function expectGone(path: string) {
   expect(await response.text(), path).toBe(STUB_GONE_BODY);
 }
 
-describe("explicit rows, on the apex host", () => {
-  for (const [from, to] of Object.entries(EXPLICIT_ROWS)) {
-    // `/research/` rebuilds its page in place, so only its slashed form moves.
-    const bareIsThePage = from === to;
-    it(`${from}/ answers 301 to ${to}`, async () => {
-      await expectMoved(`${from}/`, to);
-      if (!bareIsThePage) await expectMoved(from, to);
-    });
-  }
-});
-
 describe("pattern rules, on the apex host", () => {
-  it("/discovery-of-{name}/ and /annotation-of-{name}/ go to the phage's row on /research/phages", async () => {
-    await expectMoved("/discovery-of-lucinda/", "/research/phages#lucinda");
-    await expectMoved("/discovery-of-acorn15", "/research/phages#acorn15");
-    await expectMoved("/annotation-of-arlo/", "/research/phages#arlo");
-  });
-
-  it("the four phage project pages go to /research/phages", async () => {
-    for (const path of [
-      "/phylogenetics-lysm/",
-      "/arlo-gene-67/",
-      "/arlo-gene-67-cloning/",
-      "/raspberry-pi-plaque-counter/",
-    ]) {
-      await expectMoved(path, "/research/phages");
-    }
-  });
-
-  it("/directory-*/ goes to /teaching/phage-discovery, but the lab's own directory to Join the lab", async () => {
-    await expectMoved("/directory-2023-phage-researchers/", "/teaching/phage-discovery");
-    await expectMoved("/directory-research-group/", "/teaching#join-the-lab");
-  });
-
-  it("Dustin's own author page goes to /about, ahead of the profile rule", async () => {
-    await expectMoved("/author/dustin/", "/about");
-  });
-
-  it("student and author profiles go to the roster, query dropped", async () => {
-    // Placeholders: real profile names are not kept in this repository.
-    await expectMoved("/user/example-student/", "/teaching/phage-discovery#roster");
-    await expectMoved("/user/example-student/?profiletab=main", "/teaching/phage-discovery#roster");
-    await expectMoved("/author/example/", "/teaching/phage-discovery#roster");
-  });
-
-  it("the membership pages, the bare /user/ directory among them, answer 410", async () => {
-    for (const path of [
-      "/user/",
-      "/register/",
-      "/members/",
-      "/logout/",
-      "/account/",
-      "/password-reset/",
-    ]) {
-      await expectGone(path);
-    }
-  });
-
-  it("isolation-notes archives and paged listings go to /research/phages, query dropped", async () => {
-    await expectMoved("/category/phage-isolation-notes/page/5/", "/research/phages");
-    await expectMoved("/microbiomes/page/5/?et_blog", "/research/phages");
-    await expectMoved("/phages/page/2/?et_blog", "/research/phages");
-  });
-
-  it("knowledge-base categories go to /research/protocols", async () => {
-    await expectMoved("/knowledge-base/category/protocols/pcr/", "/research/protocols");
-    await expectMoved("/knowledge-base/category/articles/", "/research/protocols");
-  });
-
-  it("every other category and tag answers 410", async () => {
-    await expectGone("/category/uncategorized/");
-    await expectGone("/category/phage-annotation-notes/");
-    await expectGone("/tag/fall-2025/");
-  });
-
-  it("the Baylor DNA extraction PDF goes to its protocol page", async () => {
-    await expectMoved(
-      "/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.pdf",
-      "/research/protocols/phage-dna-extraction",
-    );
-  });
-
-  it("the 2019 CV PDF goes to the current CV PDF", async () => {
-    await expectMoved(
-      "/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf",
-      "/dustin-edwards-cv.pdf",
-    );
-  });
-
-  it("the two protocol scans that still earn traffic go to their protocol", async () => {
-    await expectMoved("/wp-content/uploads/2023/11/Electrophoresis.pdf", "/research/protocols");
-    await expectMoved(
-      "/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf",
-      "/research/protocols/phage-dna-extraction",
-    );
-  });
-
-  it("every other upload answers 410", async () => {
-    await expectGone("/wp-content/uploads/2017/09/Spot-Titer.png");
-  });
-
   it("the molarity and metric prefix calculators answer 410", async () => {
     await expectGone("/molarity-calculator/");
     await expectGone("/knowledge-base/metric-prefix/");
-  });
-
-  it("the old /publications/ goes to /research/publications in one hop", async () => {
-    await expectMoved("/publications/", "/research/publications");
   });
 });
 

@@ -25,7 +25,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
 export const REGISTRY_ARTIFACT_PATH = path.join("content", "generated", "registry.json");
 
 /** The repository's papers, read from content/publications as a clone has them. */
-export const repoHost = {
+const repoHost = {
   /** @param {string} slug a publication's file key */
   async recipe(slug) {
     const raw = await readFile(

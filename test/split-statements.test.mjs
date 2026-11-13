@@ -161,18 +161,13 @@ function migrated() {
 
 const LONG_TEXT_COLUMNS = {
   publications: ["markdown", "record"],
-  procedures: ["markdown", "record"],
-  pages: ["markdown", "record"],
   posts: ["body", "html"],
-  search_docs: ["body"],
 };
 
 /** Columns the migrations restrict to a list. */
 const CHECKED = {
   publications: { stage: "published", type: "article" },
-  procedures: { profile: "protocol" },
   posts: { kind: "post" },
-  search_docs: { type: "post" },
 };
 
 for (const [table, longColumns] of Object.entries(LONG_TEXT_COLUMNS)) {

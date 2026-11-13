@@ -9,7 +9,7 @@ import {
 import { siteHealthResponse } from "~/lib/health/response.server";
 import { HEALTH_CHECK_NAMES, runHealthChecks } from "~/lib/health/checks.server";
 import { ORIGIN_REFUSAL } from "@dustinedwards/site-runtime/origin";
-import { action as themeAction, loader as themeLoader } from "~/routes/theme";
+import { action as themeAction } from "~/routes/theme";
 import { loader as healthLoader } from "~/routes/health";
 
 import { freezeAtWindowStart, routeContext } from "./route-helpers";
@@ -91,12 +91,6 @@ describe("/theme", () => {
         referer: "https://example.com//evil.com",
       }),
     } as never);
-    expect(response.headers.get("location")).toBe("/");
-  });
-
-  it("answers a GET with a redirect, because there is nothing to show", () => {
-    const response = themeLoader();
-    expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("/");
   });
 
@@ -208,22 +202,6 @@ describe("/health", () => {
 });
 
 describe("the colophon health tile", () => {
-  it("reads a FAILED KV read as unreadable, not as a missing snapshot", async () => {
-    const brokenKv = {
-      get: async () => {
-        throw new Error("planted KV read failure");
-      },
-    };
-    const tile = await readHealthTile({ kv: brokenKv as never });
-    expect(tile.state).toBe("unreadable");
-  });
-
-  it("still reads an absent snapshot as missing", async () => {
-    await env.APP_KV.delete(HEALTH_SNAPSHOT_KEY);
-    const tile = await readHealthTile({ kv: env.APP_KV });
-    expect(tile.state).toBe("missing");
-  });
-
   it("is fresh once the health-snapshot job has run, with every check /health names", async () => {
     await env.APP_KV.delete(HEALTH_SNAPSHOT_KEY);
     await storeHealthSnapshot({ kv: env.APP_KV, answer: () => siteHealthResponse(env as never) });

@@ -217,7 +217,7 @@ export function contentPageMarkdownBody(page, entry) {
  *
  * @type {readonly string[]}
  */
-export const CARDED_PAGE_ROOTS = ["/software", "/research/tools", "/cv"];
+const CARDED_PAGE_ROOTS = ["/software", "/research/tools", "/cv"];
 
 /** @param {string} path */
 export function hasPageCard(path) {

@@ -24,11 +24,11 @@
     ]
   },
   "baseline": {
-    "measured_at": "d05e104",
+    "measured_at": "110702c",
     "knip": {},
     "jscpd": {
-      "clones": 46,
-      "lines": 662,
+      "clones": 42,
+      "lines": 625,
       "percentage": 0.47,
       "unread": 0
     },
@@ -38,8 +38,8 @@
     },
     "legacy": {},
     "tests": {
-      "files": 205,
-      "cases": 1621
+      "files": 177,
+      "cases": 1122
     },
     "comments": {
       "lines": 17675,

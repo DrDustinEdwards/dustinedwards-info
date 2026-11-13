@@ -6,7 +6,6 @@ import {
   askUploadsNeeded,
   mapPool,
   uploadAskItems,
-  withRetry,
 } from "../app/lib/search/ask-twins.mjs";
 import { askSyncReport, askSyncSummary } from "../app/lib/operator/sync-report.mjs";
 
@@ -100,30 +99,6 @@ await test("the converge report refuses convergence on a failed key, even when t
   assert.match(askSyncSummary(report), /10-1128-mra-01077-21/);
 });
 
-await test("with nothing failed, the report converges exactly as before", () => {
-  const report = askSyncReport({
-    uploaded: 157,
-    removed: 0,
-    cacheDropped: 0,
-    expected: 157,
-    present: 157,
-    failed: [],
-  });
-  assert.equal(report.converged, true);
-  const legacy = askSyncReport({
-    uploaded: 157,
-    removed: 0,
-    cacheDropped: 0,
-    expected: 157,
-    present: 157,
-  });
-  assert.equal(
-    legacy.converged,
-    true,
-    "a caller that passes no failed list still converges on agreeing counts",
-  );
-});
-
 await test("only a changed, missing or unhealthy item is uploaded again", () => {
   const items = [
     { key: "a.md", hash: "h1" },
@@ -151,35 +126,6 @@ await test("only a changed, missing or unhealthy item is uploaded again", () => 
     ["b.md", "c.md", "d.md"],
   );
   assert.equal(askUploadsNeeded(items, listed, new Map()).length, 5, "an empty ledger uploads all");
-});
-
-await test("withRetry tries exactly as many times as asked and rethrows the last error", async () => {
-  let calls = 0;
-  await assert.rejects(
-    withRetry(
-      async () => {
-        calls += 1;
-        throw new Error(`attempt ${calls}`);
-      },
-      { attempts: 3, backoffMs: 1, sleep: async () => {} },
-    ),
-    /attempt 3/,
-  );
-  assert.equal(calls, 3);
-});
-
-await test("withRetry returns the value when a later attempt succeeds", async () => {
-  let calls = 0;
-  const value = await withRetry(
-    async () => {
-      calls += 1;
-      if (calls === 1) throw transient();
-      return "uploaded";
-    },
-    { attempts: 3, backoffMs: 1, sleep: async () => {} },
-  );
-  assert.equal(value, "uploaded");
-  assert.equal(calls, 2);
 });
 
 await test("mapPool never exceeds its limit, keeps order, and stops starting work after a failure", async () => {

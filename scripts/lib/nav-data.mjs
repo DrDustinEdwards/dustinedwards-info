@@ -237,7 +237,7 @@ export function navDataProblems() {
   return problems;
 }
 
-export function readNavData() {
+function readNavData() {
   const identity = readIdentity();
   return {
     latestPaper: readLatestPaper(),

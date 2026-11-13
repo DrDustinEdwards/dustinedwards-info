@@ -99,12 +99,6 @@ describe("the Carrel key reaches only its prefix", () => {
     const response = await get(`${PREFIX}/content`, testEnv.OPERATOR_TOKEN);
     expect(response.status).toBe(401);
   });
-
-  it("answers the key on its prefix", async () => {
-    const response = await get(`${PREFIX}/meta`);
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ site: { id: "dustinedwards-info" } });
-  });
 });
 
 describe("every write names the version it was loaded at", () => {
@@ -1190,13 +1184,6 @@ describe("content delete", () => {
       key ? { key } : {},
     );
   const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
-
-  it("is declared in meta.capabilities", async () => {
-    const meta = (await (await get(`${PREFIX}/meta`)).json()) as {
-      capabilities: { contentDelete?: boolean };
-    };
-    expect(meta.capabilities.contentDelete).toBe(true);
-  });
 
   it("deletes the post at its current version, records the change id, and clears its rows", async () => {
     const raw = post("del-ok");

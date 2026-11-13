@@ -46,11 +46,6 @@ await test("a git that cannot be spawned throws, even on the base probe", () => 
   assert.throws(() => changedFiles("origin/main", git), /ENOENT/);
 });
 
-await test("an unknown base is reported as unknown, not as an error and not as a base", () => {
-  const git = fakeGit({ ...CLEAN, "rev-parse --verify --quiet origin/main": { status: 1 } });
-  assert.deepEqual(changedFiles("origin/main", git), { files: [], baseUsed: null });
-});
-
 await test("untracked, staged, unstaged and committed paths are all listed, once each", () => {
   const git = fakeGit({
     ...CLEAN,
@@ -109,15 +104,4 @@ await test("the related-test walk follows ~/ and relative imports, is cycle-safe
     "/app/lib/helper.ts",
     "/test/x.test.mjs",
   ]);
-});
-
-await test("a component edit does not pull in the route-only gates", () => {
-  const { gates } = gatesFor("app/components/site-footer.tsx", DECLARED);
-  assert.ok(!gates.includes("check:policy"));
-});
-
-await test("a hook edit maps to no gate, because no gate or test runs a hook", () => {
-  const { rules, gates } = gatesFor(".claude/hooks/no-direct-deploy.sh", DECLARED);
-  assert.deepEqual(gates, []);
-  assert.ok(rules.length > 0, "argued safe by a row, not unmapped");
 });

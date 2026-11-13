@@ -57,7 +57,7 @@ const SOURCES = {
 };
 
 /** The lab's numbers, each with its page. Nothing here is a value no page states. */
-export const LAB = {
+const LAB = {
   /** Full plate titer: 10 µl of each dilution with 250 µl host. */
   ulPlated: 10,
   /** Spot titer: the Guide's Protocol 6.4, 3 µl spots, as the lab runs it. */

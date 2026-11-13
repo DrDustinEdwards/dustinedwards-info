@@ -105,12 +105,3 @@ await test("a recorder that throws does not swallow the divergence error", async
     },
   );
 });
-
-await test("attempts is honored, so the retry count is not hardcoded in the loop", async () => {
-  const w = writerFailing(2);
-  const r = recorder();
-  const result = await convergeWithRetry({ ...w, ...r, slug: SLUG, commitSha: SHA, attempts: 3 });
-  assert.equal(result.attempts, 3);
-  assert.equal(w.state.calls, 3);
-  assert.deepEqual(r.state.recorded, []);
-});

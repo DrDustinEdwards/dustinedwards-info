@@ -3,7 +3,6 @@ import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 import { fileToForm, formToFile, splitFile } from "../app/kb/form.mjs";
-import { entryFields, gapReason, itemFields } from "../app/kb/form-fields.mjs";
 
 /* The Knowledge Base form editor's pure half (app/kb/form.mjs): a file read into the form and written back unchanged,
  * a changed field written alone, steps renumbered in their new order, and the fields each profile is edited with. */
@@ -73,47 +72,6 @@ await test("steps moved in the form are renumbered from where their list starts,
   assert.match(
     out,
     /8\. Add @potassium acetate[^\n]*\n(?: {3}[^\n]*\n)* {3}> CRITICAL: Mix until the precipitate/,
-  );
-});
-
-await test("a protocol is edited with its closed lists, and a field the form has no input for is edited as YAML", () => {
-  const model = fileToForm(read("content/procedures/coi-primers.md"));
-  const fields = entryFields("protocol", model.data, [
-    { value: "smegmatis", label: "M. smegmatis" },
-  ]);
-  const byKey = new Map(fields.map((f) => [f.key, f]));
-  assert.equal(byKey.get("status")?.kind, "select");
-  assert.deepEqual(
-    byKey.get("status")?.options?.map((o) => o.value),
-    ["in-use", "in-development", "retired"],
-  );
-  assert.deepEqual(
-    byKey.get("biosafety_level")?.options?.map((o) => o.value),
-    ["BSL-1", "BSL-2"],
-  );
-  assert.equal(byKey.get("updated")?.kind, "date");
-  assert.ok(byKey.get("organism")?.options?.some((o) => o.value === "smegmatis"));
-  assert.equal(byKey.get("cycling")?.kind, "yaml");
-  assert.equal(
-    gapReason(model.data.status),
-    "No source in the repo states a status for this protocol.",
-  );
-  assert.equal(gapReason("in-use"), null);
-});
-
-await test("a registry item is its name, its draft flag and its kind's fields", () => {
-  const fields = itemFields(["supplier", "catalog_number", "prepared_in_lab"], {
-    prepared_in_lab: true,
-  });
-  assert.deepEqual(
-    fields.map((f) => [f.key, f.kind]),
-    [
-      ["name", "text"],
-      ["draft", "checkbox"],
-      ["supplier", "text"],
-      ["catalog_number", "text"],
-      ["prepared_in_lab", "checkbox"],
-    ],
   );
 });
 

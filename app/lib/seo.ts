@@ -377,7 +377,7 @@ const GERMOMICS_URL = "https://germomics.com/";
 export const GERMOMICS_X_URL = "https://x.com/Germomics";
 
 // The footer's `rel="me"` profiles, in order. `check:machine-readable` reads this list.
-export const OWNER_PROFILES = [OWNER_SCHOLAR, OWNER_ORCID, OWNER_PUBMED] as const;
+const OWNER_PROFILES = [OWNER_SCHOLAR, OWNER_ORCID, OWNER_PUBMED] as const;
 
 const OWNER_SAME_AS = [
   ...OWNER_PROFILES,

@@ -15,22 +15,11 @@ await test("horizontal arrows move and wrap at both ends", () => {
   assert.equal(rovingTarget("ArrowLeft", 2, 3), 1);
 });
 
-await test("Home and End jump to the first and last item", () => {
-  assert.equal(rovingTarget("Home", 2, 5), 0);
-  assert.equal(rovingTarget("End", 0, 5), 4);
-});
-
 await test("the cross axis is not a movement key, so a vertical list leaves Left and Right alone", () => {
   assert.equal(rovingTarget("ArrowDown", 0, 3), null);
   assert.equal(rovingTarget("ArrowLeft", 1, 3, "vertical"), null);
   assert.equal(rovingTarget("ArrowDown", 1, 3, "vertical"), 2);
   assert.equal(rovingTarget("ArrowUp", 0, 3, "vertical"), 2);
-});
-
-await test("other keys and an empty group move nothing", () => {
-  assert.equal(rovingTarget("Enter", 0, 3), null);
-  assert.equal(rovingTarget("a", 0, 3), null);
-  assert.equal(rovingTarget("ArrowRight", 0, 0), null);
 });
 
 await test("a radio group moves on both axes: Down and Right forward, Up and Left back", () => {

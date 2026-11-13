@@ -19,7 +19,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
 export const PHAGES_ARTIFACT_PATH = path.join("content", "generated", "phages.json");
 
 /** The repository's papers, read from content/publications as a clone has them. */
-export const repoHost = {
+const repoHost = {
   paper: paperExists,
 };
 
@@ -29,7 +29,7 @@ export const repoHost = {
  *
  * @param {{ host?: import("../../app/lib/phages/compile.mjs").PhageHost }} [options]
  */
-export async function compileAllPhages(options = {}) {
+async function compileAllPhages(options = {}) {
   const host = options.host ?? repoHost;
   const names = (await readdir(path.join(ROOT, PHAGES_DIR)))
     .filter((n) => n.endsWith(".md"))

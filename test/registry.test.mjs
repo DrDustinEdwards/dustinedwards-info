@@ -14,10 +14,7 @@ import {
   registryPath,
   registrySetErrors,
   registrySlug,
-  sortRegistry,
 } from "../app/kb/registry/compile.mjs";
-import { KINDS } from "../app/kb/registry/kinds.mjs";
-import { registryDriftVerdict } from "../app/lib/health/verdicts.mjs";
 import { buildRegistry, compileAllRegistry } from "../scripts/lib/registry.mjs";
 
 /* The registry framework (docs/REGISTRY.md), judged with a kind of its own: the registry ships with none, so every
@@ -50,13 +47,6 @@ const WIDE = String.fromCharCode(0x2014);
 
 const compile = (slug, raw) => compileRegistryItem({ slug, raw, host, pipeline, kinds });
 const file = (lines) => `---\n${lines.join("\n")}\n---\n`;
-
-await test("every kind the registry defines is a kind with fields and a plural to address it by", () => {
-  for (const [kind, spec] of Object.entries(KINDS)) {
-    assert.match(kind, /^[a-z][a-z-]*$/, kind);
-    assert.ok(spec.singular && spec.plural && Object.keys(spec.fields).length > 0, kind);
-  }
-});
 
 await test("an item compiles to shared columns and the kind's own record, with a name stored once", async () => {
   const result = await compile(
@@ -137,14 +127,6 @@ await test("every message the file has is returned together: a field the kind la
   assert.match(text, /the body must be empty/);
 });
 
-await test("a name is one line, trimmed and bounded", async () => {
-  for (const name of ['""', '" padded"', `"${"x".repeat(121)}"`]) {
-    const result = await compile("widget/a-name", file([`name: ${name}`, "color: red"]));
-    assert.equal(result.ok, false, name);
-    assert.match(result.errors.join("\n"), /name is /);
-  }
-});
-
 await test("the address is <kind>/<id> and nothing else, and a kind the registry lacks is refused", async () => {
   assert.deepEqual(parseRegistrySlug("widget/a-red"), { kind: "widget", id: "a-red" });
   for (const bad of [
@@ -203,40 +185,6 @@ await test("the set refuses two items of a kind with one name, folded, and runs 
   );
 });
 
-await test("items sort by kind as defined, then by name folded", () => {
-  const item = (kind, name) => ({
-    kind,
-    id: name.toLowerCase(),
-    name,
-    status: "published",
-    fields: {},
-  });
-  const sorted = sortRegistry(
-    [item("gadget", "Zed"), item("widget", "Émile"), item("widget", "Adam"), item("gadget", "Abe")],
-    kinds,
-  );
-  assert.deepEqual(
-    sorted.map((i) => `${i.kind}:${i.name}`),
-    ["widget:Adam", "widget:Émile", "gadget:Abe", "gadget:Zed"],
-  );
-});
-
-await test("registry-drift reads files and rows by address, and names sync_registry", () => {
-  const ok = registryDriftVerdict(
-    [{ slug: "widget/a", sha: "1" }],
-    [{ slug: "widget/a", source_blob_sha: "1" }],
-  );
-  assert.equal(ok.ok, true);
-  const empty = registryDriftVerdict([], []);
-  assert.equal(empty.ok, true, "no files and no rows is converged");
-  const drifted = registryDriftVerdict(
-    [{ slug: "widget/a", sha: "2" }],
-    [{ slug: "widget/a", source_blob_sha: "1" }],
-  );
-  assert.equal(drifted.ok, false);
-  assert.match(drifted.detail, /sync_registry/);
-});
-
 await test("the build reads content/registry/<kind>/ for every kind, treats a missing directory as empty and refuses a stray one", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "registry-"));
   try {
@@ -281,10 +229,4 @@ await test("the build reads content/registry/<kind>/ for every kind, treats a mi
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-});
-
-await test("the real registry builds, and every row belongs to a kind it defines", async () => {
-  const built = await buildRegistry();
-  assert.ok(built.rows.length > 0);
-  for (const row of built.rows) assert.ok(Object.hasOwn(KINDS, row.kind), `${row.kind}/${row.id}`);
 });

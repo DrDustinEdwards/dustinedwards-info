@@ -5,7 +5,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import { isMain } from "../scripts/lib/is-main.mjs";
 
@@ -13,15 +13,6 @@ const HERE = fileURLToPath(import.meta.url);
 
 await test("a module is main when it is the started script", () => {
   assert.equal(isMain(import.meta.url, HERE), true);
-});
-
-await test("another module is not main", () => {
-  const other = pathToFileURL(fileURLToPath(new URL("../package.json", import.meta.url))).href;
-  assert.equal(isMain(other, HERE), false);
-});
-
-await test("no started script is not main", () => {
-  assert.equal(isMain(import.meta.url, ""), false);
 });
 
 const windowsOnly = { skip: process.platform !== "win32" };

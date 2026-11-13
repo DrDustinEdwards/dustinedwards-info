@@ -3,7 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import { getPublicationRow } from "~/db/publications";
 import { getCitationCounts, refreshCitations } from "~/lib/citations.server";
-import { decodeContentId, encodeContentId } from "~/lib/carrel/content-id.mjs";
+import { encodeContentId } from "~/lib/carrel/content-id.mjs";
 import { runTool } from "~/lib/operator/api.server";
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { renderPublicationFile } from "~/lib/publications/serialize.mjs";
@@ -124,17 +124,6 @@ async function twin(slug: string) {
   } as never)) as Response;
 }
 
-describe("the registry's ids", () => {
-  it("keeps a bare slug for a post and prefixes every other kind with a dot, which a slug may itself contain", () => {
-    expect(encodeContentId("post", "a-post")).toBe("a-post");
-    expect(encodeContentId("publication", "10-1128-mra-00888-24")).toBe(
-      "publication.10-1128-mra-00888-24",
-    );
-    expect(decodeContentId("a-post")).toEqual({ kind: "post", slug: "a-post" });
-    expect(decodeContentId("publication.a.b")).toEqual({ kind: "publication", slug: "a.b" });
-  });
-});
-
 describe("an edit through the Carrel adapter reaches the page on the next request", () => {
   it("changes the page, the twin and the stored row with no build and no deploy", async () => {
     const before = (await pageData(SLUG)) as { paper: { summary: string } };
@@ -170,20 +159,6 @@ describe("an edit through the Carrel adapter reaches the page on the next reques
     expect(await (await twin(SLUG)).text()).not.toBe("");
     const row = await getPublicationRow(testEnv as never, SLUG);
     expect(row?.status).toBe("published");
-  });
-
-  it("does nothing for a save that is byte-identical to the committed file", async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: godfather,
-      expectedVersion: await versionOf(publicationPath(SLUG)),
-      changeId: "chg-unchanged",
-    });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      id: ID,
-      version: await versionOf(publicationPath(SLUG)),
-    });
-    expect((await writes()).length > 0).toBe(false);
   });
 });
 
@@ -300,32 +275,6 @@ describe("everything a save changes carries the tag it purges", () => {
 });
 
 describe("a file the validator refuses", () => {
-  it("answers with every message and commits nothing", async () => {
-    const source = manuscript({
-      title: 'A "quoted" title',
-      authors: ["Dustin Edwards", ""],
-      topics: ["not-a-topic"],
-      summary: "One sentence. And a second one.",
-    });
-    const response = await send(
-      "PUT",
-      `${PREFIX}/content/publication.cryo-em-example-manuscript/draft`,
-      {
-        source,
-        expectedVersion: null,
-        changeId: "chg-bad",
-      },
-    );
-    expect(response.status).toBe(422);
-    const text = JSON.stringify(await response.json());
-    for (const field of ["title:", "authors[1]:", "topics[0]:", "summary:"])
-      expect(text).toContain(field);
-    expect((await storedSource(publicationPath("cryo-em-example-manuscript"))) !== undefined).toBe(
-      false,
-    );
-    expect((await writes()).length > 0).toBe(false);
-  });
-
   it("REFUSES a hosted paper whose PDF is not in the repository", async () => {
     gh.assets.delete(`public/research/publications/${SLUG}/dustin-edwards-${SLUG}.pdf`);
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {

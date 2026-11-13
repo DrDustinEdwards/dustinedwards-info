@@ -47,24 +47,3 @@ await test("an unknown name is left verbatim, because a guess would be worse", (
   // Case matters: the XML predefined entities are lower case.
   assert.equal(decodeEntities("&AMP;"), "&AMP;");
 });
-
-await test("text carrying no reference is returned unchanged", () => {
-  const plain = "Microbacteriophage Godfather was collected from a soil sample.";
-  assert.equal(decodeEntities(plain), plain);
-});
-
-await test("null and undefined are the empty string, never the word null", () => {
-  assert.equal(decodeEntities(null), "");
-  assert.equal(decodeEntities(undefined), "");
-});
-
-await test("the real corpus strings, which is what this was written for", () => {
-  assert.equal(
-    decodeEntities("Journal of Microbiology &amp; Biology Education"),
-    "Journal of Microbiology & Biology Education",
-  );
-  assert.equal(
-    decodeEntities("confidence in recommending it (p &lt; 0.05)"),
-    "confidence in recommending it (p < 0.05)",
-  );
-});

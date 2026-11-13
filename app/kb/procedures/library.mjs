@@ -36,7 +36,7 @@ const kindLabel = (id) => /** @type {Record<string, string>} */ (KINDS)[id] ?? i
  *
  * @param {{ targets: string[], time: { total: string | null } }} record
  */
-export function keyFact(record) {
+function keyFact(record) {
   if (record.targets.length > 0) return record.targets.join(", ");
   if (record.time.total) return record.time.total;
   return "";
@@ -308,7 +308,7 @@ function facetHref(key, values) {
 }
 
 /** The library narrowed to some methods. @param {readonly string[]} methods */
-export function methodHref(methods) {
+function methodHref(methods) {
   return facetHref("method", methods);
 }
 
@@ -318,7 +318,7 @@ export function methodHref(methods) {
  *
  * @param {string} id
  */
-export function toolLink(id) {
+function toolLink(id) {
   const tool = TOOLS[id];
   if (!tool)
     throw new Error(

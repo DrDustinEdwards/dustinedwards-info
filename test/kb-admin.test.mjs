@@ -1,15 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  KB_ADMIN_PATH,
-  NEEDS_INFO,
-  baseEntries,
-  kbTabs,
-  needsInfo,
-  resolveTab,
-  tabHref,
-} from "../app/kb/admin.mjs";
+import { NEEDS_INFO, baseEntries, kbTabs, needsInfo } from "../app/kb/admin.mjs";
 
 /* The admin Knowledge Base page's pure half (app/kb/admin.mjs): which tab an address names, the counts, the search over a
  * base, and the Needs info list drawn from entries and registry items. Rows here are minimal; the real ones come from D1. */
@@ -25,18 +17,6 @@ const entry = (over = {}) => ({
   updated: "2026-10-01",
   gaps: [],
   ...over,
-});
-
-await test("an unknown or absent tab falls back to the first base; a base id and needs-info are kept", () => {
-  assert.equal(resolveTab(null), "protocols");
-  assert.equal(resolveTab("nope"), "protocols");
-  assert.equal(resolveTab("recipes"), "recipes");
-  assert.equal(resolveTab(NEEDS_INFO), NEEDS_INFO);
-});
-
-await test("a tab's address keeps the search for a base and drops it for Needs info", () => {
-  assert.equal(tabHref("recipes", "soup"), `${KB_ADMIN_PATH}?tab=recipes&q=soup`);
-  assert.equal(tabHref(NEEDS_INFO, "soup"), `${KB_ADMIN_PATH}?tab=${NEEDS_INFO}`);
 });
 
 await test("every tab is counted from the rows it lists, zero included", () => {

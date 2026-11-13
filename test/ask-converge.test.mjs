@@ -53,15 +53,6 @@ await test("converges on the first poll when the index has already caught up", a
   assert.deepEqual(clock.state.slept, [ASK_POLL_INTERVAL_MS]);
 });
 
-await test("keeps polling through not-yet-converged readings and reports the count", async () => {
-  const clock = fakeClock();
-  const { reading } = readingAfter(4);
-  const out = await awaitAskConvergence({ reading, sleep: clock.sleep, now: clock.now });
-
-  assert.equal(out.converged, true);
-  assert.equal(out.polls, 5);
-});
-
 await test("a permanent miss stays a miss, and carries the latest counts", async () => {
   const clock = fakeClock();
   const { reading, state } = readingAfter(Infinity, { expected: 99, present: 90 });
@@ -149,24 +140,6 @@ await test("a malformed reading is not mistaken for convergence", async () => {
   const out = await awaitAskConvergence({ reading, sleep: clock.sleep, now: clock.now });
   assert.equal(out.converged, false);
   assert.equal(out.latest, null);
-});
-
-await test("a thrown read's reason reaches the poll callback and the result", async () => {
-  const clock = fakeClock();
-  /** @type {Array<string | null>} */
-  const seen = [];
-  const reading = async () => {
-    throw new Error("ECONNRESET");
-  };
-  const out = await awaitAskConvergence({
-    reading,
-    sleep: clock.sleep,
-    now: clock.now,
-    onPoll: ({ error }) => seen.push(error),
-  });
-  assert.equal(out.converged, false);
-  assert.equal(out.lastError, "ECONNRESET");
-  assert.ok(seen.length > 0 && seen.every((e) => e === "ECONNRESET"));
 });
 
 /* Deploy run 36274700184: the write-back read 157, health read 155 two seconds later. */

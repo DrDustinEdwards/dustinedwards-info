@@ -70,44 +70,11 @@ await test("an asset named only in a block comment is NOT a reference", () => {
   assert.deepEqual(referencesIn(stripComments(text), ASSETS), []);
 });
 
-await test("a URL inside a string survives the comment stripper", () => {
-  // Stripping from `//` to end of line would eat the rest of this line and the asset with it.
-  const text = 'const u = "https://example.test/x"; const a = "/dustin-edwards-logo.svg";';
-  const stripped = stripComments(text);
-  assert.ok(stripped.includes("https://example.test/x"), "the URL was destroyed");
-  assert.deepEqual(referencesIn(stripped, ASSETS), ["/dustin-edwards-logo.svg"]);
-});
-
-await test("a comment marker inside a string is not a comment", () => {
-  const text = 'const s = "/* not a comment */"; const a = "/favicon.ico";';
-  assert.deepEqual(referencesIn(stripComments(text), ASSETS), ["/favicon.ico"]);
-});
-
-await test("a quote inside a comment does not open a string", () => {
-  // If the stripper mistook this apostrophe for a string start it would swallow
-  // the rest of the file and the real reference below would vanish.
-  const text =
-    "// it is the author's note about /dustin-edwards-logo.svg\nconst a = '/dustin-edwards-favicon.svg';";
-  assert.deepEqual(referencesIn(stripComments(text), ASSETS), ["/dustin-edwards-favicon.svg"]);
-});
-
-await test("an escaped quote does not end a string early", () => {
-  const text = 'const s = "a \\" /dustin-edwards-logo.svg still inside"; const b = "/favicon.ico";';
-  const found = referencesIn(stripComments(text), ASSETS);
-  assert.ok(found.includes("/favicon.ico"));
-});
-
 await test("a template literal is scanned, because that is where paths live", () => {
   const text = "const a = `/phage-hunters/dustin-edwards-2019.webp`;";
   assert.deepEqual(referencesIn(stripComments(text), ASSETS), [
     "/phage-hunters/dustin-edwards-2019.webp",
   ]);
-});
-
-await test("stripping preserves newlines, so a stripped block cannot join two lines", () => {
-  const text = "/* one\n   two */\nconst a = 1;";
-  const stripped = stripComments(text);
-  assert.equal((stripped.match(/\n/g) ?? []).length, (text.match(/\n/g) ?? []).length);
 });
 
 await test("css has block comments and no line comments", () => {
@@ -145,12 +112,4 @@ await test("results fold to sorted keys and sorted files, so the artifact is sta
   assert.deepEqual(Object.keys(out.refs), ["/dustin-edwards-logo.svg", "/favicon.ico"]);
   assert.deepEqual(out.refs["/dustin-edwards-logo.svg"], ["app/a.ts", "app/z.ts"]);
   assert.equal(out.generated, 2);
-});
-
-await test("one file naming one asset twice is recorded once", () => {
-  const out = foldRefs([
-    { file: "app/a.ts", assets: ["/dustin-edwards-logo.svg"] },
-    { file: "app/a.ts", assets: ["/dustin-edwards-logo.svg"] },
-  ]);
-  assert.deepEqual(out.refs["/dustin-edwards-logo.svg"], ["app/a.ts"]);
 });

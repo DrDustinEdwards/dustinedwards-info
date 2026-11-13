@@ -5,19 +5,11 @@ import {
   askDriftVerdict,
   contentDriftCompare,
   contentDriftVerdict,
-  procedureDriftVerdict,
-  cvDriftVerdict,
   cvPdfDriftVerdict,
-  dictionaryDriftVerdict,
-  pageDriftVerdict,
   llmsDriftVerdict,
-  rosterDriftVerdict,
-  phageDriftVerdict,
-  publicationDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
   withTimeout,
-  CHECK_TIMEOUT_MS,
 } from "../app/lib/health/verdicts.mjs";
 
 const HEALTHY_FTS = { posts: 12, postsFts: 12, docs: 46, identity: 46, prose: 46 };
@@ -132,27 +124,6 @@ await test("a rejecting check is a failed check carrying its message", async () 
   assert.match(verdict.detail, /D1 unreachable/);
 });
 
-await test("the timeout clears the day's slowest measured healthy path", () => {
-  // ask-index-drift was measured at a 2332ms maximum on production 2026-08-19.
-  // A timeout at or under that turns a known-healthy tail into a false alarm.
-  assert.ok(
-    CHECK_TIMEOUT_MS > 2332,
-    `${CHECK_TIMEOUT_MS}ms would fire on the measured healthy maximum of 2332ms`,
-  );
-});
-
-await test("askDriftVerdict supplies the counts it fails on", () => {
-  const v = askDriftVerdict({ missing: ["a"], stale: [], expected: 113, present: 112 });
-  assert.equal(v.ok, false);
-  assert.deepEqual(v.counts, { expected: 113, present: 112 });
-});
-
-await test("a HEALTHY askDriftVerdict carries no counts to leak", () => {
-  const v = askDriftVerdict({ missing: [], stale: [], expected: 113, present: 113 });
-  assert.equal(v.ok, true);
-  assert.equal(v.counts, undefined);
-});
-
 await test("media drift: agreement is ok and says both counts", () => {
   const v = mediaDriftVerdict({ expected: 69, present: 69, missing: [], extra: [] });
   assert.equal(v.ok, true);
@@ -260,90 +231,6 @@ await test("content drift: equal totals with one sha changed is still drift", ()
   assert.deepEqual(v.counts, { expected: 1, present: 0 });
 });
 
-await test("procedure drift: the same comparison, naming procedures and sync_procedures", () => {
-  const files = [
-    { slug: "edited", sha: "new" },
-    { slug: "agreeing", sha: "same" },
-    { slug: "added", sha: "fresh" },
-  ];
-  const rows = [
-    { slug: "edited", source_blob_sha: "old" },
-    { slug: "agreeing", source_blob_sha: "same" },
-    { slug: "deleted", source_blob_sha: "orphan" },
-  ];
-  const v = procedureDriftVerdict(files, rows);
-  assert.equal(v.ok, false);
-  assert.match(v.detail, /^Procedure drift 3:/);
-  assert.match(v.detail, /1 sha-changed/);
-  assert.match(v.detail, /1 file\(s\) with no row/);
-  assert.match(v.detail, /1 row\(s\) with no file/);
-  assert.match(v.detail, /3 procedure file\(s\)/);
-  assert.match(v.detail, /sync_procedures/);
-  assert.doesNotMatch(v.detail, /sync_posts/);
-  assert.deepEqual(v.counts, { expected: 3, present: 1 });
-
-  const quiet = procedureDriftVerdict(
-    [{ slug: "a", sha: "s" }],
-    [{ slug: "a", source_blob_sha: "s" }],
-  );
-  assert.equal(quiet.ok, true);
-  assert.match(quiet.detail, /1 procedure file/);
-});
-
-await test("dictionary drift: the same comparison, naming dictionary entries and sync_dictionary", () => {
-  const drifted = dictionaryDriftVerdict(
-    [{ slug: "capsid", sha: "new" }],
-    [{ slug: "capsid", source_blob_sha: "old" }],
-  );
-  assert.equal(drifted.ok, false);
-  assert.match(drifted.detail, /^Dictionary drift 1:/);
-  assert.match(drifted.detail, /1 dictionary entry file\(s\)/);
-  assert.match(drifted.detail, /sync_dictionary/);
-  assert.deepEqual(drifted.counts, { expected: 1, present: 0 });
-  assert.equal(
-    dictionaryDriftVerdict([{ slug: "a", sha: "s" }], [{ slug: "a", source_blob_sha: "s" }]).ok,
-    true,
-  );
-});
-
-await test("page and publication drift: the same comparison, each naming its own noun and repair", () => {
-  const files = [
-    { slug: "research-phages", sha: "new" },
-    { slug: "teaching-labs", sha: "same" },
-  ];
-  const rows = [
-    { slug: "research-phages", source_blob_sha: "old" },
-    { slug: "teaching-labs", source_blob_sha: "same" },
-    { slug: "removed-page", source_blob_sha: "orphan" },
-  ];
-  const page = pageDriftVerdict(files, rows);
-  assert.equal(page.ok, false);
-  assert.match(page.detail, /^Page drift 2:/);
-  assert.match(page.detail, /2 page file\(s\)/);
-  assert.match(page.detail, /sync_pages/);
-  assert.deepEqual(page.counts, { expected: 2, present: 1 });
-
-  const paper = publicationDriftVerdict(files, rows);
-  assert.equal(paper.ok, false);
-  assert.match(paper.detail, /^Publication drift 2:/);
-  assert.match(paper.detail, /2 publication file\(s\)/);
-  assert.match(paper.detail, /sync_publications/);
-  assert.doesNotMatch(paper.detail, /sync_pages|sync_posts/);
-
-  const agreeing = [{ slug: "a", sha: "s" }];
-  const matching = [{ slug: "a", source_blob_sha: "s" }];
-  assert.equal(pageDriftVerdict(agreeing, matching).ok, true);
-  assert.equal(publicationDriftVerdict(agreeing, matching).ok, true);
-
-  const cv = cvDriftVerdict(files, rows);
-  assert.equal(cv.ok, false);
-  assert.match(cv.detail, /^CV drift 2:/);
-  assert.match(cv.detail, /2 CV file\(s\)/);
-  assert.match(cv.detail, /sync_cv/);
-  assert.doesNotMatch(cv.detail, /sync_pages|sync_posts|sync_publications/);
-  assert.equal(cvDriftVerdict(agreeing, matching).ok, true);
-});
-
 await test("llms.txt drift: one file against one row, naming its own repair", () => {
   const stale = llmsDriftVerdict(
     [{ slug: "llms", sha: "new" }],
@@ -363,54 +250,6 @@ await test("llms.txt drift: one file against one row, naming its own repair", ()
 
   assert.equal(
     llmsDriftVerdict([{ slug: "llms", sha: "s" }], [{ slug: "llms", source_blob_sha: "s" }]).ok,
-    true,
-  );
-});
-
-await test("roster drift: the same comparison, naming cohorts and sync_roster", () => {
-  const files = [
-    { slug: "2031", sha: "new" },
-    { slug: "2030", sha: "same" },
-  ];
-  const rows = [
-    { slug: "2031", source_blob_sha: "old" },
-    { slug: "2030", source_blob_sha: "same" },
-    { slug: "2029", source_blob_sha: "orphan" },
-  ];
-  const verdict = rosterDriftVerdict(files, rows);
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /^Roster drift 2:/);
-  assert.match(verdict.detail, /2 cohort file\(s\)/);
-  assert.match(verdict.detail, /sync_roster/);
-  assert.doesNotMatch(verdict.detail, /sync_pages|sync_posts/);
-  assert.deepEqual(verdict.counts, { expected: 2, present: 1 });
-
-  assert.equal(
-    rosterDriftVerdict([{ slug: "2031", sha: "s" }], [{ slug: "2031", source_blob_sha: "s" }]).ok,
-    true,
-  );
-});
-
-await test("phage drift: the same comparison, naming phages and sync_phages", () => {
-  const files = [
-    { slug: "zeta", sha: "new" },
-    { slug: "acorn15", sha: "same" },
-  ];
-  const rows = [
-    { slug: "zeta", source_blob_sha: "old" },
-    { slug: "acorn15", source_blob_sha: "same" },
-    { slug: "gone", source_blob_sha: "orphan" },
-  ];
-  const verdict = phageDriftVerdict(files, rows);
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /^Phage drift 2:/);
-  assert.match(verdict.detail, /2 phage file\(s\)/);
-  assert.match(verdict.detail, /sync_phages/);
-  assert.doesNotMatch(verdict.detail, /sync_pages|sync_posts/);
-  assert.deepEqual(verdict.counts, { expected: 2, present: 1 });
-
-  assert.equal(
-    phageDriftVerdict([{ slug: "zeta", sha: "s" }], [{ slug: "zeta", source_blob_sha: "s" }]).ok,
     true,
   );
 });

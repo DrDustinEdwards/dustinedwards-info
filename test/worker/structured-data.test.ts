@@ -437,17 +437,6 @@ describe("the types each page states", () => {
     for (const { path, node } of datasets) expect(node.license, path).toBe(`${SITE_ORIGIN}/terms`);
   });
 
-  it("Enarratio is source code with its repository; Capsid is an application whose source is its own node", () => {
-    const [enarratio] = ofType("/software/enarratio", "SoftwareSourceCode");
-    expect(enarratio?.codeRepository).toBe("https://github.com/DrDustinEdwards/enarratio");
-    expect(ofType("/software/capsid", "SoftwareApplication")[0]?.codeRepository).toBeUndefined();
-    const [source] = ofType("/software/capsid", "SoftwareSourceCode");
-    expect(source?.codeRepository).toBe("https://github.com/DrDustinEdwards/capsid");
-    expect((source?.targetProduct as Node | undefined)?.["@id"]).toBe(
-      ofType("/software/capsid", "SoftwareApplication")[0]?.["@id"],
-    );
-  });
-
   it("CARREL CARRIES NO CODE REPOSITORY AND NO LINK TO ITS CODE (#255)", () => {
     const page = rendered.find((p) => p.path === "/software/carrel");
     const json = JSON.stringify(blocks(page?.html ?? ""));

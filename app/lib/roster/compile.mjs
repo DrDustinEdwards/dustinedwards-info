@@ -47,22 +47,6 @@ export function sortCohorts(/** @type {Cohort[]} */ cohorts) {
   return [...cohorts].sort((a, b) => b.year - a.year);
 }
 
-/**
- * The home page's counts: counted, never typed. The names stay out of what the home page sends.
- *
- * @param {Cohort[]} cohorts
- * @returns {{ researchers: number, cohorts: number, since: number }}
- */
-export function rosterFacts(cohorts) {
-  if (cohorts.length === 0)
-    throw new Error("the roster has no cohorts, so there is nothing to count");
-  return {
-    researchers: cohorts.reduce((n, c) => n + c.researchers.length, 0),
-    cohorts: cohorts.length,
-    since: Math.min(...cohorts.map((c) => c.year)),
-  };
-}
-
 /** @param {unknown} value @returns {value is Record<string, unknown>} */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 

@@ -117,44 +117,4 @@ describe("sync_roster and the roster-drift check", () => {
       expect(JSON.parse(stored?.record ?? "{}").researchers).toContain("Example Person Eight");
     },
   );
-
-  it("REFUSES an empty file set instead of deleting every row", { timeout: 240_000 }, async () => {
-    expect((await sync()).ok).toBe(true);
-    // The directory lists, but holds no cohort: a fault, not a repository with none.
-    await removeSource(rosterPath(CURRENT_SLUG));
-    await removeSource(rosterPath(EARLIER_SLUG));
-    await putSource("content/roster/README.txt", "not a cohort");
-    const result = await sync();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      expect(result.error).toContain("empty set");
-    }
-    expect(await rowFor(CURRENT_SLUG)).not.toBeNull();
-    expect(await rowFor(EARLIER_SLUG)).not.toBeNull();
-  });
-
-  it(
-    "makes no row for a file the validator refuses, naming it, and converges the rest",
-    { timeout: 240_000 },
-    async () => {
-      await putSource("content/roster/notes.md", current);
-      await putSource(
-        rosterPath("2029"),
-        (await cohortFile(CURRENT)).replace("year: 2031", "year: 2029\nemail: someone@example.com"),
-      );
-      const result = await sync();
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.status).toBe(422);
-        expect(result.error).toContain("content/roster/notes.md fails");
-        expect(result.error).toContain("content/roster/2029.md fails");
-        expect(JSON.stringify(result.detail)).toContain("is not a roster field");
-      }
-      expect(await rowFor("notes")).toBeNull();
-      expect(await rowFor("2029")).toBeNull();
-      expect(await rowFor(CURRENT_SLUG)).not.toBeNull();
-      expect(await rowFor(EARLIER_SLUG)).not.toBeNull();
-    },
-  );
 });

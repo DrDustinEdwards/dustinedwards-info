@@ -126,44 +126,4 @@ describe("sync_dictionary and the dictionary-drift check", () => {
       );
     },
   );
-
-  it("REFUSES an empty file set instead of deleting every row", { timeout: 240_000 }, async () => {
-    expect((await sync()).ok).toBe(true);
-    // The directory lists, but holds no entry: a fault, not a repository with none.
-    await removeSource("content/dictionary/capsid.md");
-    await removeSource("content/dictionary/carrel.md");
-    await putSource("content/dictionary/README.txt", "not an entry");
-    const result = await sync();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      expect(result.error).toContain("empty set");
-    }
-    expect(await rowFor("capsid")).not.toBeNull();
-    expect(await rowFor("carrel")).not.toBeNull();
-  });
-
-  it(
-    "makes no row for a file whose path is not a registered Software page or whose clip is missing, naming it, and converges the rest",
-    { timeout: 240_000 },
-    async () => {
-      await putSource(
-        "content/dictionary/stray.md",
-        capsidEntry.replace("path: /software/capsid", "path: /software/nothing"),
-      );
-      gh.assets.delete("public/audio/carrel.mp3");
-      const result = await sync();
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.status).toBe(422);
-        expect(result.error).toContain("content/dictionary/stray.md fails");
-        expect(result.error).toContain("content/dictionary/carrel.md fails");
-        expect(JSON.stringify(result.detail)).toContain("not a registered Software page");
-        expect(JSON.stringify(result.detail)).toContain("not in the repository");
-      }
-      expect(await rowFor("stray")).toBeNull();
-      expect(await rowFor("carrel")).toBeNull();
-      expect(await rowFor("capsid")).not.toBeNull();
-    },
-  );
 });

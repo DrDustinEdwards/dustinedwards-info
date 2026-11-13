@@ -33,7 +33,7 @@ const repoHost = {
  *
  * @param {{ host?: import("../../app/lib/roster/compile.mjs").RosterHost }} [options]
  */
-export async function compileAllRoster(options = {}) {
+async function compileAllRoster(options = {}) {
   const host = options.host ?? repoHost;
   const names = (await readdir(path.join(ROOT, ROSTER_DIR)))
     .filter((n) => n.endsWith(".md"))

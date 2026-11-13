@@ -351,7 +351,7 @@ function range(from, to) {
  *
  * @param {Facts[]} all
  */
-export function chartYears(all) {
+function chartYears(all) {
   const charted = new Set(CHART_SERIES.map(([id]) => /** @type {string} */ (id)));
   const years = all
     .filter((f) => f.year !== null && (charted.has(f.type) || (f.type === "mentoring" && f.cohort)))

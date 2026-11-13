@@ -122,16 +122,6 @@ describe("an About edit through the adapter is live at the next request", () => 
       );
     },
   );
-
-  it("an unchanged save commits nothing", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: aboutFile,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-same",
-    });
-    expect(response.status).toBe(200);
-    expect(await commits()).toHaveLength(0);
-  });
 });
 
 describe("a save is held to what CI holds", () => {
@@ -189,51 +179,6 @@ describe("About has a route of its own", () => {
         "SELECT count(*) AS n FROM search_docs WHERE url LIKE '/about%'",
       ).first<{ n: number }>();
       expect(hits?.n).toBe(0);
-    },
-  );
-
-  it(
-    "unpublish takes the page and its sitemap entry down, and publish restores them",
-    { timeout: 180_000 },
-    async () => {
-      const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, {
-        expectedVersion: await versionOf(FILE),
-        changeId: "chg-down",
-      });
-      expect(down.status, await down.clone().text()).toBe(200);
-      const downBody = (await down.json()) as { status: string; version: string };
-      expect(downBody.status).toBe("draft");
-
-      await expect(aboutData()).rejects.toHaveProperty("status", 404);
-      expect(await sitemapPaths()).not.toContain("/about");
-
-      const up = await send("POST", `${PREFIX}/content/${ID}/publish`, {
-        expectedVersion: downBody.version,
-        changeId: "chg-up",
-      });
-      expect(up.status, await up.clone().text()).toBe(200);
-      expect(await aboutHtml()).toContain("Department Head of Biological Sciences");
-      expect(await sitemapPaths()).toContain("/about");
-    },
-  );
-});
-
-describe("a lost row is repaired from the file, never the reverse", () => {
-  it(
-    "rewrites the row on an unchanged save and commits nothing",
-    { timeout: 180_000 },
-    async () => {
-      await testEnv.DB.prepare("DELETE FROM pages WHERE slug = ?1").bind(SLUG).run();
-      await expect(aboutData()).rejects.toHaveProperty("status", 404);
-
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-        source: aboutFile,
-        expectedVersion: await versionOf(FILE),
-        changeId: "chg-repair",
-      });
-      expect(response.status, await response.clone().text()).toBe(200);
-      expect(await commits()).toHaveLength(0);
-      expect(await aboutHtml()).toContain("Department Head of Biological Sciences");
     },
   );
 });

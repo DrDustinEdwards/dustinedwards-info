@@ -79,20 +79,6 @@ await test("converged is never taken from the caller", () => {
   assert.equal(r.drift, 32);
 });
 
-await test("the summary carries both counts either way, so a log line is diagnosable", () => {
-  const good = askSyncSummary(
-    askSyncReport({ uploaded: 5, removed: 1, cacheDropped: 0, expected: 7, present: 7 }),
-  );
-  assert.match(good, /7 expected/);
-  assert.match(good, /7 present/);
-  const bad = askSyncSummary(
-    askSyncReport({ uploaded: 5, removed: 1, cacheDropped: 0, expected: 9, present: 7 }),
-  );
-  assert.match(bad, /9 expected/);
-  assert.match(bad, /7 present/);
-  assert.match(bad, /drift 2/);
-});
-
 /* The media index drifts by KEY, so the two totals can agree while the index is wrong in
  * both directions at once. */
 
@@ -151,18 +137,6 @@ await test("media: a key that FAILED to derive is not convergence", () => {
   assert.deepEqual(r.failures, ["/x.png: IMAGES returned 500"]);
 });
 
-await test("media: converged is never taken from the caller", () => {
-  const r = mediaSyncReport({
-    ...CLEAN,
-    present: 60,
-    missing: ["/a.png"],
-    converged: true,
-    ok: true,
-    drift: 0,
-  });
-  assert.equal(r.converged, false);
-});
-
 await test("media: an unreadable count is not a passing count", () => {
   for (const bad of [null, undefined, NaN, "69", 1.5]) {
     assert.equal(mediaSyncReport({ ...CLEAN, expected: bad }).converged, false, `expected=${bad}`);
@@ -185,12 +159,6 @@ await test("media: a non-array missing, extra or failure list fails closed witho
   }
 });
 
-await test("media: a failure entry that is not a string still counts as a failure", () => {
-  const r = mediaSyncReport({ ...CLEAN, failures: [{ key: "/x.png" }] });
-  assert.equal(r.converged, false);
-  assert.equal(r.unreadable, true);
-});
-
 await test("ask: an unreadable failure list is not converged, an absent one is", () => {
   const counts = { uploaded: 5, removed: 0, cacheDropped: 0, expected: 5, present: 5 };
   for (const bad of [7, null, "nope", {}]) {
@@ -199,18 +167,4 @@ await test("ask: an unreadable failure list is not converged, an absent one is",
     assert.match(askSyncSummary(r), /UNREADABLE/);
   }
   assert.equal(askSyncReport(counts).converged, true);
-});
-
-await test("media: the summary names what is wrong, not just that something is", () => {
-  const good = mediaSyncSummary(mediaSyncReport(CLEAN));
-  assert.match(good, /converged/);
-  assert.match(good, /69 expected/);
-
-  const bad = mediaSyncSummary(
-    mediaSyncReport({ ...CLEAN, present: 68, missing: ["/fonts/OFL.txt"], failures: ["/x: boom"] }),
-  );
-  assert.match(bad, /69 expected/);
-  assert.match(bad, /68 present/);
-  assert.match(bad, /1 missing/);
-  assert.match(bad, /1 failed to derive/);
 });

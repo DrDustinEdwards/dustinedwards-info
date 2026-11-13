@@ -11,7 +11,7 @@ import { HOSTS, PHAGES_PAGE_PATH, phageSlug } from "./compile.mjs";
 /** @typedef {import("./compile.mjs").Phage} Phage */
 
 /** A host as a facet option and a cell read it, without the markdown emphasis the page's text carries. @param {string} key */
-export function hostLabel(key) {
+function hostLabel(key) {
   const host = /** @type {Record<string, { long: string }>} */ (HOSTS)[key];
   return host ? host.long.replaceAll("*", "") : key;
 }

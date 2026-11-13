@@ -462,7 +462,7 @@ function recipePath(slug) {
  * @param {string} id
  * @param {Array<{ path: string, title: string, materials?: Array<{ reagent?: { id: string } | null }> }>} protocols
  */
-export function reagentUses(id, protocols) {
+function reagentUses(id, protocols) {
   return protocols
     .filter((protocol) => (protocol.materials ?? []).some((m) => m.reagent?.id === id))
     .map((protocol) => ({ path: protocol.path, title: protocol.title }));
@@ -569,7 +569,7 @@ export const REAGENTS = defineCatalog(
 );
 
 /** What a reagent's cells say where the record states nothing, with the reason, so a gap is listed and not left blank. @param {ReagentRow} r */
-export function reagentGapText(r) {
+function reagentGapText(r) {
   const parts = [];
   if (!r.preparedInLab && !r.supplier)
     parts.push(`supplier: ${r.supplierMissing ?? "not recorded"}`);
@@ -722,7 +722,7 @@ export const EQUIPMENT_CATALOG = defineCatalog(
 );
 
 /** What an item's cells say where the record states nothing, with the reason. @param {EquipmentRow} e */
-export function equipmentGapText(e) {
+function equipmentGapText(e) {
   const parts = [];
   if (!e.manufacturer) parts.push(`manufacturer: ${e.manufacturerMissing ?? "not recorded"}`);
   if (!e.rotor && e.rotorMissing) parts.push(`rotor: ${e.rotorMissing}`);

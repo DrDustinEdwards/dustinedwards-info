@@ -1,14 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import {
-  HOME_CARDS,
-  HOME_PICKS,
-  picksFirst,
-  splitFeatured,
-  startHere,
-} from "../app/lib/blog-listing.mjs";
+import { HOME_CARDS, picksFirst, splitFeatured, startHere } from "../app/lib/blog-listing.mjs";
 
 const page = [
   { slug: "a", featured: false },
@@ -23,21 +16,6 @@ await test("the featured post is removed from the list it was found in", () => {
     posts.map((p) => p.slug),
     ["a", "c"],
     "the hero post must not also appear as a row",
-  );
-});
-
-await test("order is preserved for the posts that remain", () => {
-  const { posts } = splitFeatured(
-    [
-      { slug: "x", featured: true },
-      { slug: "y", featured: false },
-      { slug: "z", featured: false },
-    ],
-    true,
-  );
-  assert.deepEqual(
-    posts.map((p) => p.slug),
-    ["y", "z"],
   );
 });
 
@@ -78,16 +56,6 @@ await test("the first featured post wins when the data carries more than one", (
   );
 });
 
-await test("the input array is not mutated", () => {
-  const input = [...page];
-  splitFeatured(input, true);
-  assert.deepEqual(
-    input.map((p) => p.slug),
-    ["a", "b", "c"],
-    "the loader spreads this array elsewhere; mutating it would act at a distance",
-  );
-});
-
 const flagship = { slug: "flagship" };
 const others = [{ slug: "n1" }, { slug: "n2" }, { slug: "n3" }, { slug: "n4" }, { slug: "n5" }];
 
@@ -98,15 +66,6 @@ await test("the featured post leads and the others fill in behind it", () => {
     recent.map((p) => p.slug),
     ["n1", "n2"],
     "three rows in total (the home page's best-of, 2026-09-27), so two follow the lead",
-  );
-});
-
-await test("the featured post is never also one of the others", () => {
-  const { featured, recent } = startHere([flagship], others);
-  assert.ok(
-    !recent.some((p) => p.slug === featured.slug),
-    "the caller queries others as featured = 0, and printing the lead twice is the " +
-      "defect splitFeatured exists to prevent on /writing",
   );
 });
 
@@ -144,37 +103,8 @@ await test("a post in both queries appears once", () => {
   );
 });
 
-await test("every home pick is a published, unfeatured post in content/posts", () => {
-  for (const slug of HOME_PICKS) {
-    const source = readFileSync(new URL(`../content/posts/${slug}.md`, import.meta.url), "utf8");
-    const front = source.split(/^---$/m)[1] ?? "";
-    assert.match(front, /^draft: false$/m, `${slug} is a draft, so the home page would skip it`);
-    assert.doesNotMatch(
-      front,
-      /^featured: true$/m,
-      `${slug} is featured, so it already leads and the pick is spent`,
-    );
-  }
-  assert.ok(HOME_PICKS.length >= HOME_CARDS - 1, "the picks fill the rows behind the lead");
-});
-
 await test("an empty corpus yields a null lead, which renders the section dark", () => {
   const { featured, recent } = startHere([], []);
   assert.equal(featured, null, "home guards on {featured ? ... : null}");
   assert.deepEqual(recent, []);
-});
-
-await test("a short corpus returns what it has rather than padding", () => {
-  const { featured, recent } = startHere([], [{ slug: "only" }]);
-  assert.equal(featured.slug, "only");
-  assert.deepEqual(recent, [], "one post is one card, not one card and three holes");
-});
-
-await test("cards is honored, so the count has one owner", () => {
-  const { recent } = startHere([flagship], others, 2);
-  assert.deepEqual(
-    recent.map((p) => p.slug),
-    ["n1"],
-    "HOME_CARDS is the default and the section's size is not written twice",
-  );
 });

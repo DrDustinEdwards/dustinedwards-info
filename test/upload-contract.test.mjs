@@ -5,12 +5,7 @@ import {
   ACCEPT_ATTRIBUTE,
   ALLOWED,
   MAX_BYTES,
-  UPLOAD_FORM_INTENT,
-  UPLOAD_RETURN_PATH,
-  isFormUpload,
-  uploadErrorBody,
   uploadErrorSentence,
-  uploadRedirectTo,
   validateUpload,
 } from "../app/lib/media/upload-contract.mjs";
 
@@ -19,41 +14,6 @@ function buffer(...values) {
 }
 
 const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-
-await test("THE ERROR BODY: exactly error, carrying the sentence unchanged", () => {
-  const body = uploadErrorBody('Unsupported image type "application/zip".');
-
-  assert.deepEqual(Object.keys(body), ["error"]);
-  assert.equal(body.error, 'Unsupported image type "application/zip".');
-});
-
-await test("THE BRANCH IS AN EQUALITY, so the editors keep the JSON path", () => {
-  assert.equal(isFormUpload(UPLOAD_FORM_INTENT), true);
-
-  for (const value of [undefined, null, "", "1", "true", "upload", "UPLOAD-FORM", " upload-form"]) {
-    assert.equal(
-      isFormUpload(value),
-      false,
-      `${JSON.stringify(value)} must not select the form branch`,
-    );
-  }
-});
-
-await test("THE REDIRECTS carry the key on success and a code on failure", () => {
-  assert.equal(
-    uploadRedirectTo({ ok: true, key: "abc123.png" }),
-    `${UPLOAD_RETURN_PATH}?uploaded=abc123.png`,
-  );
-  assert.equal(
-    uploadRedirectTo({ ok: false, code: "too-large" }),
-    `${UPLOAD_RETURN_PATH}?upload-error=too-large`,
-  );
-
-  assert.equal(
-    uploadRedirectTo({ ok: true, key: "a b&c.png" }),
-    `${UPLOAD_RETURN_PATH}?uploaded=a%20b%26c.png`,
-  );
-});
 
 await test("VALIDATION ACCEPTS a plausible image of an allowed type", () => {
   assert.equal(validateUpload({ type: "image/png", bytes: buffer(...PNG_MAGIC) }), null);
@@ -111,44 +71,6 @@ await test("SVG is in neither the allowlist nor the picker's accept attribute", 
   assert.ok(![...ALLOWED.values()].includes("svg"));
   assert.doesNotMatch(ACCEPT_ATTRIBUTE, /svg/);
   assert.doesNotMatch(uploadErrorSentence("unsupported-type"), /svg/);
-});
-
-await test("EVERY REFUSAL validateUpload can return is a code the form can render", () => {
-  const svg = new TextEncoder().encode("<svg/>").buffer;
-  const refusals = [
-    validateUpload({ type: "application/zip", bytes: buffer(0x50, 0x4b) }),
-    validateUpload({ type: "image/png", bytes: new ArrayBuffer(MAX_BYTES + 1) }),
-    validateUpload({ type: "image/svg+xml", bytes: svg }),
-  ];
-
-  for (const refusal of refusals) {
-    assert.ok(refusal, "a refusing case returned the accepting answer");
-    assert.ok(
-      uploadErrorSentence(refusal.code),
-      `${refusal.code} has no sentence in UPLOAD_ERRORS, so the media page renders nothing`,
-    );
-    assert.ok(refusal.status >= 400 && refusal.status < 500, `${refusal.code} status`);
-  }
-});
-
-await test("EVERY EMITTED CODE HAS A SENTENCE, and an unknown code has none", () => {
-  for (const code of [
-    "no-file",
-    "unsupported-type",
-    "svg-refused",
-    "too-large",
-    "content-mismatch",
-  ]) {
-    const sentence = uploadErrorSentence(code);
-    assert.equal(typeof sentence, "string");
-    assert.ok(sentence.length > 0, `${code} must say something`);
-  }
-  assert.equal(uploadErrorSentence("invented"), null);
-  assert.equal(uploadErrorSentence(null), null);
-
-  // Not inherited from Object.prototype: a lookup with `in` or a bare index
-  // would answer "constructor" with a function.
-  assert.equal(uploadErrorSentence("constructor"), null);
 });
 
 // Uploads land on the site's own origin, so this allowlist is a security boundary.

@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { readSourceDates, sourceDatesModule } from "../scripts/lib/source-dates.mjs";
+import { readSourceDates } from "../scripts/lib/source-dates.mjs";
 
 /* The sitemap's lastmod is each source file's last commit day (scripts/lib/source-dates.mjs). These hold the read
  * to a real repository: a commit dates only the files it touched, files outside the source trees and deleted files
@@ -82,11 +82,4 @@ await test("a shallow clone takes no dates from git, only from the pull manifest
     }),
   );
   assert.deepEqual(readSourceDates(clone), { "content/a.md": "2026-02-02" });
-});
-
-await test("the module is a frozen object of the dates", () => {
-  assert.match(
-    sourceDatesModule({ "content/a.md": "2026-03-01" }),
-    /export const SOURCE_DATES = Object\.freeze\(\{\n  "content\/a\.md": "2026-03-01"\n\}\);\n$/,
-  );
 });

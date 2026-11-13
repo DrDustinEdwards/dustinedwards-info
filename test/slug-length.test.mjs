@@ -4,8 +4,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
-
 import { frontmatterSchema } from "../app/lib/content/pipeline.mjs";
 
 /**
@@ -29,15 +27,6 @@ const rest = {
   description: "A description.",
 };
 
-await test("the fixture builder produces slugs of the exact length, shape-valid", () => {
-  /* A builder that returned 119 characters when asked for 121 would make every refusal below
-   * prove the wrong thing. */
-  for (const n of [1, 120, 121, 200]) {
-    assert.equal(slugOfLength(n).length, n, `asked for ${n}`);
-    assert.ok(SLUG_PATTERN.test(slugOfLength(n)), `${n} is shape-valid`);
-  }
-});
-
 await test("a 121-character slug is REFUSED by the frontmatter schema", () => {
   const result = frontmatterSchema.safeParse({ ...rest, slug: slugOfLength(121) });
   assert.equal(result.success, false, "121 characters must not parse");
@@ -52,11 +41,4 @@ await test("a 120-character slug is ACCEPTED, so the bound is where it says it i
    * perfectly well and is not the rule anybody meant. */
   const result = frontmatterSchema.safeParse({ ...rest, slug: slugOfLength(120) });
   assert.equal(result.success, true, JSON.stringify(result.error?.issues ?? []));
-});
-
-await test("the shape rule still bites, so the cap did not replace it", () => {
-  for (const bad of ["Not-Kebab", "trailing-", "double--hyphen", "under_score", ""]) {
-    const result = frontmatterSchema.safeParse({ ...rest, slug: bad });
-    assert.equal(result.success, false, `${JSON.stringify(bad)} must not parse`);
-  }
 });

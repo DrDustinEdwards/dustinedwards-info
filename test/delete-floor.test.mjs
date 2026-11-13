@@ -28,10 +28,6 @@ await test("an artifact with no posts key, or not an object at all, is refused",
   }
 });
 
-await test("a whole artifact hands back its posts", () => {
-  assert.deepEqual(requirePosts({ posts: [POST] }, "posts.json"), [POST]);
-});
-
 await test("a delete that keeps nothing is refused", () => {
   assert.match(
     deleteFloor({ what: "file-sourced posts", keeping: 0, removing: 15 }) ?? "",
@@ -68,10 +64,6 @@ await test("an unreadable count refuses rather than passing", () => {
       `keeping=${String(bad)}`,
     );
   }
-});
-
-await test("a whole post has no sync problems", () => {
-  assert.deepEqual(syncablePostProblems([POST]), []);
 });
 
 await test("REPLAY: a post without mediaRefs is refused, since media_refs is replaced wholesale", () => {

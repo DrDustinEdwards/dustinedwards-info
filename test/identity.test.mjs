@@ -5,7 +5,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
-import { deriveIdentity, joinList } from "../app/lib/identity.mjs";
+import { deriveIdentity } from "../app/lib/identity.mjs";
 import { IDENTITY_TOKEN_KEYS, expandPageTokens } from "../app/lib/pages/compile.mjs";
 import { SITE, personNode } from "../app/lib/seo.ts";
 import { CV_PAGE, buildCv } from "../app/lib/cv/entries.mjs";
@@ -82,13 +82,6 @@ await test("a CV with no current position, two, or an incomplete person cannot g
   const noDiscipline = deriveIdentity({ ...PERSON, discipline: "" }, ENTRIES);
   assert.equal(noDiscipline.ok, false);
   assert.match(JSON.stringify(noDiscipline), /person\.discipline is missing/);
-});
-
-await test("joinList writes one, two and three or more", () => {
-  assert.equal(joinList([]), "");
-  assert.equal(joinList(["a"]), "a");
-  assert.equal(joinList(["a", "b"]), "a and b");
-  assert.equal(joinList(["a", "b", "c"]), "a, b, and c");
 });
 
 await test("the generated module is exactly what the CV files derive, so no copy of the identity goes stale", () => {

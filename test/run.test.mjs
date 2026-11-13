@@ -1,13 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  finishRun,
-  newRun,
-  setNote,
-  setRunNote,
-  toggleDone,
-} from "capsomer/behavior/checklist-run-model";
+import { finishRun, newRun, setRunNote } from "capsomer/behavior/checklist-run-model";
 
 import { labRunRecord } from "../app/kb/procedures/run.mjs";
 
@@ -38,27 +32,6 @@ const STEPS = [
   },
   { key: "part-b.1", number: 1, section: "Part B", text: "Dry the pellet." },
 ];
-await test("the record is Capsomer's run record, named for this site, with the checklist named procedure", () => {
-  let run = newRun(procedure, T0);
-  run = toggleDone(run, "part-a.1", T0 + 60_000);
-  run = setNote(run, "part-a.2", "centrifuge 2 was out");
-  run = finishRun(run, T0 + 3_600_000);
-  const rec = labRunRecord(run, STEPS);
-  assert.equal(rec.record, "dustinedwards.info run");
-  assert.equal(rec.format, 1);
-  assert.deepEqual(rec.procedure, { path: procedure.path, title: procedure.title, version: "3" });
-  assert.equal("checklist" in rec, false);
-  assert.equal(rec.finishedAt, "2026-10-03T16:00:00.000Z");
-  assert.deepEqual(
-    rec.steps.map((s) => [s.step, s.section, s.done, s.note]),
-    [
-      [1, "Part A", true, ""],
-      [2, "Part A", false, "centrifuge 2 was out"],
-      [1, "Part B", false, ""],
-    ],
-    "the second step 1 is its own step",
-  );
-});
 
 await test("the JSON record is a Bioschemas LabProcess that executes the procedure's LabProtocol, at the version run", () => {
   let run = newRun(procedure, T0);

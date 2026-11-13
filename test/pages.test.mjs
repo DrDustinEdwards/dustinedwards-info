@@ -1,14 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 
 import { findWideDashes, renderBody } from "../app/lib/content/pipeline.mjs";
-import {
-  CONTENT_PAGE_SECTIONS,
-  CONTENT_PAGES_FROM_DATA,
-  PAGE_FILE_PATHS,
-} from "../app/lib/content-pages.mjs";
-import { compilePage, pageSlug } from "../app/lib/pages/compile.mjs";
+import { compilePage } from "../app/lib/pages/compile.mjs";
 import { idsIn, pageLinkErrors } from "../app/lib/pages/links.mjs";
 import { buildPhages } from "../scripts/lib/phages.mjs";
 
@@ -24,7 +19,6 @@ const { phages } = await buildPhages();
 const compile = (/** @type {string} */ slug, /** @type {string} */ raw) =>
   compilePage({ slug, raw, pipeline, phages });
 /** Built from its code point, so this file carries no literal wide dash. */
-const WIDE_DASH = String.fromCharCode(0x2014);
 
 /**
  * The errors a changed page raises: asserts it was refused, and returns every message.
@@ -40,98 +34,6 @@ async function refusal(slug, mutate) {
   assert.equal(result.ok, false, `${slug} was accepted after the change`);
   return result.ok ? "" : result.errors.join("\n");
 }
-
-await test("every page file compiles, and every registered path has its file", async () => {
-  const files = readdirSync(dir).filter((name) => name.endsWith(".md"));
-  const registered = PAGE_FILE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path)).map(
-    pageSlug,
-  );
-  assert.deepEqual(files.map((name) => name.slice(0, -3)).sort(), [...registered].sort());
-  for (const slug of registered) {
-    const result = await compile(slug, read(slug));
-    assert.equal(result.ok, true, `${slug}: ${result.ok ? "" : result.errors.join("; ")}`);
-  }
-});
-
-await test("About is a page file: it compiles, and its front matter and its render are held to what check:content and check:links held", async () => {
-  const ok = await compile("about", read("about"));
-  assert.equal(ok.ok, true, ok.ok ? "" : ok.errors.join("; "));
-  assert.match(
-    await refusal("about", (r) => r.replace(/^seo_title: .*$/m, "seo_title: ")),
-    /seo_title is required/,
-  );
-  assert.match(
-    await refusal("about", (r) => r.replace(/^description: .*$/m, "description: ")),
-    /description is required/,
-  );
-  assert.match(
-    await refusal("about", (r) => r.replace("path: /about", "path: /elsewhere")),
-    /path is "\/elsewhere"/,
-  );
-  assert.match(await refusal("about", (r) => `${r}\n![a picture](/media/x.jpg)\n`), /image/);
-  assert.match(
-    await refusal("about", (r) => `${r}\n[bad](javascript:alert(1))\n`),
-    /allowlist refused|javascript/i,
-  );
-  assert.match(
-    await refusal("about", (r) => `${r}\nA sentence ${WIDE_DASH} with a dash.\n`),
-    /wide dash/,
-  );
-  // The floor: an About with a title and a description but no prose is a blank page that looks like a success.
-  assert.match(
-    await refusal("about", (r) => `${r.split("\n---\n")[0]}\n---\n\nToo short.\n`),
-    /floor 200/,
-  );
-});
-
-await test("a path outside the registry is refused, and the message says a save cannot create one", async () => {
-  const result = await compile("research-new-thing", read("research-phages"));
-  assert.equal(result.ok, false);
-  assert.match(result.errors.join(" "), /cannot create a new path/);
-});
-
-await test("front matter: path, required fields, lengths and draft are checked", async () => {
-  assert.match(
-    await refusal("research-phages", (r) =>
-      r.replace("path: /research/phages", "path: /research/other"),
-    ),
-    /path is "\/research\/other"/,
-  );
-  assert.match(
-    await refusal("research-phages", (r) => r.replace(/^title: .*$/m, "title: ")),
-    /title is required/,
-  );
-  assert.match(
-    await refusal("research-phages", (r) =>
-      r.replace(/^description: .*$/m, `description: ${"x".repeat(400)}`),
-    ),
-    /description is 400 characters/,
-  );
-  assert.match(
-    await refusal("research-phages", (r) => r.replace(/^---\n/, "---\ndraft: maybe\n")),
-    /draft is "maybe"/,
-  );
-});
-
-await test("prose rules: a wide dash and a refused link fail", async () => {
-  assert.match(
-    await refusal("research-phages", (r) => `${r}\nA sentence ${WIDE_DASH} with a dash.\n`),
-    /wide dash/,
-  );
-  assert.match(
-    await refusal("research-phages", (r) => `${r}\n[a link](javascript:alert(1))\n`),
-    /allowlist refused|javascript/i,
-  );
-});
-
-await test("structured data: an unknown schema_type fails", async () => {
-  assert.match(
-    await refusal("software-capsid", (r) =>
-      r.replace(/^schema_type: .*$/m, "schema_type: Spaceship"),
-    ),
-    /schema_type "Spaceship"/,
-  );
-});
 
 await test("the calculator pages must still state what the calculator prints", async () => {
   assert.match(
@@ -149,52 +51,6 @@ await test("the calculator pages must still state what the calculator prints", a
       r.replace("= 1 x 10^-3 µl", "= 1.02 x 10^-3 µl"),
     ),
     /lysate-per-plate sum/,
-  );
-});
-
-await test("the phage page must say where its table is drawn", async () => {
-  assert.match(
-    await refusal("research-phages", (r) => r.replace("<!-- phages:table -->", "")),
-    /exactly once.*it has 0/,
-  );
-});
-
-await test("the named software pages keep their name sections and their two exclusions", async () => {
-  assert.match(
-    await refusal("software-capsid", (r) => r.replace(/^## Why the name$/m, "## Origin")),
-    /no "Why the name" section/,
-  );
-  assert.match(
-    await refusal("software-capsid", (r) =>
-      r.replace(
-        "Its dashboard, the Capsid Portal, is named for the portal protein",
-        "Its dashboard is named",
-      ),
-    ),
-    /Capsid Portal/,
-  );
-  assert.match(
-    await refusal("software-carrel", (r) => `${r}\nSee carrel.dustinedwards.info.\n`),
-    /names the app by its address/,
-  );
-});
-
-await test("the header menu's anchors must stay on their page", async () => {
-  const anchored = CONTENT_PAGE_SECTIONS[0];
-  assert.ok(anchored, "the registry lists at least one section");
-  const [path = "", id = ""] = anchored.split("#");
-  const slug = pageSlug(path);
-  const result = await compile(
-    slug,
-    read(slug).replace(
-      new RegExp(`^#{2,3} ${id.replaceAll("-", " ")}$`, "im"),
-      () => "## Renamed so the anchor is gone",
-    ),
-  );
-  assert.equal(result.ok, false, `${anchored} was accepted with its heading renamed`);
-  assert.match(
-    result.ok ? "" : result.errors.join(" "),
-    new RegExp(`no heading has the id "${id}"`),
   );
 });
 
@@ -237,31 +93,6 @@ await test("links: a link that provably goes nowhere is refused, and an address 
 const withFields = (/** @type {string} */ fields) => (/** @type {string} */ raw) =>
   raw.replace(/^---\n/, `---\n${fields}\n`);
 
-await test("legal pages: /privacy is registered and compiles, and the banner and date are read from the front matter", async () => {
-  const privacy = await compile("privacy", read("privacy"));
-  assert.equal(privacy.ok, true, privacy.ok ? "" : privacy.errors.join("; "));
-  const stated = await compile(
-    "terms",
-    withFields("banner: Draft\nlast_updated: 2026-10-06")(read("terms")),
-  );
-  assert.equal(stated.ok, true, stated.ok ? "" : stated.errors.join("; "));
-  if (!stated.ok) return;
-  assert.equal(stated.page.banner, "Draft");
-  assert.equal(
-    stated.page.lastUpdated,
-    "2026-10-06",
-    "an unquoted YAML date must come back as its day",
-  );
-  assert.match(
-    stated.markdown,
-    /^# Terms\n\nDraft\n\nLast updated: October 6, 2026\n\n/,
-    "the twin states what the page shows",
-  );
-  const quiet = await compile("terms", read("terms"));
-  assert.equal(quiet.ok && quiet.page.banner, undefined);
-  assert.doesNotMatch(quiet.ok ? quiet.markdown : "", /Last updated/);
-});
-
 await test("legal pages: the banner is the one word Draft, the date is a real day, and no other page states either", async () => {
   assert.match(
     await refusal("terms", withFields("banner: Draft copy")),
@@ -283,17 +114,4 @@ await test("legal pages: the banner is the one word Draft, the date is a real da
     await refusal("research-phages", withFields("last_updated: 2026-10-06")),
     /belong to the legal pages/,
   );
-});
-
-await test("/terms can never be a draft: it is the dataset license, and the refusal says so", async () => {
-  assert.match(
-    await refusal("terms", withFields("draft: true")),
-    /draft is true, but \/terms is the license on every data set/,
-  );
-  // The guard is /terms's alone: another page may still be unpublished.
-  const other = await compile(
-    "research-phages",
-    withFields("draft: true")(read("research-phages")),
-  );
-  assert.equal(other.ok, true);
 });

@@ -1,12 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  proofErrors,
-  proofFromFile,
-  proofMarkdown,
-  resolveProof,
-} from "../app/kb/procedures/proof.mjs";
+import { proofErrors, resolveProof } from "../app/kb/procedures/proof.mjs";
 
 /* Proof of use (app/kb/procedures/proof.mjs): stored slugs, resolved to words and addresses from rows, never inferred. */
 
@@ -27,17 +22,6 @@ await test("a proof of papers and phages is valid; every malformed shape is refu
   assert.match(proofErrors({ papers: ["a"], cited: ["x"] })[0], /no field "cited"/);
 });
 
-await test("the record keeps slugs only, and null when nothing is stated", () => {
-  assert.deepEqual(proofFromFile({ papers: ["p"], phages: ["arlo"] }), {
-    papers: ["p"],
-    phages: ["arlo"],
-  });
-  assert.deepEqual(proofFromFile({ phages: ["arlo"] }), { papers: [], phages: ["arlo"] });
-  assert.equal(proofFromFile(null), null);
-  assert.equal(proofFromFile(undefined), null);
-  assert.equal(proofFromFile({}), null);
-});
-
 const ROWS = {
   papers: new Map([["p1", { title: "A genome announcement", year: 2018 }]]),
   phages: new Map([["arlo", "Arlo"]]),
@@ -54,25 +38,4 @@ await test("the words and addresses come from the rows; a slug the rows lack sta
     { key: "nobody", name: "nobody", href: null },
   ]);
   assert.equal(resolveProof(null, ROWS), null);
-});
-
-await test("the twin lists the same papers and phages with absolute links, and nothing when there is no proof", () => {
-  const md = proofMarkdown(
-    resolveProof({ papers: ["p1"], phages: ["arlo"] }, ROWS),
-    "https://example.test",
-  );
-  assert.ok(md.startsWith("## Proof of use\n\nPapers that used this method:"));
-  assert.ok(
-    md.includes("- [A genome announcement](https://example.test/research/publications/p1/) (2018)"),
-  );
-  assert.ok(
-    md.includes("Phages it produced:\n\n- [Arlo](https://example.test/research/phages#arlo)"),
-  );
-  assert.equal(proofMarkdown(null, "https://example.test"), "");
-  assert.ok(
-    !proofMarkdown(
-      resolveProof(proofFromFile({ phages: ["arlo"] }), ROWS),
-      "https://example.test",
-    ).includes("Papers that used"),
-  );
 });

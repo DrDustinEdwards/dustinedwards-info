@@ -7,10 +7,6 @@ import assert from "node:assert/strict";
 import { copySlugCandidates } from "../app/lib/editor/duplicate.mjs";
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
-await test("the first candidate is the plain -copy form", () => {
-  assert.equal(copySlugCandidates("a-post")[0], "a-post-copy");
-});
-
 await test("later candidates are numbered from 2, never from 1", () => {
   // `-copy-1` would be a second name for the position `-copy` already holds.
   assert.deepEqual(copySlugCandidates("a-post", 4), [
@@ -47,9 +43,4 @@ await test("every candidate is a slug the URL rules accept", () => {
 await test("a slug that is nothing but the suffix keeps its own name as the base", () => {
   // Stripping would leave the empty string, and `-copy` is not a slug.
   assert.equal(copySlugCandidates("copy")[0], "copy-copy");
-});
-
-await test("the limit is honored, so the caller's probe loop is bounded", () => {
-  assert.equal(copySlugCandidates("a-post", 1).length, 1);
-  assert.equal(copySlugCandidates("a-post", 9).length, 9);
 });

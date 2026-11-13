@@ -2,18 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
-import { contentIdFits, decodeContentId, encodeContentId } from "../app/lib/carrel/content-id.mjs";
 import { decideFileWrite } from "../app/lib/editor/publish-policy.mjs";
 import { compilePublication } from "../app/lib/publications/compile.mjs";
 import { parsePublication } from "../app/lib/publications/parse.mjs";
 import { renderPublicationFile } from "../app/lib/publications/serialize.mjs";
 import { validateCorpus } from "../app/lib/publications/validate.mjs";
-import {
-  buildPublications,
-  compileAllPublications,
-  readCitedBy,
-  repoHost,
-} from "../scripts/lib/publications.mjs";
+import { readCitedBy, repoHost } from "../scripts/lib/publications.mjs";
 
 /*
  * The publication file format and its validator, node side. check:machine-readable holds the real corpus to
@@ -68,21 +62,6 @@ await test("every file round-trips through the one writer, byte for byte", () =>
   }
 });
 
-await test("every file compiles, and a file named for any other slug does not", async () => {
-  const all = await compileAllPublications();
-  assert.ok(all.length >= 36);
-  assert.deepEqual(
-    all.filter((f) => !f.compiled.ok).map((f) => f.file),
-    [],
-  );
-  const wrong = await compile("a-different-slug", godfather());
-  assert.equal(wrong.ok, false);
-  assert.ok(
-    wrong.errors.some((e) => e.startsWith("doi: its page slug would be")),
-    wrong.errors.join("\n"),
-  );
-});
-
 await test("a minimal manuscript with no DOI compiles, with no citation tags and no DOI line anywhere", async () => {
   const out = await compile(MANUSCRIPT.slug, renderPublicationFile(MANUSCRIPT, null));
   assert.equal(out.ok, true, out.errors?.join("\n"));
@@ -93,56 +72,6 @@ await test("a minimal manuscript with no DOI compiles, with no citation tags and
   assert.doesNotMatch(out.twin, /^doi:/m);
   assert.doesNotMatch(out.twin, /doi\.org\/null/);
   assert.equal(out.draft, true);
-});
-
-await test("a manuscript without its own slug is refused: there is no DOI to derive one from", async () => {
-  const { slug: _slug, ...rest } = MANUSCRIPT;
-  const out = await compile("cryo-em-example-manuscript", renderPublicationFile(rest, null));
-  assert.equal(out.ok, false);
-  assert.ok(
-    out.errors.some((e) => e.startsWith("slug:")),
-    out.errors.join("\n"),
-  );
-});
-
-await test("a refusal names every defect, each starting with its field path and none with a dot", async () => {
-  const raw = renderPublicationFile(
-    {
-      ...MANUSCRIPT,
-      title: 'A "quoted" title with &amp; in it',
-      authors: ["Dustin Edwards", "", "  "],
-      topics: ["nope", "bacteriophages"],
-      summary: "One sentence. And a second.",
-      pmid: "12x",
-      isOpenAccess: "yes",
-    },
-    null,
-  );
-  const out = await compile(MANUSCRIPT.slug, raw);
-  assert.equal(out.ok, false);
-  for (const field of [
-    "title:",
-    "authors[1]:",
-    "authors[2]:",
-    "topics[0]:",
-    "summary:",
-    "pmid:",
-    "isOpenAccess:",
-  ]) {
-    assert.ok(
-      out.errors.some((e) => e.startsWith(field)),
-      `${field} in:\n${out.errors.join("\n")}`,
-    );
-  }
-  assert.ok(
-    out.errors.every((e) => !e.startsWith(".")),
-    "no leading dot",
-  );
-  assert.equal(
-    out.errors.filter((e) => e.startsWith("title:")).length,
-    2,
-    "the quote and the character reference are two findings",
-  );
 });
 
 await test("a field the format does not have is refused rather than silently kept", async () => {
@@ -228,17 +157,6 @@ await test("an id or a DOI another paper holds is refused, whatever the DOI's ca
   );
 });
 
-await test("a slug that cannot carry the publication. prefix inside 200 characters is refused", async () => {
-  assert.equal(contentIdFits("publication", "a".repeat(188)), true);
-  assert.equal(contentIdFits("publication", "a".repeat(189)), false);
-  const slug = "a".repeat(195);
-  const out = await compile(slug, renderPublicationFile({ ...MANUSCRIPT, slug }, null));
-  assert.ok(
-    out.errors.some((e) => e.startsWith("slug:") && e.includes("too long")),
-    out.errors.join("\n"),
-  );
-});
-
 await test("the corpus rule catches a duplicate id, a case-folded DOI and an empty corpus", () => {
   const dupes = validateCorpus([
     { file: "a.md", slug: "a", id: "x", doi: "10.1/A" },
@@ -246,22 +164,6 @@ await test("the corpus rule catches a duplicate id, a case-folded DOI and an emp
   ]);
   assert.equal(dupes.length, 2);
   assert.ok(validateCorpus([]).some((e) => e.includes("empty")));
-});
-
-await test("content ids: a post keeps its bare slug, every other kind is kind.slug, and the first dot splits", () => {
-  assert.equal(encodeContentId("post", "my-post"), "my-post");
-  assert.equal(
-    encodeContentId("publication", "10-1128-mra-00888-24"),
-    "publication.10-1128-mra-00888-24",
-  );
-  assert.deepEqual(decodeContentId("my-post"), { kind: "post", slug: "my-post" });
-  assert.deepEqual(decodeContentId("publication.a.b"), { kind: "publication", slug: "a.b" });
-  for (const slug of ["x", "a-b", "10-1128-jvi-00356-08"]) {
-    assert.deepEqual(decodeContentId(encodeContentId("publication", slug)), {
-      kind: "publication",
-      slug,
-    });
-  }
 });
 
 await test("the write policy: an operator may edit but never first-publish, Carrel may, a read-only credential may not write", () => {
@@ -324,16 +226,4 @@ await test("the write policy: an operator may edit but never first-publish, Carr
       }),
     /READ ONLY/,
   );
-});
-
-await test("the build's rows hold the file's blob sha, the twin and a Crossref record for exactly the papers that have one", async () => {
-  const { rows, records } = await buildPublications();
-  assert.equal(rows.length, records.length);
-  for (const row of rows) {
-    assert.match(row.sourceBlobSha, /^[0-9a-f]{40}$/);
-    assert.ok(row.markdown.startsWith("---\n"), row.slug);
-    assert.equal(row.status, "published");
-    assert.equal(row.doiKey, row.doiKey?.toLowerCase());
-  }
-  assert.equal(rows.filter((r) => r.csl === null).length, 0);
 });

@@ -299,7 +299,7 @@ export function formerlyText(/** @type {Phage} */ { formerly }) {
 }
 
 /** One phage's row in the table, in the table's columns. The table is the page's only list of the phages, so a former name and a note ride in it. */
-export function phageTableRow(/** @type {Phage} */ phage) {
+function phageTableRow(/** @type {Phage} */ phage) {
   const cells = [
     `${phage.name}${formerlyText(phage)}`,
     String(phage.year),

@@ -74,7 +74,7 @@ export function citeFacts(record) {
  *
  * @param {string} name
  */
-export function familyGiven(name) {
+function familyGiven(name) {
   const words = name.trim().split(/\s+/);
   const family = words.pop() ?? "";
   return { family, given: words.join(" ") };

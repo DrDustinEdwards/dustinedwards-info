@@ -23,11 +23,6 @@ await test("a paper's key maps back to the page, with the trailing slash", () =>
   );
 });
 
-await test("the paper round trip is stable", () => {
-  const url = "/research/publications/10-3390-v3060861/";
-  assert.equal(urlForKey(keyForUrl(url)), url);
-});
-
 await test("a paper key with a section anchor is refused rather than guessed", () => {
   // A paper is indexed as ONE document, so no such key can be written by this
   // site. One arriving is an item from somewhere else, and a citation pointing

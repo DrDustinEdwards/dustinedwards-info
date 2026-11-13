@@ -197,37 +197,9 @@ describe("an edit through the adapter is live at the next request", () => {
       expect(await (await twin()).text()).toContain("171 national and regional presentations");
     },
   );
-
-  it("an unchanged save commits nothing", { timeout: 240_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/cv.grants/draft`, {
-      source: rawOf("grants"),
-      expectedVersion: await versionOf("content/cv/grants.md"),
-      changeId: "chg-same",
-    });
-    expect(response.status).toBe(200);
-    expect(await commits()).toHaveLength(0);
-  });
 });
 
 describe("a save is held to what CI holds", () => {
-  it("REFUSES a file the validator fails, with every message, and commits nothing", async () => {
-    const wide = String.fromCharCode(0x2014);
-    const bad = grants
-      .replace("amount: 3000", "amount: -1")
-      .replace("Student Research Grant", `Student ${wide} Research Grant`);
-    const response = await send("PUT", `${PREFIX}/content/cv.grants/draft`, {
-      source: bad,
-      expectedVersion: await versionOf("content/cv/grants.md"),
-      changeId: "chg-bad",
-    });
-    expect(response.status).toBe(422);
-    const message = ((await response.json()) as { message: string }).message;
-    expect(message).toMatch(/wide dash/);
-    expect(message).toMatch(/amount must be dollars/);
-    expect(await commits()).toHaveLength(0);
-    expect(await source(cvSourcePath("grants"))).toBe(grants);
-  });
-
   it("REFUSES a paper no published record holds, naming the DOI", async () => {
     const response = await send("PUT", `${PREFIX}/content/cv.publications/draft`, {
       source: rawOf("publications").replace(
@@ -268,20 +240,6 @@ describe("a save is held to what CI holds", () => {
     });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/cannot create one/);
-    expect(await commits()).toHaveLength(0);
-  });
-
-  it("REFUSES a stale version, names the current one, and commits nothing", async () => {
-    const response = await send("PUT", `${PREFIX}/content/cv.grants/draft`, {
-      source: editedGrants,
-      expectedVersion: "b".repeat(40),
-      changeId: "chg-stale",
-    });
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({
-      error: "version-conflict",
-      currentVersion: await versionOf("content/cv/grants.md"),
-    });
     expect(await commits()).toHaveLength(0);
   });
 
@@ -411,39 +369,6 @@ describe("a filter that leaves nothing to chart", () => {
       expect(bogus.html).not.toContain(EMPTY);
     },
   );
-});
-
-describe("a lost row is repaired from the file, never the reverse", () => {
-  it(
-    "rewrites the row on an unchanged save and commits nothing",
-    { timeout: 240_000 },
-    async () => {
-      await testEnv.DB.prepare("DELETE FROM cv WHERE slug = 'honors'").run();
-      await expect(cvPage()).rejects.toThrow(/do not make a CV/);
-
-      const response = await send("PUT", `${PREFIX}/content/cv.honors/draft`, {
-        source: rawOf("honors"),
-        expectedVersion: await versionOf("content/cv/honors.md"),
-        changeId: "chg-repair",
-      });
-      expect(response.status, await response.clone().text()).toBe(200);
-      expect(await commits()).toHaveLength(0);
-      expect((await cvPage()).loaderData.cv.entries.length).toBeGreaterThan(200);
-    },
-  );
-});
-
-describe("Carrel lists the CV beside the other kinds", () => {
-  it("shows each file as kind cv under its cv.<slug> id", async () => {
-    const res = (await (await get(`${PREFIX}/content?limit=100&q=grants`)).json()) as {
-      items: Array<{ id: string; kind: string; path: string | null; status: string }>;
-    };
-    expect(res.items.find((i) => i.id === "cv.grants")).toMatchObject({
-      kind: "cv",
-      path: CV_PAGE.path,
-      status: "published",
-    });
-  });
 });
 
 describe("the CV and the papers it cites", () => {

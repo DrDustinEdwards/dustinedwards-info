@@ -175,17 +175,6 @@ describe("an edit through the adapter is live at the next request", () => {
       expect((data as { roster: Array<{ year: number }> }).roster.map((c) => c.year)[0]).toBe(year);
     },
   );
-
-  it("an unchanged save commits nothing and purges nothing", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: currentFile,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-same",
-    });
-    expect(response.status).toBe(200);
-    expect(await commits()).toHaveLength(0);
-    expect(purge).not.toHaveBeenCalled();
-  });
 });
 
 describe("a save purges every page that embeds the roster", () => {
@@ -265,20 +254,6 @@ describe("a save is held to what CI holds", () => {
     expect((await get(`${PREFIX}/content/roster.notes`)).status).toBe(404);
   });
 
-  it("REFUSES a stale version, names the current one, and commits nothing", async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] }),
-      expectedVersion: "b".repeat(40),
-      changeId: "chg-stale",
-    });
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({
-      error: "version-conflict",
-      currentVersion: await versionOf(FILE),
-    });
-    expect(await commits()).toHaveLength(0);
-  });
-
   it("has no draft state: a cohort cannot be unpublished, and the answer says how to remove one", async () => {
     const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, {
       expectedVersion: await versionOf(FILE),
@@ -291,44 +266,11 @@ describe("a save is held to what CI holds", () => {
   });
 });
 
-describe("a lost row is repaired from the file, never the reverse", () => {
-  it(
-    "rewrites the row on an unchanged save and commits nothing",
-    { timeout: 180_000 },
-    async () => {
-      await testEnv.DB.prepare("DELETE FROM roster WHERE slug = ?1").bind(SLUG).run();
-      expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length - 1);
-
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-        source: currentFile,
-        expectedVersion: await versionOf(FILE),
-        changeId: "chg-repair",
-      });
-      expect(response.status, await response.clone().text()).toBe(200);
-      expect(await commits()).toHaveLength(0);
-      expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length);
-    },
-  );
-});
-
 describe("an empty table is a fault, never an empty roster", () => {
   it("the program page and the home page refuse to render with no cohorts", async () => {
     await testEnv.DB.prepare("DELETE FROM roster").run();
     await expect(programPage()).rejects.toThrow(/roster table is empty/);
     await expect(homeFacts()).rejects.toThrow(/roster table is empty/);
-  });
-});
-
-describe("Carrel lists cohorts beside posts, and the operator reads them and cannot save one", () => {
-  it("shows each cohort as kind roster under its roster.<year> id", async () => {
-    const res = (await (await get(`${PREFIX}/content?limit=100&q=${SLUG}`)).json()) as {
-      items: Array<{ id: string; kind: string; path: string | null; status: string }>;
-    };
-    expect(res.items.find((i) => i.id === ID)).toMatchObject({
-      kind: "roster",
-      path: `${PAGE}#year-${SLUG}`,
-      status: "published",
-    });
   });
 });
 

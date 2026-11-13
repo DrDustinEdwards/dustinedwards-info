@@ -175,11 +175,6 @@
     // The roster's metric derivations. check:features computes them through
     // metricValue, and the public Software pages are markdown, not this module.
     "app/lib/projects-page.mjs",
-    // The theme resolver. workers/app.ts builds its cache key with it and
-    // root.tsx writes data-theme from it, and test/theme.test.mjs reaches the
-    // same module rather than restating its rules. No DOM: it takes a Request,
-    // which the Node lib provides.
-    "app/lib/theme.ts",
     // The color math. check:contrast computes with it: there is one rule for a
     // ratio, not one per reader.
     "app/lib/contrast.mjs",

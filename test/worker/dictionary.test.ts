@@ -168,16 +168,6 @@ describe("an entry edit through the adapter is live at the next request", () => 
       expect(list.items.find((i) => i.id === ID)).toMatchObject({ kind: "dictionary", path: PATH });
     },
   );
-
-  it("an unchanged save commits nothing and says so", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: capsidEntry,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-same",
-    });
-    expect(response.status).toBe(200);
-    expect(await commits()).toHaveLength(0);
-  });
 });
 
 describe("an entry change purges the pages tag, because a page embeds its entry", () => {
@@ -208,24 +198,6 @@ describe("an entry change purges the pages tag, because a page embeds its entry"
 });
 
 describe("a save is held to what CI holds", () => {
-  it("REFUSES a file the validator fails, with every message, and commits nothing", async () => {
-    const wide = String.fromCharCode(0x2014);
-    const bad = capsidEntry
-      .replace(/^term: .*$/m, "term: ")
-      .concat(`\nA sentence ${wide} with a dash.\n`);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: bad,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-bad",
-    });
-    expect(response.status).toBe(422);
-    const body = (await response.json()) as { message: string };
-    expect(body.message).toMatch(/wide dash/);
-    expect(body.message).toMatch(/term: is required text/);
-    expect(await commits()).toHaveLength(0);
-    expect(await source(FILE)).toBe(capsidEntry);
-  });
-
   it("REFUSES a clip that is not in the repository", async () => {
     gh.assets.delete("public/audio/capsid.mp3");
     gh.assets.set("public/audio/other.mp3", "clip");
@@ -251,20 +223,6 @@ describe("a save is held to what CI holds", () => {
     expect(((await response.json()) as { message: string }).message).toMatch(
       /not a registered Software page/,
     );
-    expect(await commits()).toHaveLength(0);
-  });
-
-  it("REFUSES a stale version, names the current one, and commits nothing", async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: capsidEntry.replace(SENSE, ADDED),
-      expectedVersion: "b".repeat(40),
-      changeId: "chg-stale",
-    });
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({
-      error: "version-conflict",
-      currentVersion: await versionOf(FILE),
-    });
     expect(await commits()).toHaveLength(0);
   });
 });

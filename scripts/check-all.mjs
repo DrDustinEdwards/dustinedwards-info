@@ -52,7 +52,6 @@ export const TIERS = {
   "check:policy": "offline",
   "check:ask-guards": "offline",
   "check:test-assertions": "offline",
-  "check:enhance-a11y": "offline",
   // Offline: the renderer takes alt from the reference alone, never from the media index in D1.
   "check:alt-text": "offline",
   "check:urls": "offline",

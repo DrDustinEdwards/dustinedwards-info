@@ -51,7 +51,7 @@ export function wwwRedirectTarget(hostname, pathname, search) {
  * Not kept, and not put in R2: its protocol is rewritten as a page, so the old PDF address, which
  * still earns clicks, points there (Dustin, 2026-09-27).
  */
-export const BAYLOR_PDF = "/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.pdf";
+const BAYLOR_PDF = "/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.pdf";
 const CV_PDF = "/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf";
 
 /**

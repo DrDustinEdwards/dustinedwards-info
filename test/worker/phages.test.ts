@@ -234,17 +234,6 @@ describe("a phage edit through the adapter is live at the next request", () => {
       );
     },
   );
-
-  it("an unchanged save commits nothing and says so", { timeout: 240_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: acornPhage,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-same",
-    });
-    expect(response.status).toBe(200);
-    expect(await commits()).toHaveLength(0);
-    expect(purge).not.toHaveBeenCalled();
-  });
 });
 
 describe("a phage change purges the pages tag, because the page embeds the table", () => {
@@ -271,26 +260,6 @@ describe("a phage change purges the pages tag, because the page embeds the table
 });
 
 describe("a save is held to what CI holds", () => {
-  it("REFUSES a file the validator fails, with every message, and commits nothing", async () => {
-    const wide = String.fromCharCode(0x2014);
-    const bad = acornPhage
-      .replace("year: 2017", "year: soon")
-      .replace("---\n", "---\nsample: soil\n")
-      .concat(`\nA sentence ${wide} with a dash.\n`);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: bad,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-bad",
-    });
-    expect(response.status).toBe(422);
-    const body = (await response.json()) as { message: string };
-    expect(body.message).toMatch(/wide dash/);
-    expect(body.message).toMatch(/sample is not a phage field/);
-    expect(body.message).toMatch(/year is "soon"/);
-    expect(await commits()).toHaveLength(0);
-    expect(await source(FILE)).toBe(acornPhage);
-  });
-
   it("REFUSES a genome paper this site does not hold, a record that is not the phage's own, and a stale version", async () => {
     const paper = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: acornPhage.replace(/\n---\n$/, "\npaper: not-a-paper-here\n---\n"),

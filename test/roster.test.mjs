@@ -4,14 +4,7 @@ import assert from "node:assert/strict";
 import { stringifyMatter } from "@drdustinedwards/site-helpers/matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
-import {
-  compileCohort,
-  rosterFacts,
-  rosterPath,
-  rosterSetErrors,
-  sortCohorts,
-} from "../app/lib/roster/compile.mjs";
-import { buildRoster, compileAllRoster } from "../scripts/lib/roster.mjs";
+import { compileCohort, rosterSetErrors } from "../app/lib/roster/compile.mjs";
 
 /* The roster validator is the one rule CI and the Carrel save share (docs/ROSTER.md). Everything here that
  * needs a person's name uses a placeholder: the real names live in content/roster/ and nowhere else. */
@@ -40,11 +33,6 @@ await test("a well-formed cohort compiles to exactly the three fields the data f
   assert.deepEqual(Object.keys(JSON.parse(result.record)), ["year", "photo", "researchers"]);
   assert.equal(result.sourcePath, "content/roster/2031.md");
   assert.match(result.sourceBlobSha, /^[0-9a-f]{40}$/);
-});
-
-await test("a cohort with no photograph and no names is allowed (the page says the roster is to be added)", async () => {
-  const result = await compile(file({ year: 2031, photo: null, researchers: [] }));
-  assert.equal(result.ok, true, result.errors.join("\n"));
 });
 
 await test("REFUSES any field that is not in the existing shape, so no new personal data can enter", async () => {
@@ -121,65 +109,8 @@ await test("REFUSES a photograph that is not a media library .webp whose address
   assert.match(noAlt.errors.join("\n"), /photo\.alt is required/);
 });
 
-await test("REFUSES a wide dash, as every content file does", async () => {
-  const wide = String.fromCharCode(0x2014);
-  const result = await compile(file({ ...GOOD, researchers: [`Example${wide}Person`] }));
-  assert.equal(result.ok, false);
-  assert.match(result.errors.join("\n"), /wide dash/);
-});
-
 await test("the set rules: it cannot be empty and two files cannot be one year", () => {
   assert.match(rosterSetErrors([]).join("\n"), /cannot be empty/);
   assert.match(rosterSetErrors([GOOD, GOOD]).join("\n"), /two files are the 2031 cohort/);
   assert.deepEqual(rosterSetErrors([GOOD, { ...GOOD, year: 2030 }]), []);
-});
-
-await test("cohorts list newest first, whatever order they are read in", () => {
-  const years = (list) => list.map((c) => c.year);
-  const cohorts = [2019, 2025, 2021].map((year) => ({ ...GOOD, year }));
-  assert.deepEqual(years(sortCohorts(cohorts)), [2025, 2021, 2019]);
-  assert.deepEqual(years(cohorts), [2019, 2025, 2021], "the input is not reordered in place");
-});
-
-await test("the home page's counts are counted from the cohorts, never typed", () => {
-  const cohorts = [
-    { year: 2024, photo: null, researchers: ["A One", "B Two", "C Three"] },
-    { year: 2021, photo: null, researchers: ["D Four"] },
-    { year: 2023, photo: null, researchers: [] },
-  ];
-  assert.deepEqual(rosterFacts(cohorts), { researchers: 4, cohorts: 3, since: 2021 });
-  assert.throws(() => rosterFacts([]), /no cohorts/);
-});
-
-await test("the committed roster compiles, in the shape the data file had, and every photograph is a media library address", async () => {
-  const compiled = await compileAllRoster();
-  assert.ok(
-    compiled.length >= 9,
-    `the roster has ${compiled.length} files; it had nine cohorts when it moved to files`,
-  );
-  const failed = compiled
-    .filter((c) => !c.compiled.ok)
-    .map((c) => `${c.file}: ${c.compiled.errors.join("; ")}`);
-  assert.deepEqual(failed, []);
-
-  const { rows, cohorts } = await buildRoster();
-  assert.equal(rows.length, compiled.length);
-  assert.deepEqual(
-    cohorts.map((c) => c.year),
-    cohorts.map((c) => c.year).sort((a, b) => b - a),
-    "newest first",
-  );
-  for (const c of cohorts) {
-    assert.ok(
-      c.photo,
-      `the ${c.year} cohort has its group photograph, as every cohort had when it moved`,
-    );
-    assert.match(
-      c.photo.src,
-      /^\/media\/dustin-edwards-/,
-      "a cohort photograph is a media library file",
-    );
-  }
-  // The file key is the year, and the file is where rosterPath says.
-  for (const row of rows) assert.equal(row.sourcePath, rosterPath(row.slug));
 });

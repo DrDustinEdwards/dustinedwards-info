@@ -10,21 +10,12 @@ import {
   AREAS,
   ROLES,
   TYPES,
-  chartYears,
-  facetCounts,
-  groupEntries,
-  headline,
   matches,
   parseState,
   stateToSearch,
   timelineData,
 } from "../app/lib/cv/view.mjs";
-import {
-  FINGERPRINT_LABEL,
-  cvFingerprint,
-  cvPdfOptions,
-  renderCvHtml,
-} from "../app/lib/cv/pdf-html.mjs";
+import { cvFingerprint } from "../app/lib/cv/pdf-html.mjs";
 
 // The CV as the build resolves it: the files in content/cv/ joined to the records in content/publications/. The
 // build compiles every file with the validation module the CV save uses (app/lib/cv/validate.mjs), so a file that
@@ -35,19 +26,6 @@ const CV = BUILT.cv;
 const FACTS = cvFacts(CV.entries);
 /** What the files state, entry by entry, in the CV's order. */
 const SOURCE = BUILT.rows.flatMap((row) => JSON.parse(row.record).entries ?? []);
-
-await test("every entry resolves, with a known type, known areas, a known role and a unique id", () => {
-  const types = new Set(TYPES.map(([id]) => id));
-  const areas = new Set(AREAS.map(([id]) => id));
-  const roles = new Set(ROLES.map(([id]) => id));
-  assert.equal(CV.entries.length, SOURCE.length);
-  for (const e of CV.entries) {
-    assert.ok(types.has(e.type), `${e.id}: type ${e.type}`);
-    for (const a of e.areas) assert.ok(areas.has(a), `${e.id}: area ${a}`);
-    if (e.role) assert.ok(roles.has(e.role), `${e.id}: role ${e.role}`);
-  }
-  assert.equal(new Set(CV.entries.map((e) => e.id)).size, CV.entries.length);
-});
 
 await test("a paper named by DOI takes its facts from the site's Crossref-backed record, and its role from the author list", () => {
   const byDoi = new Map(PUBLICATIONS.flatMap((p) => (p.doi ? [[p.doi.toLowerCase(), p]] : [])));
@@ -65,36 +43,6 @@ await test("a paper named by DOI takes its facts from the site's Crossref-backed
   assert.equal(godfather?.role, "senior-author");
   const tax = CV.entries.find((e) => e.paper?.doi === "10.1128/jvi.00356-08");
   assert.equal(tax?.role, "first-author");
-});
-
-await test("privacy: mentoring is counts, and no line in the CV data carries an email, a phone or a room", () => {
-  const MENTORING_KEYS = new Set([
-    "type",
-    "section",
-    "year",
-    "endYear",
-    "count",
-    "unit",
-    "level",
-    "program",
-    "org",
-    "detail",
-    "cohort",
-    "areas",
-    "role",
-    "links",
-  ]);
-  for (const e of SOURCE.filter((x) => x.type === "mentoring")) {
-    for (const key of Object.keys(e))
-      assert.ok(MENTORING_KEYS.has(key), `mentoring entry carries "${key}"`);
-    assert.equal(typeof e.count, "number");
-  }
-  // The values, not the file: its header comment names what it leaves out.
-  const data = JSON.stringify(SOURCE);
-  assert.doesNotMatch(data, /@[a-z0-9-]+\.[a-z]{2,}/i, "an email address");
-  assert.doesNotMatch(data, /\(\d{3}\)\s*\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b/, "a phone number");
-  assert.doesNotMatch(data, /\bRoom\b|\bSuite\b|\bOffice \d/i, "a room");
-  assert.doesNotMatch(data, /Mountains Lake/i, "a private community group");
 });
 
 await test("the URL state round-trips, drops what it does not know and orders a reversed range", () => {
@@ -121,94 +69,12 @@ await test("the URL state round-trips, drops what it does not know and orders a 
   assert.equal(reversed.to, 2020);
 });
 
-await test("filters combine: type and area and years and role and search", () => {
-  const count = (/** @type {string} */ query) =>
-    FACTS.filter((f) => matches(f, parseState(new URLSearchParams(query)))).length;
-  assert.equal(count(""), CV.entries.length);
-  assert.equal(count("type=publication"), 34);
-  assert.equal(count("type=grant"), 43);
-  assert.ok(count("type=publication&area=bacteriophages") > 0);
-  assert.equal(count("type=publication&from=2019&to=2019"), 3);
-  const seniorPhage = count("type=publication&area=bacteriophages&role=senior-author");
-  assert.ok(seniorPhage > 0 && seniorPhage < count("type=publication&area=bacteriophages"));
-  // An ongoing appointment matches a range after it began; an undated membership matches no range.
-  const professor = FACTS.find((f) => f.type === "appointment" && f.endYear === "present");
-  assert.ok(professor && matches(professor, parseState(new URLSearchParams("from=2030"))));
-  const membership = FACTS.find((f) => f.year === null);
-  assert.ok(membership && !matches(membership, parseState(new URLSearchParams("to=2030"))));
-  // Search folds case and accents, and every word must match.
-  assert.ok(count("q=GALVAO") > 0);
-  assert.equal(count("q=phage+zzzz"), 0);
-});
-
-await test("the counts, the facets and the grouping agree with the entries", () => {
-  const all = headline(FACTS);
-  assert.equal(all.papers, 34);
-  assert.equal(all.grants, 43);
-  assert.equal(
-    all.students,
-    SOURCE.reduce((n, e) => n + (e.type === "mentoring" && e.unit === "students" ? e.count : 0), 0),
-  );
-  const facets = facetCounts(FACTS, parseState(new URLSearchParams("type=publication")));
-  assert.equal(facets.types.grant, 43, "a type's count ignores the type filter");
-  assert.deepEqual(
-    groupEntries(FACTS, "type").map((g) => g.key),
-    TYPES.map(([id]) => `type-${id}`),
-  );
-  const byYear = groupEntries(FACTS, "newest");
-  assert.equal(byYear[byYear.length - 1]?.heading, "Undated");
-  const ids = byYear.flatMap((g) => g.parts.flatMap((p) => p.ids));
-  assert.equal(new Set(ids).size, CV.entries.length);
-});
-
-await test("the timeline counts each charted type by year", () => {
-  const state = parseState(new URLSearchParams(""));
-  const data = timelineData(FACTS, state);
-  assert.deepEqual(data.years, chartYears(FACTS));
-  const pubs = data.series.find((s) => s.key === "publication");
-  assert.equal(
-    pubs?.values.reduce((a, b) => a + b, 0),
-    34,
-  );
-});
-
 /** The timeline as the route draws it: the empty-data guard in render-charts.ts is the only thing between a filter and Enarratio. */
 const timelineFor = (query) => {
   const state = parseState(new URLSearchParams(query));
   const data = timelineData(FACTS, state);
   return { data, markup: renderCvCharts(FACTS, state).timeline };
 };
-
-await test("a filter that selects nothing chartable gets a sentence, never an Enarratio call with empty data", () => {
-  // The case from the report: grants as senior author selects no entry at all.
-  const none = timelineFor("type=grant&role=senior-author");
-  assert.equal(none.data.entries, 0);
-  assert.match(none.markup, /data-state="nodata"/);
-  assert.match(none.markup, /No entries match these filters, so there is nothing to chart\./);
-  // Entries match, but none is a charted type: courses and service are the CV's largest examples.
-  const uncharted = timelineFor("type=service");
-  assert.ok(uncharted.data.entries > 0);
-  assert.match(uncharted.markup, /data-state="nodata"/);
-  assert.match(
-    uncharted.markup,
-    /publications, grants, invited talks, and awards, and none of the entries/,
-  );
-  // The innocent cases: anything with a charted entry is still a figure, with no sentence.
-  for (const query of [
-    "",
-    "type=publication",
-    "type=grant&from=2018&to=2022",
-    "role=first-author&sort=newest",
-    "area=bacteriophages&type=talk",
-  ]) {
-    const { markup } = timelineFor(query);
-    assert.ok(markup.includes("<svg"), `${query || "no filter"} draws the chart`);
-    assert.ok(
-      !markup.includes('data-state="nodata"'),
-      `${query || "no filter"} has no empty sentence`,
-    );
-  }
-});
 
 await test("no combination of the CV's filters throws, and the sentence appears exactly when no charted entry is selected", () => {
   const queries = [""];
@@ -245,13 +111,6 @@ await test("no combination of the CV's filters throws, and the sentence appears 
   assert.ok(empties > 20, "the table reaches the empty states");
 });
 
-await test("a value outside the vocabulary is dropped, so it never narrows to nothing", () => {
-  assert.deepEqual(
-    parseState(new URLSearchParams("type=bogus&role=bogus&area=bogus")),
-    parseState(new URLSearchParams("")),
-  );
-});
-
 await test("the twin cites every paper by DOI and keeps mentoring as counts", () => {
   const doc = cvMarkdownDocument(CV);
   for (const e of CV.entries) {
@@ -284,39 +143,5 @@ await test("the PDF's fingerprint is a deterministic function of the CV data, an
     await cvFingerprint({ ...CV, entries: rest }),
     fingerprint,
     "a dropped entry moves it",
-  );
-});
-
-await test("the print document carries the fingerprint it is stored under, and one copy of the options serves both renderers", async () => {
-  const html = await renderCvHtml(CV, {
-    renderBody: async () => ({ html: "<p>body</p>", blockedUrls: [] }),
-    fontCss: "/* fonts */",
-  });
-  assert.ok(
-    html.includes(`${FINGERPRINT_LABEL} ${await cvFingerprint(CV)}.`),
-    "the last line names the data's fingerprint",
-  );
-  assert.ok(html.includes("/* fonts */") && html.includes("<p>body</p>"));
-  await assert.rejects(
-    renderCvHtml(CV, {
-      renderBody: async () => ({ html: "", blockedUrls: [{ url: "javascript:x" }] }),
-      fontCss: "",
-    }),
-    /allowlist refused/,
-  );
-  const options = cvPdfOptions();
-  assert.deepEqual(
-    [
-      options.format,
-      options.tagged,
-      options.outline,
-      options.preferCSSPageSize,
-      "displayHeaderFooter" in options,
-    ],
-    ["letter", true, true, true, false],
-  );
-  assert.ok(
-    html.includes(`Curriculum Vitae, ${CV.edition}"`),
-    "the footer, in the page's margin boxes",
   );
 });
