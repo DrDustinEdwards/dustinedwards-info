@@ -219,10 +219,10 @@
 /* The site's own display scale: the cover's h1, the part titles and the small print. Everything else is
    Capsomer's type tokens. */
 :root {
-  --t-small-size: 0.875rem;
+  --t-small-size: var(--fs-body);
 
   /* The manual's heads: Medium sans, the h2 a part title over a hairline (capsomer/manual.css). */
-  --t-h2-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+  --t-h2-size: clamp(var(--title-4), 1.1rem + 0.6vw, var(--title-3));
 
   --t-h1-family: var(--font-sans);
   --t-h1-size: clamp(2.5rem, 1.6rem + 3.6vw, 4.5rem);
@@ -231,7 +231,7 @@
      draws Inter's display cut at this size, already set tight, so the tracking stays light. */
   --t-h1-weight: var(--weight-title);
   --t-h1-vars: "wght" 300;
-  --t-h1-tracking: -0.02em;
+  --t-h1-tracking: var(--tracking-tight);
 }
 
 /* Not in the theme blocks: check:contrast requires every token there to be a hex in a measured pair. */
@@ -593,7 +593,7 @@
   .btn-danger,
   .cap-skip,
   .ask-badge {
-    outline: 1px solid transparent;
+    outline: var(--line-w) solid transparent;
   }
 }
 
@@ -601,7 +601,7 @@ html,
 body {
   /* On body, not the token block (check:contrast parses those as colors), and not .admin, because the
      public chrome reads it. */
-  --site-inset: 1.5rem;
+  --site-inset: var(--space-6);
   background: var(--paper);
   color: var(--text);
   font-family: var(--font-sans);
@@ -642,7 +642,7 @@ a:where(
 }
 
 a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)) {
-  border-radius: 3px;
+  border-radius: var(--radius-s);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
@@ -692,8 +692,8 @@ a:active:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a))
    unlayered, this rule put a second ring inside the first. */
 @layer cap.base {
   :focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 2px;
+    outline: var(--focus-width) solid var(--brand);
+    outline-offset: var(--focus-offset);
   }
 }
 

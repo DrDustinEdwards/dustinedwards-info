@@ -1,6 +1,6 @@
 /* Left-aligned under the running head, at the same gutter, as the manual's pages hang from their head. */
 .page {
-  padding-block: 2rem;
+  padding-block: var(--space-7);
 }
 
 .page-inner {
@@ -42,7 +42,7 @@
 .page-contents-label {
   margin: 0 0 var(--space-3);
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: var(--leading-relaxed);
 }
 
 /* The public plane's link rules are unlayered and the index's layered, so its ink is restated here. */
@@ -61,7 +61,7 @@
   gap: var(--space-4);
   min-block-size: 0;
   padding-block: var(--space-3);
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
   line-height: 1.35;
 }
 
@@ -89,8 +89,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
-  margin: 0.75rem 0 1.25rem;
+  gap: var(--space-3) var(--space-5);
+  margin: var(--space-4) 0 1.25rem;
 }
 
 .legal-status p {
@@ -98,19 +98,19 @@
 }
 
 .legal-banner {
-  padding: 0.125rem 0.625rem;
+  padding: var(--space-1) var(--space-3-5);
   border: var(--line-w) solid var(--border-warning);
   background: var(--tint-warning);
   color: var(--on-tint-warning);
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: var(--fs-body);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
 }
 
 .legal-updated {
   color: var(--text-secondary);
-  font-size: 0.9375rem;
+  font-size: var(--fs-lead);
 }
 
 /* A page that sets its own head (about, contact, gone) takes the same title as `.page-title`. */

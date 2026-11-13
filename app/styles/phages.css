@@ -1,11 +1,11 @@
 /* The phage table on /research/phages (app/routes/phages.tsx): Capsomer's catalog, in its purple family and manual look. */
 .phage-catalog {
-  margin-block: 1.5rem 2rem;
+  margin-block: var(--space-6) var(--space-7);
 }
 
 /* A row is a phage's anchor (/research/phages#acorn15): land it below the sticky header. */
 .phage-catalog [id] {
-  scroll-margin-top: calc(var(--header-h) + 1rem);
+  scroll-margin-top: calc(var(--header-h) + var(--space-5));
 }
 
 /* A note ("A manuscript on Rira is submitted.") wraps under the name instead of widening the table. */

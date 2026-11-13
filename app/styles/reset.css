@@ -14,7 +14,7 @@
 
 html,
 :host {
-  line-height: 1.5;
+  line-height: var(--leading-normal);
   -webkit-text-size-adjust: 100%;
   tab-size: 4;
   font-family: var(--font-sans);
@@ -24,7 +24,7 @@ html,
 hr {
   height: 0;
   color: inherit;
-  border-top-width: 1px;
+  border-top-width: var(--line-w);
 }
 
 abbr:where([title]) {
@@ -148,7 +148,7 @@ textarea,
 }
 
 ::file-selector-button {
-  margin-inline-end: 4px;
+  margin-inline-end: var(--space-2);
 }
 
 ::placeholder {
@@ -196,7 +196,7 @@ textarea {
 }
 
 ::-webkit-calendar-picker-indicator {
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 :-moz-ui-invalid {

@@ -8,10 +8,10 @@
   border-inline-start: var(--line-w) solid var(--text);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-size: var(--fs-h3);
+  font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
-  line-height: 1.3;
+  line-height: var(--leading-snug);
 }
 
 .evidence > span {
@@ -32,11 +32,11 @@
 
 /* A health ratio is only true beside its read time, and this page is shared-cached. */
 .evidence-detail {
-  margin: 0.5rem 0 0;
+  margin: var(--space-3) 0 0;
   color: var(--text-secondary);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1.5;
+  font-size: var(--fs-detail);
+  line-height: var(--leading-normal);
 }
 
 .evidence-health {
@@ -45,10 +45,10 @@
 
 /* The colophon's row carries the site-health tile, under the page title. */
 .colophon-evidence {
-  margin-block: 1.5rem 2rem;
+  margin-block: var(--space-6) var(--space-7);
 }
 
 /* Under it, each /health check as a cockpit light (colophon.tsx HealthPanel, capsomer .cap-annunciator). */
 .colophon-annunciator {
-  margin-block: -0.75rem 2rem;
+  margin-block: calc(-1 * var(--space-4)) var(--space-7);
 }

@@ -1,12 +1,12 @@
 .ask-mount {
-  margin: 1rem 0 0;
+  margin: var(--space-5) 0 0;
 }
 
 .ask-panel {
-  margin: 0.75rem 0 0;
-  padding: 0.875rem 1rem;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--brand);
+  margin: var(--space-4) 0 0;
+  padding: 0.875rem var(--space-5);
+  border: var(--line-w) solid var(--border);
+  border-left: var(--line-w-bar) solid var(--brand);
   border-radius: 0;
   background: var(--tint-brand);
 }
@@ -14,26 +14,26 @@
 .ask-header {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-3);
   align-items: baseline;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-3);
 }
 
 .ask-badge {
-  padding: 0.125rem 0.4rem;
+  padding: var(--space-1) 0.4rem;
   border-radius: 0;
   background: var(--brand);
   color: var(--on-brand);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: var(--fs-label);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
 }
 
 .ask-note,
 .ask-status {
   color: var(--text-secondary);
-  font-size: 0.8125rem;
+  font-size: var(--fs-detail);
 }
 
 .ask-status {
@@ -53,23 +53,23 @@
 /* No :empty { display: none }: an empty body collapsing is exactly the jump the well removes. */
 
 .ask-sources {
-  margin: 0.75rem 0 0;
+  margin: var(--space-4) 0 0;
   padding: 0;
   list-style: none;
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
 }
 
 .ask-sources-heading {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-2);
   color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: var(--fs-small);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
 }
 
 .ask-sources li + li {
-  margin-top: 0.25rem;
+  margin-top: var(--space-2);
 }
 
 .ask-source-index {
@@ -79,12 +79,12 @@
 
 .ask-source-kind {
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--fs-small);
 }
 
 .ask-followup {
-  margin: 0.75rem 0 0;
-  font-size: 0.875rem;
+  margin: var(--space-4) 0 0;
+  font-size: var(--fs-body);
 }
 
 .ask-followup a {
@@ -92,8 +92,8 @@
 }
 
 .ask-cut {
-  margin: 0.5rem 0 0;
+  margin: var(--space-3) 0 0;
   color: var(--text-secondary);
-  font-size: 0.8125rem;
+  font-size: var(--fs-detail);
   font-style: italic;
 }

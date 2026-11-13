@@ -2,13 +2,13 @@
  * The protocol library (app/routes/protocols.tsx), on Capsomer's catalog: its layout only.
  */
 .library {
-  margin-block: 2rem;
+  margin-block: var(--space-7);
 }
 
 .library-links {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
+  gap: var(--space-2) var(--space-4);
 }
 
 /* Capsomer's table keeps every cell on one line, which makes this one wider than its column and hides the quick
@@ -31,11 +31,11 @@
 /* The calculators under a station of the workflow (a step indicator, data-variant="stations"). */
 .library-stage-tools {
   display: grid;
-  gap: 0.25rem;
+  gap: var(--space-2);
   margin: var(--space-4) 0 0;
   padding: 0;
   list-style: none;
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
 }
 
 /* The ways in: the start-here protocols on a dark panel, then each browse group as an index, in ruled cells. */
@@ -70,8 +70,8 @@
 }
 
 .library-start-mark {
-  font: 700 0.6875rem / 1.6 var(--font-mono);
-  letter-spacing: 0.1em;
+  font: var(--weight-bold) var(--fs-label) / var(--leading-relaxed) var(--font-mono);
+  letter-spacing: var(--tracking-sign);
   text-decoration: underline;
   text-transform: uppercase;
 }
@@ -79,8 +79,8 @@
 .library-start-title,
 .library-start-title:visited {
   color: var(--paper);
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-size: var(--fs-h3);
+  font-weight: var(--weight-bold);
   line-height: 1.25;
   text-decoration: none;
 }
@@ -90,29 +90,29 @@
 }
 
 .library-start-why {
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
   line-height: 1.45;
 }
 
 .library-subtitle {
   margin: 0 0 var(--space-3);
   color: var(--text);
-  font: var(--weight-heading) 0.6875rem / 1.6 var(--font-mono);
-  letter-spacing: 0.1em;
+  font: var(--weight-heading) var(--fs-label) / var(--leading-relaxed) var(--font-mono);
+  letter-spacing: var(--tracking-sign);
   text-transform: uppercase;
 }
 
 .library-browse .cap-leader-index-link {
   min-block-size: 0;
   padding-block: var(--space-3);
-  font-size: 0.9375rem;
+  font-size: var(--fs-lead);
 }
 
 /* A course carries a second link to the page that describes it. */
 .library-tile-about {
   display: inline-block;
   margin-block: 0 var(--space-3);
-  font-size: 0.8125rem;
+  font-size: var(--fs-detail);
 }
 
 /* The tabs sit above the catalog's form: room beneath them, and no scrollbar chrome on a list that fits. */
@@ -126,8 +126,8 @@
   font-family: var(--font-sans);
 }
 .library-cite-text {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--text);
+  padding: var(--space-4) var(--space-5);
+  border: var(--line-w) solid var(--text);
   /* The citation ends in the page's address, one unbroken word wider than a phone (WCAG 1.4.10). */
   overflow-wrap: anywhere;
   user-select: all;

@@ -2,7 +2,7 @@
    procedure step each folds under. The calculator itself is Capsomer's (capsomer/calculator.css). */
 
 .phage-tool {
-  margin: 1.5rem 0 2.5rem;
+  margin: var(--space-6) 0 2.5rem;
   padding: 1.25rem 0 0;
   border-top: var(--line-w) solid var(--border);
 }
@@ -12,24 +12,24 @@
 }
 
 .phage-tool-title {
-  margin: 0 0 1rem;
-  font-size: 1.25rem;
+  margin: 0 0 var(--space-5);
+  font-size: var(--title-4);
   line-height: 1.25;
 }
 
 .phage-tool-hint {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--space-5);
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
   line-height: 1.45;
 }
 
 /* A calculator folded under a procedure step (app/components/phage-tool.tsx, StepCalculators): Capsomer's inline
    disclosure with the sign marker, left off paper (data-print="hide"). Only its distance from the step is here. */
 .phage-tool-step {
-  margin: 0.75rem 0 0;
+  margin: var(--space-4) 0 0;
 }
 
 .phage-tool-more {
-  margin: 1rem 0 0;
+  margin: var(--space-5) 0 0;
 }
