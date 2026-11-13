@@ -11,7 +11,11 @@
   "tokens": {
     "--text": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer",
     "--scrim": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer",
-    "--line-strong": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer"
+    "--line-strong": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer",
+    "--z-progress": "Capsomer's reading bar sits above the pinned header on this site's own stacking scale (900), as it always has; Capsomer's scale tops out at 90; moves to Capsomer's site layer with the manual look",
+    "--line-w": "the manual look's one-pixel rule, in rem so it scales with text size, where Capsomer's scale uses px; moves to Capsomer's site layer with the manual look",
+    "--line-w-thick": "the manual look's two-pixel rule, in rem; same reason as --line-w",
+    "--radius-control": "the manual look's square controls (0), where Capsomer rounds them by --radius-m; moves to Capsomer's site layer with the manual look"
   },
   "spelling": {
     "skip": [

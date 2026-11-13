@@ -207,11 +207,8 @@
 /* A plain :root, not @theme: an unknown at-rule is dropped whole, and every font fell back to Times. */
 /* Not in the color blocks: check:contrast requires every token there to be a hex. */
 :root {
-  --z-dropdown: 200; /* @kind other */
   --z-progress: 900; /* @kind other */
 }
-
-/* Never --z-dropdown for the header menu: it sits below the bar, which the menu must clear. */
 
 :root {
   --font-sans:

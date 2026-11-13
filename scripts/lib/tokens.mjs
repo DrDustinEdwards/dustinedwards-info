@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { walkFiles } from "@dustinedwards/devkit/node";
+import { stripCss } from "capsomer/token-check";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -25,16 +26,6 @@ const ROOT_MODULE_PATH = join(root, "app", "routes", "legacy-public.tsx");
 const ADMIN_CSS_PATH = join(root, "app", "admin.css");
 /** The /lab-bench workspace's sheet: Capsomer's plane like admin.css, built on its tokens, not the public palette. */
 const LAB_CSS_PATH = join(root, "app", "lab.css");
-
-/**
- * CRLF first, because autocrlf gives a fresh clone CRLF and multi-line selectors stop matching;
- * then comments, because the token block's own comment spells out its selectors.
- *
- * @param {string} css
- */
-export function stripCss(css) {
-  return css.replace(/\r\n/g, "\n").replace(/\/\*[\s\S]*?\*\//g, "");
-}
 
 /**
  * A relative `@import` in any spelling CSS accepts: `"./a.css"`, `'./a.css'`, `url("./a.css")` or
@@ -197,21 +188,4 @@ export function resolveTokens(nameMap, block, label) {
     out[key] = value;
   }
   return out;
-}
-
-/**
- * The CSS toolchain rewrites long hex to short, so a literal comparison misses colors that are there.
- *
- * @param {string} hex
- */
-export function normalizeHex(hex) {
-  const h = hex.trim().toLowerCase().replace("#", "");
-  const full =
-    h.length === 3
-      ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : h;
-  return `#${full}`;
 }

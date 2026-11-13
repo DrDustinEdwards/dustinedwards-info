@@ -13,7 +13,7 @@ import {
 } from "../credential.mjs";
 import { countCssRules } from "capsomer/testing/page";
 
-import { ok, overflowScan, say } from "../harness.mjs";
+import { ok, pageOverflow, say } from "../harness.mjs";
 
 /** Re-measure when the admin's stylesheets change: the floor sits a few under a measured run. */
 const ADMIN_RULE_MEASURED = 74;
@@ -245,7 +245,7 @@ export async function run({ browser }) {
         ["/admin/kb?tab=needs-info", "the knowledge base, needs info"],
       ]) {
         await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
-        const o = await admin.evaluate(overflowScan);
+        const o = await pageOverflow(admin);
         ok(
           `${path}: ${what} does not scroll sideways at ${width}px`,
           o.scrollW <= o.clientW,

@@ -3,7 +3,7 @@
 
 import { PredefinedNetworkConditions } from "puppeteer";
 
-import { BASE, ok, overflowScan, readSkipLink } from "../harness.mjs";
+import { BASE, ok, pageOverflow, readSkipLink } from "../harness.mjs";
 
 /* The network profile the /writing layout shift was measured on. */
 const SLOW_4G = PredefinedNetworkConditions["Slow 4G"];
@@ -111,7 +111,7 @@ export async function run({ page, browser }) {
   await page.setViewport({ width: 320, height: 800 });
   for (const path of ["/", "/writing", "/search?q=workers", "/colophon", "/software"]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-    const o = await page.evaluate(overflowScan);
+    const o = await pageOverflow(page);
     ok(
       `${path}: no horizontal scroll at 320px`,
       o.scrollW <= o.clientW,
