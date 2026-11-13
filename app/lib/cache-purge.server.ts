@@ -1,6 +1,5 @@
 // aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
-import { cache, env } from "cloudflare:workers";
-import { purgeTags, recordPurge, type PurgeCache } from "@dustinedwards/site-runtime/edge-cache";
+import { exports } from "cloudflare:workers";
 
 import { LLMS_CACHE_TAG } from "~/lib/llms/validate.mjs";
 import { CV_CACHE_TAG } from "~/lib/cv/route";
@@ -25,17 +24,25 @@ export function combinePurges(...outcomes: PurgeOutcome[]): PurgeOutcome {
 }
 
 /**
- * site-runtime's purge (./edge-cache): never throws, `null` where Miniflare has no purge API, and a refusal or a
- * throw logged as `cache-purge-refused` or `cache-purge-threw`. A failure is also kept in KV until a purge succeeds
- * (recordPurge), which /health's cache-purge check shows; the Renderer's purgePages records its own the same way.
+ * The Renderer's purgePages (workers/app.ts, site-runtime ./edge-cache), over the Worker's own loopback: a purge reaches
+ * only the cache of the entrypoint that calls it, and a save runs in the Renderer (an admin page), the gateway (Carrel's
+ * step) or the cron. Never throws, `null` where Miniflare has no purge API, and a refusal or a throw logged as
+ * `cache-purge-refused` or `cache-purge-threw` (or `cache-purge-unreachable` when the loopback fails). A failure is kept
+ * in KV until a purge succeeds (recordPurge, in the Renderer), which /health's cache-purge check shows.
  *
  * @param tags the cache tags to invalidate
  * @param why  one phrase naming the write that caused this, for the log line
  */
 async function purge(tags: string[], why: string): Promise<PurgeOutcome> {
-  const purged = await purgeTags(cache as PurgeCache, tags, why);
-  await recordPurge(env.APP_KV, why, purged);
-  return purged;
+  try {
+    return await exports.Renderer.purgePages(why, tags);
+  } catch (error) {
+    // The loopback itself failed, so the Renderer recorded nothing: a failed purge, logged here.
+    console.error(
+      JSON.stringify({ alert: "cache-purge-unreachable", why, tags, detail: String(error) }),
+    );
+    return false;
+  }
 }
 
 /**

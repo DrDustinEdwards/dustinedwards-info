@@ -12,6 +12,8 @@
 // inferred. A sequence that DIFFERS from the one a paper prints is shown as differing on its page and listed by
 // check:content; it is never corrected silently, and the decision to change it is the seat's.
 
+import { DOI_PATTERN } from "@drdustinedwards/site-helpers/scholar";
+
 import { REFERENCES } from "./references.generated.mjs";
 import { primerTmRounded } from "./tm.mjs";
 
@@ -22,7 +24,6 @@ const PRIMER_MAX_LENGTH = 80;
 const DIRECTIONS = /** @type {const} */ (["forward", "reverse", "probe"]);
 /** A product as a paper states it: a size in base pairs, "about" when the paper says so. */
 const PRODUCT = /^(?:about )?[1-9][0-9]{1,4} bp$/;
-const DOI = /^10\.[0-9]{4,9}\/[^\s]+$/;
 const LINE = /^[^\r\n]+$/;
 
 /** @param {unknown} value @param {number} max */
@@ -65,7 +66,7 @@ export const PRIMER = {
     published_in: { required: true, check: (value) => oneLine(value, 200) },
     published_doi: {
       check: (value) =>
-        typeof value === "string" && DOI.test(value)
+        typeof value === "string" && DOI_PATTERN.test(value)
           ? null
           : "is a DOI, such as 10.1371/journal.pone.0099678",
     },

@@ -9,6 +9,17 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
+ * site-runtime's errorMessage, written out: the live gate runs in a fresh checkout with no install (devkit
+ * worker-deploy's verify-command), so this file may import only node: builtins. Importing the package broke every
+ * admin MCP deploy from #848 until this was restored.
+ * @param {unknown} error
+ * @returns {string}
+ */
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
  * jsonc: block and line comments stripped, as check:wrapper reads it.
  * @param {string} text
  * @returns {any}
@@ -34,7 +45,7 @@ export function mcpConfig(root) {
   } catch (error) {
     return {
       ok: false,
-      why: `${rel} does not parse: ${error instanceof Error ? error.message : String(error)}`,
+      why: `${rel} does not parse: ${errorMessage(error)}`,
     };
   }
   const origin = String(config?.vars?.PUBLIC_ORIGIN ?? "").replace(/\/+$/, "");
@@ -104,7 +115,7 @@ async function readJsonResponse(url, init) {
       status: 0,
       body: null,
       challenge: "",
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage(error),
     };
   }
 }

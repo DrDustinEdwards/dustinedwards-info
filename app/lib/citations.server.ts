@@ -1,11 +1,12 @@
 import type { RouterContextProvider } from "react-router";
-import { inArray } from "drizzle-orm";
+import { inList } from "@dustinedwards/site-runtime/d1";
 
 import { getDb } from "~/db/client";
 import { publicationCitations } from "~/db/schema";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { SITE_USER_AGENT } from "~/lib/site-origin.mjs";
+import { timedFetch } from "@dustinedwards/site-runtime/http";
 
 // Per DOI only: the OpenAlex author endpoint has works by other people merged into it.
 //
@@ -61,7 +62,7 @@ async function fetchOne(
   };
 
   try {
-    const res = await fetch(url, { headers: { "user-agent": SITE_USER_AGENT } });
+    const res = await timedFetch(url, { headers: { "user-agent": SITE_USER_AGENT } });
     if (!res.ok) {
       // 401 and 403 are configuration (a revoked or wrong key), and name it so; a 404 is a DOI
       // OpenAlex does not hold.
@@ -93,7 +94,7 @@ async function readRows(env: Env, dois: string[]): Promise<Map<string, CitationE
   const rows = await getDb(env)
     .select()
     .from(publicationCitations)
-    .where(inArray(publicationCitations.doi, keys));
+    .where(inList(publicationCitations.doi, keys));
   for (const row of rows)
     out.set(row.doi, { count: row.count, fetchedAt: row.fetchedAt, url: row.url });
   return out;

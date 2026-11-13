@@ -8,6 +8,7 @@ import {
   gt,
   inArray,
   isNotNull,
+  isNull,
   lt,
   max,
   ne,
@@ -19,15 +20,17 @@ import {
   HOME_CARDS,
   HOME_PICKS,
   POSTS_PER_PAGE,
-  pageCount,
   picksFirst,
   startHere,
 } from "../lib/blog-listing.mjs";
-import { PUBLISHED_STATUS } from "../lib/search/visibility.mjs";
+import { inList } from "@dustinedwards/site-runtime/d1";
+import { pageEnvelope } from "capsomer/react/pagination";
+import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import { seriesSlug } from "../lib/series-path.mjs";
-import { timed, type Timings } from "../lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { type Timings } from "../lib/timing";
 import { media, postTags, posts, tags } from "./schema";
-import { getDb, type DB, publiclyVisible, isBlogPost, notTrashed } from "./client";
+import { getDb, type DB, publiclyVisible, isBlogPost } from "./client";
 
 /** Ask's cache replay re-checks visibility here because KV invalidation lags. */
 export async function publiclyVisibleSlugs(env: Env, slugs: string[]): Promise<Set<string>> {
@@ -35,7 +38,7 @@ export async function publiclyVisibleSlugs(env: Env, slugs: string[]): Promise<S
   const rows = await getDb(env)
     .select({ slug: posts.slug })
     .from(posts)
-    .where(and(inArray(posts.slug, slugs), publiclyVisible()));
+    .where(and(inList(posts.slug, slugs), publiclyVisible()));
   return new Set(rows.map((r) => r.slug));
 }
 
@@ -159,6 +162,19 @@ function groupValues<R, K, V>(rows: Iterable<R>, key: (row: R) => K, value: (row
   return out;
 }
 
+/** The year a post was published, as SQL; a new chunk each call, because `.as()` marks the chunk it is called on. */
+const publishYear = <T = unknown>() => sql<T>`strftime('%Y', ${posts.publishAt}, 'unixepoch')`;
+
+/** Each row with its tags, by slug, from the admin's tag rows. */
+function withTags<R extends { slug: string }>(rows: R[], tagRows: { slug: string; tag: string }[]) {
+  const tagsBySlug = groupValues(
+    tagRows,
+    (row) => row.slug,
+    (row) => row.tag,
+  );
+  return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
+}
+
 async function tagsForPosts(db: DB, postIds: number[]) {
   if (postIds.length === 0) return new Map<number, string[]>();
 
@@ -166,7 +182,7 @@ async function tagsForPosts(db: DB, postIds: number[]) {
     .select({ postId: postTags.postId, name: tags.name, slug: tags.slug })
     .from(postTags)
     .innerJoin(tags, eq(tags.id, postTags.tagId))
-    .where(inArray(postTags.postId, postIds))
+    .where(inList(postTags.postId, postIds))
     .orderBy(asc(tags.slug));
 
   return groupValues(
@@ -201,7 +217,7 @@ export async function listBlogPosts(
   if (tag) narrowing.push(carriesTag(db, tag));
   if (options.indexedOnly) narrowing.push(indexable());
   if (year) {
-    narrowing.push(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch') = ${year}`);
+    narrowing.push(sql`${publishYear()} = ${year}`);
   }
   const where = and(isBlogPost(), ...narrowing);
 
@@ -273,7 +289,7 @@ export async function listBlogPosts(
     total,
     page,
     perPage,
-    pageCount: pageCount(total, perPage),
+    pageCount: pageEnvelope(page, perPage, total).pageCount,
     /* The whole filtered list, not this page of it. */
     span: spanOf(stats),
   };
@@ -324,13 +340,13 @@ export async function listHomeStartHere(
 export async function listBlogYears(env: Env) {
   return getDb(env)
     .select({
-      year: sql<string>`strftime('%Y', ${posts.publishAt}, 'unixepoch')`.as("year"),
+      year: publishYear<string>().as("year"),
       total: count(),
     })
     .from(posts)
     .where(isBlogPost())
-    .groupBy(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch')`)
-    .orderBy(desc(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch')`));
+    .groupBy(publishYear())
+    .orderBy(desc(publishYear()));
 }
 
 export async function listSeriesParts(env: Env, series: string) {
@@ -391,7 +407,7 @@ export async function listSeriesPosts(
     posts: rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] })),
     total,
     page,
-    pageCount: pageCount(total, perPage),
+    pageCount: pageEnvelope(page, perPage, total).pageCount,
     span: spanOf(statRows[0]),
   };
 }
@@ -495,15 +511,12 @@ async function withNeighbors(db: DB, post: PostRow, tagSlugs: string[]) {
   };
 }
 
-/**
- * Admin only, so exempt from visibility. The rows the media page lists: not trashed, and stored
- * files only, since the site's static assets (fonts, favicons, diagrams) are not in the library.
- */
+/** Admin only, so exempt from visibility. The files the media page lists: the library's, not trashed. */
 export async function adminNavCounts(env: Env) {
   const mediaRow = await getDb(env)
     .select({ n: count() })
     .from(media)
-    .where(and(notTrashed(), ne(media.storage, "static")));
+    .where(isNull(media.trashedAt));
   return { media: Number(mediaRow[0]?.n ?? 0) };
 }
 
@@ -523,12 +536,7 @@ export async function listAllPostsForAdmin(env: Env) {
       .orderBy(desc(posts.publishAt)),
     listAllPostTagsForAdmin(env),
   ]);
-  const tagsBySlug = groupValues(
-    tagRows,
-    (row) => row.slug,
-    (row) => row.tag,
-  );
-  return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
+  return withTags(rows, tagRows);
 }
 
 /** Corpus for `withRelated`, drafts included: it filters candidates itself. */
@@ -546,12 +554,7 @@ export async function listPostCorpusForRelated(env: Env) {
     .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
   const tagRows = await listAllPostTagsForAdmin(env);
 
-  const tagsBySlug = groupValues(
-    tagRows,
-    (row) => row.slug,
-    (row) => row.tag,
-  );
-  return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
+  return withTags(rows, tagRows);
 }
 
 /** Drafts included: it filters the linking post itself. Carries `html` because a backlink is read out of a rendered body. */

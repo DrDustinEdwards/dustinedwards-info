@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // Imported from the pipeline so the gate cannot check a theme the renderer does not use.
-import { LANGUAGES, SHIKI_THEMES } from "../app/lib/content/pipeline.mjs";
+import { LANGUAGES, SHIKI_THEMES } from "@drdustinedwards/site-helpers/render/highlight";
 
 import { apca, channels, contrast } from "../app/lib/contrast.mjs";
 
@@ -27,8 +27,8 @@ import {
   TEXT,
   UI,
 } from "./lib/contrast-matrix.mjs";
-import { assertFloor } from "./lib/floor.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const { light: githubLight, dark: githubDark } = SHIKI_THEMES;
 
@@ -673,7 +673,7 @@ function opacityExempt(selectorGroup) {
   }
 
   /* Scope floor: a regex that stopped matching reports what a clean sweep reports. */
-  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 8);
+  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 7);
 
   assert(
     unparsed.length === 0
@@ -712,8 +712,10 @@ const buildPresent = existsSync(assetDir);
 // reaches the absent branch; measure it by moving build/ aside, never by reasoning.
 // Re-measured 2026-09-27 with the build absent: 515 ran after the unpainted tokens and
 // their pairs were deleted, on top of the five pin checks removed the same day. Present
-// is that branch's measured 646 minus those five.
-const MINIMUM_CHECKS = buildPresent ? 635 : 510;
+// is that branch's measured 646 minus those five. Re-measured 2026-11-11 by running both branches after the five
+// DECLARED_ELSEWHERE exemptions (two assertions each) went with the move to Capsomer's prose blocks: 630 present,
+// 506 absent.
+const MINIMUM_CHECKS = buildPresent ? 625 : 501;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",

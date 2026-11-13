@@ -3,9 +3,6 @@
 
 export const PUBLICATIONS_PREFIX = "/research/publications/";
 
-// The HTTPS redirect's own rule, so the redirect helpers never disagree.
-export { httpsRedirectStatus as pdfRedirectStatus } from "../https-redirect.mjs";
-
 /**
  * Skips anything with a dot so the PDF inside the directory still reaches the asset handler.
  *

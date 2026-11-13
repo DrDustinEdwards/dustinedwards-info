@@ -4,7 +4,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { RouterContextProvider, createRoutesStub } from "react-router";
 import { vi } from "vitest";
 
-import { cloudflareContext } from "~/lib/context";
+import { carrelStep } from "~/lib/carrel/site-api.server";
+import { Renderer } from "../../workers/app";
+import {
+  cloudflareContext,
+  documentHandlerContext,
+  getEnv,
+  getExecutionContext,
+} from "~/lib/context";
 
 /**
  * Driving route modules directly: the router context their loaders read, the middleware chain in
@@ -19,6 +26,50 @@ export function routeContext(
   const context = new RouterContextProvider();
   context.set(cloudflareContext, { env: { ...env, ...overrides } as never, ctx });
   return context;
+}
+
+/**
+ * A request through Carrel's gateway step (workers/app.ts), with the kit's in-process render taken from the
+ * context's document handler, which a case sets to stand in for the app build a test has not got. Off the step's
+ * paths the gateway passes it on to the site's 404, which this answers in its place.
+ */
+export async function carrelRequest({
+  request,
+  context,
+}: {
+  request: Request;
+  context: RouterContextProvider;
+}): Promise<Response> {
+  const render = context.get(documentHandlerContext);
+  const kit = {
+    url: new URL(request.url),
+    render: (page: Request, extra?: { set?: (context: RouterContextProvider) => void }) => {
+      if (!render) throw new Error("the case set no document handler on the context");
+      return render(page, extra?.set ?? (() => {}));
+    },
+    stylesheets: async () => [],
+    purgeAfterWrite: () => {},
+    secure: (response: Response) => response,
+  };
+  const answer = await carrelStep(
+    request,
+    getEnv(context),
+    getExecutionContext(context) as ExecutionContext,
+    kit,
+  );
+  return answer ?? new Response("Not found", { status: 404 });
+}
+
+/**
+ * A save's purge goes to the Renderer over the Worker's loopback (cache-purge.server.ts), which Miniflare cannot purge:
+ * each purge's tags go to `purge` in its place, answered with its `success`.
+ */
+export function recordPurges(
+  purge: (options: { tags: string[] }) => Promise<{ success: boolean }>,
+) {
+  vi.spyOn(Renderer.prototype, "purgePages").mockImplementation(
+    async (_why: string, tags: string[] = []) => (await purge({ tags })).success,
+  );
 }
 
 type Middleware = (args: never, next: () => Promise<unknown>) => Promise<unknown>;

@@ -14,6 +14,7 @@ import scienceEducationPage from "../../content/pages/research-science-education
 
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { seedPages } from "./seed";
+import { recordPurges } from "./route-helpers";
 
 /* sync_phages and the phage-drift check: D1 converges to content/phages through the compile and write doors a
  * phage save uses (the repository is the source), and the page the table is drawn into is re-derived
@@ -41,12 +42,9 @@ const PAPERS = Object.fromEntries(
 const PAGE_FILE = "content/pages/research-phages.md";
 const PATH = "/research/phages";
 
-/* The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one. */
+/* The save's purge goes to the Renderer over the loopback (cache-purge.server.ts), replaced here with a recording one. */
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
-vi.mock("cloudflare:workers", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("cloudflare:workers")>()),
-  cache: { purge },
-}));
+recordPurges(purge);
 
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 const operator = { kind: "operator", id: "test" } as const;

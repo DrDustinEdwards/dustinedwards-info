@@ -3,12 +3,8 @@
 // protocol library is in procedures/library.mjs. The page, its facets, its downloads and its markdown twin all read the
 // declaration, and every fact is drawn from the records, never typed. Pure: the routes pass in the records from D1.
 
-import {
-  catalogRedirect,
-  defineCatalog,
-  parseCatalogParams,
-  queryCatalog,
-} from "capsomer/behavior/catalog";
+import { mdCell } from "@drdustinedwards/site-helpers/text";
+import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
 import { BASES } from "./bases.mjs";
 import { stepCount } from "./procedures/library.mjs";
@@ -213,28 +209,6 @@ export function baseCatalog(base) {
 }
 
 /**
- * The address a request should have, or null: the catalog's own clean address, with unknown parameters (a tracking
- * tag) served rather than redirected, as the protocol library does.
- *
- * @param {KnowledgeBase} base
- * @param {URL} url
- */
-export function baseRedirect(base, url) {
-  const catalog = baseCatalog(base);
-  const known = new Set([
-    "q",
-    "sort",
-    "page",
-    ...catalog.fields.filter((f) => f.facet).map((f) => f.key),
-  ]);
-  const kept = new URLSearchParams();
-  for (const [key, value] of url.searchParams) if (known.has(key)) kept.append(key, value);
-  const only = new URL(url);
-  only.search = kept.toString();
-  return catalogRedirect(catalog, only);
-}
-
-/**
  * The library as rows for a download, for the filter state in the address: every fact the page shows, ids with their
  * words. The CSV and the JSON are both this.
  *
@@ -271,9 +245,6 @@ export function baseRecords(base, items, params, origin) {
   );
 }
 
-/** One cell of a markdown table. @param {string} text */
-const cell = (text) => text.replaceAll("|", "\\|").replace(/\s+/g, " ").trim();
-
 /**
  * The twin's table: every entry with the facts the page shows, linked to its own page. An empty library says so.
  *
@@ -290,7 +261,7 @@ export function baseMarkdown(base, items, origin) {
   const rows = items.map((p) =>
     (recipe
       ? [
-          `[${cell(p.title)}](${origin}${p.path})`,
+          `[${mdCell(p.title)}](${origin}${p.path})`,
           p.category,
           p.cuisine,
           p.diet.join(", "),
@@ -299,31 +270,20 @@ export function baseMarkdown(base, items, origin) {
           p.updated,
         ]
       : [
-          `[${cell(p.title)}](${origin}${p.path})`,
+          `[${mdCell(p.title)}](${origin}${p.path})`,
           p.type ? howtoTypeLabel(p.type) : "",
           p.methods.map(methodLabel).join(", "),
           p.courses.map(courseLabel).join(", "),
           String(p.steps),
           p.updated,
         ]
-    ).map((c, i) => (i === 0 ? c : cell(c))),
+    ).map((c, i) => (i === 0 ? c : mdCell(c))),
   );
   return [
     `| ${head.join(" | ")} |`,
     `| ${head.map(() => "---").join(" | ")} |`,
     ...rows.map((r) => `| ${r.join(" | ")} |`),
   ].join("\n");
-}
-
-/** The downloads of a view, carrying its filter state; the twin is always the whole library. @param {KnowledgeBase} base @param {{ href: () => string }} result */
-export function baseDownloads(base, result) {
-  const href = result.href();
-  const query = href.includes("?") ? href.slice(href.indexOf("?")) : "";
-  return {
-    csv: `${base.library}.csv${query}`,
-    json: `${base.library}.json${query}`,
-    markdown: `${base.library}.md`,
-  };
 }
 
 /** How to cite the library, from the site's identity and the library's address. @param {KnowledgeBase} base @param {{ name: string, affiliation: string, origin: string }} who */

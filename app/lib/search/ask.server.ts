@@ -9,14 +9,18 @@ import {
   writeCachedDrift,
 } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, ownsAskKey } from "./ask-keys.mjs";
-import { ASK_UPLOAD_CONCURRENCY, mapPool, uploadTwins, withRetry } from "./ask-twins.mjs";
-import { answerDelta, takeSseFrames } from "./sse.mjs";
+import { askUploadsNeeded, uploadAskItems, withRetry } from "./ask-twins.mjs";
+import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
+import { forgetAskUploads, readAskUploads, recordAskUploads } from "~/db/ask-uploads";
+import { answerDelta, replayFrames, takeSseFrames } from "@dustinedwards/site-runtime/ai-ask";
 import { setDrift } from "~/lib/health/verdicts.mjs";
-import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
+import { isPubliclyVisible } from "@drdustinedwards/site-helpers/search";
+import { statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
 import { listPublishedPublicationTwins } from "~/db/publications";
 import { paperPath } from "~/lib/publications/paths.mjs";
-import { timed, type Timings } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import {
@@ -25,11 +29,10 @@ import {
   answerLeaksPrompt,
   askMessages,
   citedSlugs,
-  guardAnswerStream,
-  replayFrames,
+  guardAsk,
 } from "./ask-prompt.mjs";
 
-export { answerLeaksPrompt, citedSlugs, guardAnswerStream };
+export { answerLeaksPrompt, citedSlugs, guardAsk };
 
 const ASK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
@@ -50,10 +53,10 @@ export function askAvailable(env: Env): boolean {
 
 /**
  * The raw upstream SSE is handed through untouched: the client already parses SSE. The binding takes no
- * signal, so a call that has not started answering by ASK_TIMEOUT_MS is abandoned here (guardAnswerStream
+ * signal, so a call that has not started answering by ASK_TIMEOUT_MS is abandoned here (guardAsk
  * bounds the rest). `max_tokens` is not in the binding's documented parameters; Cloudflare's own
  * ai-search-provider sends it there, and its docs say it reaches the model and truncates the answer, so the guard
- * reads each answer's finish_reason and a cut one is never cached (guardAnswerStream).
+ * reads each answer's finish_reason and a cut one is never cached (guardAsk).
  *
  * The gateway (checklist G1, C13): AI Search has no per-request gateway option and no route through site-runtime's
  * shared caller, which speaks Anthropic's Messages API. Every AI Search instance is connected to an AI Gateway, and
@@ -230,34 +233,60 @@ async function deleteAskItemsWhere(env: Env, matches: (key: string) => boolean) 
     await env.AI_SEARCH.items.delete(item.id);
     removed.push(item.key);
   }
+  if (removed.length > 0) await forgetAskUploads(env, removed);
   return removed;
 }
 
-/** Uploaded rather than crawled: the crawler would index the apex (the legacy site) and lose heading granularity. */
-export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
-  // From D1 with visibilityClause composed in the SQL, so drafts and future posts never enter the index.
-  const records = await askCorpusRecords(env);
-  // Every item is built before the first upload, so a bad url fails the sync before it writes anything.
-  const items = records.map(askItemFor);
-  const keys: string[] = items.map(({ key }) => key);
+/**
+ * One item to AI Search and its hash to the ledger, retried. Every upload goes through here or uploadAskItems, so the
+ * ledger never holds a hash for a body the index was not sent.
+ */
+async function uploadAskItem(env: Env, key: string, body: string): Promise<void> {
+  await withRetry(() => env.AI_SEARCH.items.upload(key, body));
+  await recordAskUploads(env, [{ key, hash: await sha256Hex(body) }]);
+}
 
-  // Bounded parallel: one request carries the whole sync, and the caller stops waiting after 300 s.
-  await mapPool(items, ASK_UPLOAD_CONCURRENCY, ({ key, body }) =>
-    withRetry(() => env.AI_SEARCH.items.upload(key, body), { attempts: 2 }),
+/**
+ * Uploaded rather than crawled: the crawler would index the apex (the legacy site) and lose heading granularity.
+ * Only what changed is sent (askUploadsNeeded): a deploy that re-sent all of the corpus drew AI Search's rate limit.
+ */
+export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
+  // From D1 with visibilityClause composed in the SQL, so drafts and future posts never enter the index. Papers from
+  // their twins, not search_docs: uploading both would let the shorter win questions the longer answers.
+  const [records, twins, listed, ledger] = await Promise.all([
+    askCorpusRecords(env),
+    listPublishedPublicationTwins(env),
+    listAllAskItems(env),
+    readAskUploads(env),
+  ]);
+  // Every item is built before the first upload, so a bad url fails the sync before it writes anything.
+  const items = [
+    ...records.map(askItemFor),
+    ...twins.map(({ slug, markdown }) => ({ key: keyForUrl(paperPath(slug)), body: markdown })),
+  ];
+  const hashed = await Promise.all(
+    items.map(async (item) => ({ ...item, hash: await sha256Hex(item.body) })),
+  );
+  const needed = askUploadsNeeded(hashed, listed, ledger);
+
+  const { uploaded, failed } = await uploadAskItems(needed, {
+    upload: (key, body) => env.AI_SEARCH.items.upload(key, body),
+  });
+  const hashOf = new Map(hashed.map(({ key, hash }) => [key, hash]));
+  await recordAskUploads(
+    env,
+    uploaded.map((key) => ({ key, hash: hashOf.get(key) ?? "" })),
   );
 
-  // Papers from their twins, not search_docs: uploading both would let the shorter win questions the longer answers.
-  const twins = await uploadPaperTwins(env);
-  keys.push(...twins.keys);
-
-  // The corpus changed, so cached answers may now be untrue.
-  const dropped = await invalidateAnswerCache(env);
-  await dropCachedDrift(env);
+  // Only when something was sent: an unchanged corpus leaves cached answers true.
+  const dropped = uploaded.length > 0 ? await invalidateAnswerCache(env) : 0;
+  if (uploaded.length > 0) await dropCachedDrift(env);
 
   return {
-    uploaded: keys.length - twins.failed.length,
-    keys,
-    failed: twins.failed,
+    uploaded: uploaded.length,
+    // Every key, failed ones too: the caller prunes every key it is not given.
+    keys: items.map(({ key }) => key),
+    failed,
     cacheDropped: dropped,
   };
 }
@@ -265,21 +294,6 @@ export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
 /** The published papers' Ask keys, from D1: a draft paper is not public, so it is not asked about. */
 async function paperItemKeys(env: Env): Promise<string[]> {
   return (await listPublishedPublicationTwins(env)).map(({ slug }) => keyForUrl(paperPath(slug)));
-}
-
-/** Each published twin from D1, the row the twin route serves, so this indexes exactly what the site says. */
-async function uploadPaperTwins(env: Env) {
-  const rows = await listPublishedPublicationTwins(env);
-  const bySlug = new Map(rows.map((row) => [row.slug, row.markdown]));
-  const twins = rows.map(({ slug }) => ({ key: keyForUrl(paperPath(slug)), path: slug }));
-  return uploadTwins(twins, {
-    fetchText: async (slug: string) => {
-      const markdown = bySlug.get(slug);
-      if (markdown === undefined) throw new Error(`twin ${slug} has no published row`);
-      return markdown;
-    },
-    upload: (key: string, body: string) => env.AI_SEARCH.items.upload(key, body),
-  });
 }
 
 /** Scoped to this post's keys, which is sound because sections are a pure function of one post's markdown. */
@@ -298,10 +312,10 @@ export async function syncAskPost(
     // Outside the retry: a bad url would produce the same wrong key every time.
     const { key, body } = askItemFor(record);
     try {
-      await withRetry(() => env.AI_SEARCH.items.upload(key, body), { attempts: 2 });
+      await uploadAskItem(env, key, body);
     } catch (error) {
       console.error(
-        JSON.stringify({ alert: "ask-upload-failed-twice", key, detail: errorMessage(error) }),
+        JSON.stringify({ alert: "ask-upload-failed", key, detail: errorMessage(error) }),
       );
       failed.push(key);
     }
@@ -426,8 +440,11 @@ export async function removeAskPost(env: Env, slug: string): Promise<number> {
 export async function pruneAskCorpus(env: Env, liveKeys: string[]): Promise<string[]> {
   const live = new Set(liveKeys);
   const removed = await deleteAskItemsWhere(env, (key) => !live.has(key));
-  // Only on an actual removal; dropping the key otherwise would cost the next reader a listing.
-  if (removed.length > 0) await dropCachedDrift(env);
+  // Only on an actual removal; dropping the keys otherwise would cost the next reader a listing and an answer.
+  if (removed.length > 0) {
+    await invalidateAnswerCache(env);
+    await dropCachedDrift(env);
+  }
   return removed;
 }
 
@@ -444,7 +461,7 @@ export async function syncAskPaper(
   let uploaded = 0;
   let removed = 0;
   if (markdown !== null) {
-    await withRetry(() => env.AI_SEARCH.items.upload(key, markdown), { attempts: 2 });
+    await uploadAskItem(env, key, markdown);
     uploaded = 1;
   } else {
     removed = (await deleteAskItemsWhere(env, (itemKey) => itemKey === key)).length;

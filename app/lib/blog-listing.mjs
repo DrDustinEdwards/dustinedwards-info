@@ -1,3 +1,4 @@
+import { plural } from "@drdustinedwards/site-helpers/text";
 export const POSTS_PER_PAGE = 10;
 
 /** The home page's Writing section is a taste, not a feed: the featured post and two more. */
@@ -34,32 +35,11 @@ export function picksFirst(rows, picks = HOME_PICKS) {
 }
 
 /**
- * A `?page=` a listing can use: a positive whole number, else 1. `-3`, `1.5` and `abc` all read as 1.
- *
- * @param {string | null} raw
- */
-export function readPage(raw) {
-  if (raw === null || !/^\d+$/.test(raw)) return 1;
-  const page = Number(raw);
-  return page > 0 && Number.isSafeInteger(page) ? page : 1;
-}
-
-/**
  * @param {number} position 1-based
  * @param {number} [perPage]
  */
 export function pageForPosition(position, perPage = POSTS_PER_PAGE) {
   return Math.floor((position - 1) / perPage) + 1;
-}
-
-/**
- * An empty corpus still has one page, because /writing renders an empty state rather than a 404.
- *
- * @param {number} total
- * @param {number} [perPage]
- */
-export function pageCount(total, perPage = POSTS_PER_PAGE) {
-  return Math.max(1, Math.ceil(total / perPage));
 }
 
 /**
@@ -117,5 +97,5 @@ export function listingFacts(total, span) {
       ? `${Math.round(span.minutes / 60)} hours of reading`
       : `${span.minutes} minutes of reading`
     : null;
-  return [`${total} post${total === 1 ? "" : "s"}`, years, reading];
+  return [plural(total, "post"), years, reading];
 }

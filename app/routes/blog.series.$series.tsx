@@ -8,7 +8,8 @@ import {
   redirectPastLastPage,
 } from "~/components/taxonomy-listing";
 import { getBlogSeries, listSeriesPosts, nextScheduledPublishAt } from "~/db";
-import { POSTS_PER_PAGE, readPage } from "~/lib/blog-listing.mjs";
+import { parsePage } from "capsomer/react/pagination";
+import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
 import {
   EDGE_CACHE_HEADER,
@@ -24,6 +25,7 @@ import type { Route } from "./+types/blog.series.$series";
 import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
 import "~/styles/entry-list.css";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 /**
  * Ordered by part, the one listing that is not newest first. 404 rather than an empty page, which
@@ -32,7 +34,7 @@ import "~/styles/entry-list.css";
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
-  const page = readPage(url.searchParams.get("page"));
+  const page = parsePage(url.searchParams.get("page"));
 
   const series = await getBlogSeries(env, params.series);
   if (!series) throw data("Not found", { status: 404 });
@@ -78,7 +80,7 @@ export default function BlogSeries({ loaderData }: Route.ComponentProps) {
       {...listing}
       base={seriesPath(series.name)}
       heading={series.name}
-      dek={`A series in ${series.total} part${series.total === 1 ? "" : "s"}, in order.`}
+      dek={`A series in ${plural(series.total, "part")}, in order.`}
     />
   );
 }

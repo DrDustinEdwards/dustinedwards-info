@@ -5,7 +5,7 @@ import { INDEXNOW_KEY } from "./lib/indexnow.mjs";
 import { BASES } from "./kb/bases.mjs";
 import { LIBRARY_BASES } from "./kb/libraries.mjs";
 import { LIBRARY_PATH } from "./kb/procedures/taxonomy.mjs";
-import { LAB_BENCH_PATH } from "./lab/path.mjs";
+import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 
 export default [
   // TEMPORARY: everything a visitor can see sits under one layout, which owns the old public CSS. The public
@@ -152,10 +152,7 @@ export default [
     route("sitemap.xml", "routes/sitemap.ts"),
     // The site map for people, from the same URL list as sitemap.xml (app/lib/site-urls.server.ts).
     route("site-map", "routes/site-map.tsx"),
-    route("robots.txt", "routes/robots.ts"),
     route("site.webmanifest", "routes/site-webmanifest.ts"),
-    route("ai.txt", "routes/ai-txt.ts"),
-    route(".well-known/security.txt", "routes/security-txt.ts"),
     route(`${INDEXNOW_KEY}.txt`, "routes/indexnow-key.ts"),
     route("llms.txt", "routes/llms.ts"),
     route("llms-full.txt", "routes/llms-full[.txt].ts"),
@@ -207,12 +204,7 @@ export default [
   // The site's one health endpoint, in the network shape: the uptime monitor, Capsid's watcher and the colophon link
   // read it, and so do ship's readiness, the admin MCP and operator-sync.
   route("health", "routes/health.ts"),
-  // Unauthenticated because browsers send reports without credentials; capped and rate limited there.
-  route("csp-report", "routes/csp-report.ts"),
   // Bearer token, not the session, so it sits outside the /admin subtree the middleware gates.
   route("api/operator", "routes/api.operator.ts"),
-  // Carrel's key, not the session, and only this prefix: the site-api package guards it.
-  route("api/carrel/v1/*", "routes/api.carrel.v1.$.ts"),
-  // Carrel's shareable preview links: no key, the token is the address, and the package answers private and noindex.
-  route("preview/:token", "routes/preview.$token.ts"),
+  // Carrel's site API (/api/carrel/v1) and its preview links (/preview/<token>) are a gateway step (workers/app.ts).
 ] satisfies RouteConfig;

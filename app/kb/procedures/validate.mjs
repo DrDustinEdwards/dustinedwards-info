@@ -6,7 +6,9 @@
 // the check can print it and the read tool can show it. A bare MISSING, or a required field left out,
 // is an error: a forgotten field cannot pass as a recorded gap.
 
-import { DOI_PATTERN, VERSION_PATTERN } from "./cite.mjs";
+import { VERSION_PATTERN } from "./cite.mjs";
+import { DOI_PATTERN } from "@drdustinedwards/site-helpers/scholar";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 import { allSteps, PLATFORMS, readCalcs, stepConditions } from "./parse.mjs";
 import { proofErrors } from "./proof.mjs";
 import { COURSES, METHODS, NON_STRAIN_ORGANISMS, PROTOCOL_STATUSES } from "./taxonomy.mjs";
@@ -318,7 +320,7 @@ export function validateProcedure(parsed, expect) {
       !f ||
       typeof f !== "object" ||
       Array.isArray(f) ||
-      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(f.slug ?? ""))
+      !SLUG_PATTERN.test(String(f.slug ?? ""))
     ) {
       errors.push(
         "forked_from is { slug, version }: the file name of the procedure this one was copied from, and its version if it had one",
@@ -511,7 +513,7 @@ export function validateProcedure(parsed, expect) {
   }
 
   // A step's section, so a gap in it can say where it is (app/kb/gap-labels.mjs).
-  const sectionOf = new Map(
+  const stepSection = new Map(
     parsed.sections.flatMap((section) =>
       section.blocks.flatMap((block) =>
         block.type === "steps" ? block.steps.map((s) => [s, section.title]) : [],
@@ -610,7 +612,7 @@ export function validateProcedure(parsed, expect) {
           gaps.push({
             field: `step ${step.number} (line ${step.line}).spin`,
             reason: spin.replace(/^MISSING:\s*/, ""),
-            section: sectionOf.get(step) ?? "",
+            section: stepSection.get(step) ?? "",
           });
         else if (!/x g\b/.test(spin)) errors.push(`${at}: SPIN "${spin}" is not in x g`);
       }

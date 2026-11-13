@@ -1,20 +1,22 @@
+import { JsonLd } from "capsomer/react/json-ld";
+import { DraftNotice } from "capsomer/react/draft-notice";
 import { Catalog } from "capsomer/react/catalog";
 import { TabLink, TabsNav } from "capsomer/react/tabs";
 import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
-import { data, redirect } from "react-router";
+import { redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { LibraryCite } from "~/components/library-cite";
 import { LibraryOverview } from "~/components/library-overview";
 import { PageShell } from "~/components/page-shell";
 import { getPageByPath } from "~/db/pages";
-import { listPublishedLibraryRecords } from "~/db/procedures";
+import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";
+import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { thing } from "@drdustinedwards/site-helpers/schema";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import {
   LIBRARY,
@@ -49,6 +51,8 @@ import "~/styles/prose.css";
 import "~/styles/site-catalog.css";
 import "~/styles/library.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { PROSE } from "~/lib/prose-context";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * The protocol library at /research/protocols (docs/PROCEDURES.md): the page's own introduction, then every
@@ -65,17 +69,16 @@ export function headers() {
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
-  const row = await getPageByPath(env, LIBRARY_PATH);
-  if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request)))
-    throw data(null, { status: 404 });
+  const { row, draft } = await draftGate(await getPageByPath(env, LIBRARY_PATH), () =>
+    isAdminViewer(env, request),
+  );
   // A state written in another order, or with a default spelled out, goes to its one address.
   const canonical = libraryRedirect(url);
   if (canonical) throw redirect(canonical, 301);
-  const items = libraryItems(await listPublishedLibraryRecords(env));
+  const items = libraryItems(await listPublishedRecordsOfProfile(env, "protocol"));
   // The registry's kinds are tabs beside the calculators, counted from its rows (docs/REGISTRY.md).
   const registry = registryTabs(await listRegistry(env, { published: true }));
-  return { page: row.record, draft: row.status === "draft", items, registry, search: url.search };
+  return { page: row.record, draft, items, registry, search: url.search };
 }
 
 const TRAIL: Trail = [
@@ -100,7 +103,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       type: "text/markdown",
       href: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}`,
     },
-    ...(draft ? [{ name: "robots", content: "noindex" }] : []),
+    ...draftRobots(draft),
   ];
 }
 
@@ -140,20 +143,13 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
     },
   });
   return (
-    <PageShell
-      trail={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: serializeJsonLd(collection) }}
-        />
-      }
-    >
+    <PageShell trail={<JsonLd data={collection} />}>
       <Breadcrumb trail={TRAIL} />
       <h1 className="page-title cap-layout-grid" id="library-title">
         {page.title}
       </h1>
-      {draft ? <p>Draft: only you can see this page.</p> : null}
-      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: intro }} />
+      <DraftNotice show={draft} />
+      <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(intro)} />
       <LibraryOverview overview={libraryOverview(items)} />
       <div className="library site-catalog site-catalog-wide">
         <TabsNav aria-label="Protocols by kind of work" variant="line">
@@ -185,7 +181,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
         })}
       />
       {rest ? (
-        <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: rest }} />
+        <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(rest)} />
       ) : null}
       <template data-island="catalog" />
     </PageShell>

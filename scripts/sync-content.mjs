@@ -1,6 +1,7 @@
 // This script runs no gate: run `npm run check:content` first. It writes production D1, and the
 // bulk path deletes the search index and replaces the media citations wholesale.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { spawnSync } from "node:child_process";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 
@@ -11,7 +12,8 @@ import os from "node:os";
 import { textChunks } from "../app/lib/content/chunks.mjs";
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { PROTECTED_PAGE_PATHS, protectedPageReason } from "../app/lib/pages/protected.mjs";
-import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
+import { isPubliclyVisible } from "@drdustinedwards/site-helpers/search";
+import { statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, PAGES_ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
 import { CV_ARTIFACT_PATH } from "./lib/cv.mjs";
 import { DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs";
@@ -913,6 +915,6 @@ async function main() {
 }
 
 main().catch((/** @type {unknown} */ error) => {
-  console.error(`sync:content failed. ${error instanceof Error ? error.message : String(error)}`);
+  console.error(`sync:content failed. ${errorMessage(error)}`);
   process.exit(1);
 });

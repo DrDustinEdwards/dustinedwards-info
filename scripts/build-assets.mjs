@@ -1,5 +1,6 @@
 // A Worker cannot list its own static assets, so they are enumerated into a committed manifest.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { createHash } from "node:crypto";
 import { readdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -109,7 +110,7 @@ export async function buildAssetManifest() {
 
 if (isMain(import.meta.url)) {
   buildAssetManifest().catch((error) => {
-    console.error(`build:assets failed. ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`build:assets failed. ${errorMessage(error)}`);
     process.exit(1);
   });
 }

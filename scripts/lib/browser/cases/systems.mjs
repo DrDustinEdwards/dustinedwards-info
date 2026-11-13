@@ -6,6 +6,7 @@
 //
 // What a browser cannot prove is said where it is skipped: a real phone's frame rate (the release PR's remote
 // DevTools run) and a screen reader (VoiceOver and NVDA by hand).
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
@@ -81,11 +82,7 @@ export async function run({ browser }) {
       try {
         await part(page);
       } catch (error) {
-        ok(
-          `/systems: ${part.name} ran`,
-          false,
-          error instanceof Error ? error.message : String(error),
-        );
+        ok(`/systems: ${part.name} ran`, false, errorMessage(error));
       }
     }
   } finally {

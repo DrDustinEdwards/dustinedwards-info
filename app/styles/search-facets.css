@@ -29,35 +29,6 @@
   margin: 0 0 1.25rem;
 }
 
-.search-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.625rem;
-  border: 1px solid var(--border);
-  border-radius: 0;
-  background: var(--paper);
-  color: var(--text);
-  font-size: 0.8125rem;
-  text-decoration: none;
-  min-height: 1.75rem;
-}
-
-.search-chip:hover {
-  border-color: var(--brand);
-}
-
-.search-chip.is-active {
-  border-color: var(--brand);
-  background: var(--tint-brand);
-  color: var(--brand);
-}
-
-.search-chip-count {
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
 .search-zero section {
   margin-top: 1.5rem;
 }
@@ -71,18 +42,6 @@
   margin: 0;
   padding-left: 1.125rem;
   line-height: 1.9;
-}
-
-.search-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-  color: var(--text-secondary);
-  font-size: 0.9375rem;
 }
 
 .search-sort {
@@ -103,11 +62,4 @@
   list-style: none;
   display: flex;
   gap: 0.375rem;
-}
-
-.search-chip[aria-current] {
-  border-color: var(--brand);
-  background: var(--tint-brand);
-  color: var(--brand);
-  font-weight: 500;
 }

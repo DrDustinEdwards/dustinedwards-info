@@ -1,12 +1,14 @@
+import { JsonLd } from "capsomer/react/json-ld";
 import { Link, data } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { Breadcrumb } from "~/components/breadcrumb";
-import { PostBacklinks } from "~/components/post-backlinks";
 import { PostHistory } from "~/components/post-history";
-import { PostMentions } from "~/components/post-mentions";
 import { PostRail, ymd } from "~/components/post-rail";
-import { SeriesNav } from "~/components/post-series-nav";
-import { Signs } from "~/components/signs";
+import { Signs } from "capsomer/react/manual";
+import { RelatedLinks } from "capsomer/react/related-links";
+import { SeriesNav } from "capsomer/react/series-nav";
+import { httpHref } from "capsomer/behavior/related-links";
+import { seriesPath } from "~/lib/series-path.mjs";
 import { EvidenceRow } from "~/components/evidence-row";
 import { ISLAND_GZIP_BYTES } from "virtual:islands";
 
@@ -22,12 +24,11 @@ import {
 } from "~/db";
 import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
 import { blogPostView } from "~/lib/blog-view";
-import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { renameRedirect } from "@dustinedwards/site-runtime/url";
 import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv, postPreviewContext } from "~/lib/context";
-import { longDateUTC } from "~/lib/long-date.mjs";
-import { Picture } from "~/components/picture";
+import { formatDate } from "capsomer/behavior/time";
+import { Picture } from "capsomer/react/picture";
 import { articleCrops, contentPicture } from "~/lib/media/images.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
@@ -53,15 +54,19 @@ import "~/styles/evidence-row.css";
 import "capsomer/tokens.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
+import "capsomer/series-nav.css";
+import "capsomer/related-links.css";
 import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
 import "capsomer/dialog.css";
 import "capsomer/button.css";
 import "capsomer/lightbox.css";
+import "capsomer/reading-progress.css";
 import "~/styles/post-head-blocks.css";
-import "~/styles/post-disclosures.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { PROSE } from "~/lib/prose-context";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /** Middleware, not the loader: a document route's loader cannot return a raw Response. */
 export const middleware: Route.MiddlewareFunction[] = [
@@ -209,6 +214,8 @@ function toArticleSeo(post: LoadedPost): Parameters<typeof articleJsonLd>[1] {
 }
 
 /** One day: a post synced the day it was published has been deployed, not revised. */
+// Two screens of text, the length below which a reading bar fills in one flick.
+const READING_BAR_MIN_WORDS = 500;
 const REVISED_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 export default function BlogPost({ loaderData }: Route.ComponentProps) {
@@ -220,7 +227,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
   const revised = post.updatedAt ? new Date(post.updatedAt).getTime() : null;
   const revisedLabel =
     published !== null && revised !== null && revised - published > REVISED_THRESHOLD_MS
-      ? longDateUTC(post.updatedAt)
+      ? formatDate(post.updatedAt)
       : null;
 
   const sections = toc.filter((entry) => entry.depth === 2);
@@ -240,12 +247,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
        * article-scoped h-entry would have no p-name and no dt-published.
        */}
       <main className="cap-page tracks post-tracks h-entry" id="main" tabIndex={-1}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLdText(articleJsonLd(SITE_ORIGIN, toArticleSeo(post))),
-          }}
-        />
+        <JsonLd data={articleJsonLd(SITE_ORIGIN, toArticleSeo(post))} />
 
         <header className="post-head">
           <Breadcrumb trail={postTrail(post)} />
@@ -262,6 +264,12 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         </header>
 
         <PostRail post={post} revisedLabel={revisedLabel} sections={sections} />
+
+        {/* Capsomer's reading bar, CSS only, filling through the post body below. Only on a post of two screens or more
+            (about 500 words), as Prelum's script bar did: on a shorter one it would fill in one flick. */}
+        {post.wordCount >= READING_BAR_MIN_WORDS && (
+          <div className="cap-reading-progress" aria-hidden="true" />
+        )}
 
         <article className="post post-body">
           <PostHeadBlocks
@@ -283,31 +291,32 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           )}
 
           {post.series && seriesParts.length > 1 && (
-            <SeriesNav post={post} series={post.series} seriesParts={seriesParts} />
+            <SeriesNav
+              name={post.series}
+              href={seriesPath(post.series)}
+              parts={seriesParts.map((entry) => ({
+                href: `/writing/${entry.slug}`,
+                title: entry.title,
+              }))}
+              current={`/writing/${post.slug}`}
+            />
           )}
 
           {/* Build-time HTML from markdown we author; no third-party input, so it can be injected. */}
           <div
             className="prose e-content"
+            {...PROSE}
             data-cap="lightbox"
+            data-cap-reading
             {...RENDERED}
-            dangerouslySetInnerHTML={{ __html: post.html }}
+            dangerouslySetInnerHTML={markup(post.html)}
           />
 
-          {post.furtherReading.length > 0 && (
-            <section className="further-reading" aria-labelledby="further-heading">
-              <h2 id="further-heading">Further reading</h2>
-              <ul>
-                {post.furtherReading.map((item) => (
-                  <li key={item.url}>
-                    <a href={item.url} rel="noopener noreferrer">
-                      {item.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <RelatedLinks
+            kind="external"
+            title="Further reading"
+            items={post.furtherReading.map((item) => ({ href: item.url, title: item.title }))}
+          />
 
           {/* The runway holding position marking (capsomer/manual.css .cap-hold): the post ends here; what follows is
               about it. Drawn, with no words (Dustin, 2026-11-04). */}
@@ -348,7 +357,18 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </a>
           </nav>
 
-          {mentions.length > 0 && <PostMentions mentions={mentions} />}
+          {/* A mention is a stranger's: its author's address if that passes, else its source; its name falls back to
+              the source address, a fact, never an invented name attributed to a real person. */}
+          <RelatedLinks
+            kind="mentions"
+            title="Mentions"
+            items={mentions.map((mention) => ({
+              href: httpHref(mention.authorUrl) ?? mention.sourceUrl,
+              title: mention.authorName ?? mention.sourceUrl,
+              excerpt: mention.excerpt,
+              date: mention.decidedAt,
+            }))}
+          />
 
           <p className="post-colophon-note">
             Built on the stack described at <Link to="/colophon">/colophon</Link>.
@@ -362,7 +382,14 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             />
           )}
 
-          {post.backlinks.length > 0 && <PostBacklinks backlinks={post.backlinks} />}
+          <RelatedLinks
+            kind="internal"
+            title="Linked from"
+            items={post.backlinks.map((item) => ({
+              href: `/writing/${item.slug}`,
+              title: item.title,
+            }))}
+          />
 
           <div className="post-nav">
             <Signs

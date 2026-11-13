@@ -37,7 +37,8 @@ import { idsIn } from "../app/lib/pages/links.mjs";
 import { buildNav, menuLinks } from "../app/lib/nav.ts";
 import { paperSlashTarget } from "../app/lib/publications/pdf-redirect.mjs";
 import { paperMarkdownPath, paperPath } from "../app/lib/publications/paths.mjs";
-import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
+import { isPubliclyVisible } from "@drdustinedwards/site-helpers/search";
+import { statusForDraft } from "../app/lib/search/visibility.mjs";
 import { seriesPath } from "../app/lib/series-path.mjs";
 import { tagPath } from "../app/lib/tag-path.mjs";
 import { loadSystemModel, systemPath } from "../app/lib/systems.mjs";
@@ -55,10 +56,10 @@ import { hasItemPage, itemPath, kindPath } from "../app/kb/registry/catalog.mjs"
 import { buildPublications } from "./lib/publications.mjs";
 import { fixedSectionIds } from "../app/kb/procedures/render.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";
-import { parseSource, ts } from "./lib/syntax.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { parseSource, ts } from "@dustinedwards/devkit/node/syntax";
+import { createTally } from "@dustinedwards/devkit/node";
 import { readPublishedPages } from "./lib/published-pages.mjs";
-import { walkFiles } from "./lib/walk-files.mjs";
+import { walkFiles } from "@dustinedwards/devkit/node";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const rel = (/** @type {string} */ file) => relative(root, file).split(sep).join("/");

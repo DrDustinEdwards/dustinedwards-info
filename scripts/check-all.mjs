@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { gateNames } from "./build-stack.mjs";
@@ -5,7 +6,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { availableParallelism } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { assertFloor } from "./lib/floor.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
 import { killTree, readProcessTable, recordedTreeLeftovers } from "./lib/child-processes.mjs";
 import { WINDOWS_CRASH_CODES } from "./lib/windows-crash-codes.mjs";
 import { mb, peakBetween, startRssSampler, treeSince } from "./lib/rss.mjs";
@@ -594,9 +595,7 @@ async function main() {
  */
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch((error) => {
-    console.error(
-      `\ncheck failed to start. ${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    console.error(`\ncheck failed to start. ${errorMessage(error)}\n`);
     process.exit(1);
   });
 }

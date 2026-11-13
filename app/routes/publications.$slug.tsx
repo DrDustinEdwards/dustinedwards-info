@@ -1,3 +1,7 @@
+import { AuthorList } from "capsomer/react/author-list";
+import { CitedBy, CitedByCount } from "capsomer/react/cited-by";
+import { JsonLd } from "capsomer/react/json-ld";
+import { RecordFacts } from "capsomer/react/record-facts";
 import { Link } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -5,9 +9,8 @@ import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getCitationCounts } from "~/lib/citations.server";
 import { getEnv } from "~/lib/context";
-import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { paperJsonLd } from "~/lib/publications/article-json-ld.mjs";
-import { buildCitationTags } from "~/lib/publications/citation-tags.mjs";
+import { citationTags } from "@drdustinedwards/site-helpers/scholar";
 import { accessionLabel, accessionUrl } from "~/lib/publications/accessions.mjs";
 import { publicationBySlug } from "~/lib/publications/by-slug";
 import { TOPICS } from "~/lib/publications/topics.mjs";
@@ -23,21 +26,23 @@ import {
 } from "~/lib/publications/paths.mjs";
 import { citedByFetchedAt, citedByFor } from "~/lib/publications/cited-by.mjs";
 import citedByArtifact from "../../data/publications.cited-by.json";
+import { SERP_DESCRIPTION, truncateForSerp } from "@drdustinedwards/site-helpers/head";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   isSiteOwner,
   personId,
   personNode,
   publicHtmlHeaders,
-  SERP_DESCRIPTION,
   SITE,
   SITE_ORIGIN,
   siteHead,
-  truncateForSerp,
   type Trail,
 } from "~/lib/seo";
 import type { Route } from "./+types/publications.$slug";
 
+import "capsomer/author-list.css";
+import "capsomer/record-facts.css";
+import "capsomer/cited-by.css";
 import "~/styles/paper.css";
 
 /**
@@ -96,7 +101,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       trail: paperTrail(title, pagePath),
     }),
     // A manuscript with no DOI has no registry record to cite, so it carries no Scholar tags.
-    ...(paper.doi ? buildCitationTags(paper, { abstractUrl, pdfUrl }) : []),
+    ...(paper.doi ? citationTags(paper, { abstractUrl, pdfUrl }) : []),
     /* Every paper has a twin (the markdown route reads it from D1); the head is how an agent finds it. */
     {
       tagName: "link",
@@ -114,24 +119,6 @@ function paperTrail(title: string, pagePath: string): Trail {
     ["Publications", PUBLICATIONS_PATH],
     [title, pagePath],
   ];
-}
-
-function Authors({ authors }: { authors: string[] }) {
-  /* Every author visible: `citation_author` lists them, and Scholar penalizes content that disagrees with its meta tags. */
-  return (
-    <p className="paper-authors">
-      {authors.map((name, i) => (
-        <span key={`${name}-${i}`}>
-          {i > 0 ? ", " : ""}
-          {isSiteOwner(name) ? (
-            <strong className="pub-author-me">{decodeEntities(name)}</strong>
-          ) : (
-            decodeEntities(name)
-          )}
-        </span>
-      ))}
-    </p>
-  );
 }
 
 export default function Paper({ loaderData }: Route.ComponentProps) {
@@ -152,46 +139,38 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
             {italicizeOrganisms(decodeEntities(paper.title))}
           </h1>
 
-          <Authors authors={paper.authors} />
+          {/* Every author visible: `citation_author` lists them, and Scholar penalizes content that disagrees with its meta tags. */}
+          <AuthorList authors={paper.authors} isOwner={isSiteOwner} format={decodeEntities} />
         </header>
 
         <div className="paper-rail u-rail">
-          <p className="paper-machine">
-            <b>{paper.year}</b>
-            {paper.stage === "submitted" ? "submitted" : "published"}
-            {paper.journal ? (
-              <>
-                <b className="paper-machine-venue">{decodeEntities(paper.journal)}</b>
-                {[
-                  paper.volume ? `volume ${paper.volume}` : null,
-                  paper.issue ? `issue ${paper.issue}` : null,
-                  paper.pages ? `pages ${paper.pages}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(", ")}
-              </>
-            ) : null}
-            {paper.doi ? (
-              <>
-                <b>
-                  <a href={`https://doi.org/${paper.doi}`}>{paper.doi}</a>
-                </b>
-                doi
-              </>
-            ) : null}
-            {paper.type !== "article" ? (
-              <>
-                <b>{paper.type}</b>
-                kind
-              </>
-            ) : null}
-            {paper.isOpenAccess ? (
-              <>
-                <b>open access</b>
-                license
-              </>
-            ) : null}
-          </p>
+          <RecordFacts
+            facts={[
+              { label: "Year", value: paper.year },
+              { label: "Stage", value: paper.stage === "submitted" ? "submitted" : "published" },
+              {
+                label: "Journal",
+                value: paper.journal
+                  ? [
+                      decodeEntities(paper.journal),
+                      paper.volume ? `volume ${paper.volume}` : null,
+                      paper.issue ? `issue ${paper.issue}` : null,
+                      paper.pages ? `pages ${paper.pages}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")
+                  : null,
+              },
+              {
+                label: "DOI",
+                value: paper.doi,
+                href: paper.doi ? `https://doi.org/${paper.doi}` : undefined,
+                mono: true,
+              },
+              { label: "Kind", value: paper.type !== "article" ? paper.type : null },
+              { label: "License", value: paper.isOpenAccess ? "open access" : null },
+            ]}
+          />
         </div>
 
         <div className="paper-text">
@@ -209,16 +188,12 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           </p>
 
           {/* Only at 1 or more: a cold cache shows nothing rather than a zero that looks measured. */}
-          {cited && cited.count >= 1 ? (
-            <p className="paper-cited">
-              {cited.url ? (
-                <a href={cited.url}>Cited by {cited.count}</a>
-              ) : (
-                <>Cited by {cited.count}</>
-              )}{" "}
-              <span className="paper-provenance">OpenAlex, read {cited.fetchedAt}</span>
-            </p>
-          ) : null}
+          <CitedByCount
+            count={cited?.count}
+            href={cited?.url}
+            source="OpenAlex"
+            readAt={cited?.fetchedAt}
+          />
 
           {/* `role="status"`, not `alert`, which interrupts a screen reader mid-sentence. */}
           {paper.updateNotice ? (
@@ -255,31 +230,14 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
             </section>
           ) : null}
 
-          {citedBy && citedBy.citing.length > 0 ? (
-            <section className="paper-citedby" aria-labelledby="citedby-heading">
-              <h2 id="citedby-heading">
-                Cited by{" "}
-                {citedBy.total > citedBy.citing.length
-                  ? `${citedBy.citing.length} of ${citedBy.total}`
-                  : citedBy.total}
-              </h2>
-              <p className="paper-provenance paper-citedby-source">
-                OpenAlex, read {citedByFetchedAt ?? "an unrecorded date"}. Newest first.
-              </p>
-              <ol className="paper-citedby-list">
-                {citedBy.citing.map((w, i) => (
-                  <li key={`${w.doi ?? w.title}-${i}`}>
-                    {w.doi ? (
-                      <a href={`https://doi.org/${w.doi}`}>{w.title ?? w.doi}</a>
-                    ) : (
-                      (w.title ?? "Untitled")
-                    )}
-                    {w.venue ? <span className="paper-provenance">, {w.venue}</span> : null}
-                    {w.year ? <span className="paper-provenance">, {w.year}</span> : null}
-                  </li>
-                ))}
-              </ol>
-            </section>
+          {citedBy ? (
+            <CitedBy
+              total={citedBy.total}
+              works={citedBy.citing}
+              source="OpenAlex"
+              readAt={citedByFetchedAt ?? undefined}
+              order="Newest first."
+            />
           ) : null}
 
           {topics.length > 0 ? (
@@ -293,21 +251,18 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           ) : null}
         </div>
 
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLdText([
-              ...paperJsonLd(paper, {
-                origin: SITE_ORIGIN,
-                pageUrl,
-                pdfUrl: pdfPath ? `${SITE_ORIGIN}${pdfPath}` : null,
-                isOwner: isSiteOwner,
-                personId: personId(SITE_ORIGIN),
-                personNode: personNode(SITE_ORIGIN),
-                topics,
-              }),
-            ]),
-          }}
+        <JsonLd
+          data={[
+            ...paperJsonLd(paper, {
+              origin: SITE_ORIGIN,
+              pageUrl,
+              pdfUrl: pdfPath ? `${SITE_ORIGIN}${pdfPath}` : null,
+              isOwner: isSiteOwner,
+              personId: personId(SITE_ORIGIN),
+              personNode: personNode(SITE_ORIGIN),
+              topics,
+            }),
+          ]}
         />
       </main>
       <ShellFooter />

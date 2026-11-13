@@ -7,7 +7,6 @@ import { decodeContentId, encodeContentId } from "~/lib/carrel/content-id.mjs";
 import { runTool } from "~/lib/operator/api.server";
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { renderPublicationFile } from "~/lib/publications/serialize.mjs";
-import { action, loader } from "~/routes/api.carrel.v1.$";
 import { loader as bibAllLoader } from "~/routes/publications[.bib]";
 import Publications, {
   headers as indexHeaders,
@@ -28,7 +27,7 @@ import {
   writes,
   type SourceStub,
 } from "./source-stub";
-import { renderRoute, routeContext } from "./route-helpers";
+import { renderRoute, routeContext, carrelRequest } from "./route-helpers";
 import { seedCitations, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -56,11 +55,11 @@ const headersFor = () => ({
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
 
 function get(url: string): Promise<Response> {
-  return loader(argsFor(new Request(url, { headers: headersFor() })));
+  return carrelRequest(argsFor(new Request(url, { headers: headersFor() })));
 }
 
 function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return action(
+  return carrelRequest(
     argsFor(new Request(url, { method, headers: headersFor(), body: JSON.stringify(body) })),
   );
 }

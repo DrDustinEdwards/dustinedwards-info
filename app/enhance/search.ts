@@ -4,6 +4,9 @@
  * list; arrow keys anywhere else still scroll the page.
  */
 
+import { trustedHtml } from "capsomer/behavior/trusted-html";
+import { plural } from "@drdustinedwards/site-helpers/text";
+
 const MIN_QUERY = 3;
 const DEBOUNCE_MS = 200;
 
@@ -62,7 +65,7 @@ function renderHit(hit: JsonHit): HTMLLIElement {
   const snippet = document.createElement("p");
   snippet.className = "search-snippet";
   // The one field written as HTML: the server escaped the text before substituting its <mark> markers.
-  snippet.innerHTML = hit.snippet;
+  snippet.innerHTML = trustedHtml(hit.snippet);
   item.appendChild(snippet);
 
   return item;
@@ -130,7 +133,7 @@ export function enhanceSearch(): void {
 
     if (count) {
       const total = data.total ?? 0;
-      count.textContent = total === 0 ? "No results" : `${total} result${total === 1 ? "" : "s"}`;
+      count.textContent = total === 0 ? "No results" : plural(total, "result");
     }
 
     // Replaced, not pushed, so a reader who typed eight characters need not press Back eight times.
@@ -144,8 +147,10 @@ export function enhanceSearch(): void {
    */
   function followQuery(query: string) {
     for (const link of document.querySelectorAll<HTMLAnchorElement>(
-      ".search-sort a, .search-facets a, .search-active-filters a, .search-pagination a",
+      ".search-sort a, .search-facets a, .search-active-filters a, .cap-pagination a",
     )) {
+      // A disabled end of the pager is an anchor with no href; rewriting it would make it link to "/".
+      if (!link.hasAttribute("href")) continue;
       const next = new URL(link.href, location.origin);
       next.searchParams.set("q", query);
       link.href = next.pathname + next.search;

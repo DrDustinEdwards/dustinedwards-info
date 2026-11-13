@@ -3,6 +3,8 @@
 // JSON downloads and the markdown twin all read this, so a field is described in exactly one place and a protocol's
 // facts are drawn from its record, never typed again. Pure: the route passes in the records it read from D1.
 
+import { mdCell } from "@drdustinedwards/site-helpers/text";
+import { recordsCsv } from "@dustinedwards/site-runtime/csv";
 import {
   catalogRedirect,
   defineCatalog,
@@ -196,22 +198,16 @@ export function libraryRecords(items, params, origin) {
 }
 
 /**
- * The same rows as CSV (RFC 4180): a list field is its values joined with "; ". A cell is quoted when it holds a
- * comma, a quote or a line break.
+ * The same rows as CSV, site-runtime's (RFC 4180, the formula guard on): a list field is its values joined with "; ".
  *
  * @param {Array<Record<string, unknown>>} rows a library's download rows, its own or another base's (app/kb/libraries.mjs)
  */
 export function libraryCsv(rows) {
-  const columns = Object.keys(rows[0] ?? { id: 1, title: 1, url: 1 });
-  const cellOf = (/** @type {unknown} */ value) => {
-    const text = Array.isArray(value) ? value.join("; ") : String(value ?? "");
-    return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-  };
-  return `${[columns.join(","), ...rows.map((row) => columns.map((c) => cellOf(row[c])).join(","))].join("\r\n")}\r\n`;
+  return recordsCsv(
+    /** @type {Array<Record<string, import("@dustinedwards/site-runtime/csv").CsvValue>>} */ (rows),
+    Object.keys(rows[0] ?? { id: 1, title: 1, url: 1 }),
+  );
 }
-
-/** One cell of a markdown table. @param {string} text */
-const cell = (text) => text.replaceAll("|", "\\|").replace(/\s+/g, " ").trim();
 
 /**
  * The twin's table: every protocol with the facts the page shows, drawn from the same items. Links are to the
@@ -224,14 +220,14 @@ export function libraryMarkdown(items, origin) {
   const head = ["Protocol", "Method", "Organism", "Target", "Course", "Steps", "Updated"];
   const rows = items.map((p) =>
     [
-      `[${cell(p.title)}](${origin}${p.path})`,
+      `[${mdCell(p.title)}](${origin}${p.path})`,
       p.methods.map(methodLabel).join(", "),
       p.organisms.map(organismLabel).join(", "),
       p.targets.join(", "),
       p.courses.map(courseLabel).join(", "),
       String(p.steps),
       p.updated,
-    ].map((c, i) => (i === 0 ? c : cell(c))),
+    ].map((c, i) => (i === 0 ? c : mdCell(c))),
   );
   return [
     `| ${head.join(" | ")} |`,
@@ -475,20 +471,23 @@ function calculatorCount() {
  * the first and leaves the second alone: a tracking parameter or a cache-buster on a library address is served, not
  * redirected, so a link carrying one still lands on the page it names.
  *
+ * The knowledge bases' libraries (libraries.mjs) use it with their own catalog.
+ *
  * @param {URL} url
+ * @param {import("capsomer/behavior/catalog").CatalogDefinition<any>} [catalog]
  */
-export function libraryRedirect(url) {
+export function libraryRedirect(url, catalog = LIBRARY) {
   const known = new Set([
     "q",
     "sort",
     "page",
-    ...LIBRARY.fields.filter((f) => f.facet).map((f) => f.key),
+    ...catalog.fields.filter((f) => f.facet).map((f) => f.key),
   ]);
   const kept = new URLSearchParams();
   for (const [key, value] of url.searchParams) if (known.has(key)) kept.append(key, value);
   const only = new URL(url);
   only.search = kept.toString();
-  return catalogRedirect(LIBRARY, only);
+  return catalogRedirect(catalog, only);
 }
 
 /**
@@ -513,14 +512,15 @@ export function libraryCitation({ name, affiliation, origin }) {
  * shown; the markdown twin is always the whole library.
  *
  * @param {{ href: () => string }} result the catalog's result, whose `href()` is the clean address of this view
+ * @param {string} [path] the library's address; a knowledge base's library passes its own
  */
-export function libraryDownloads(result) {
+export function libraryDownloads(result, path = LIBRARY_PATH) {
   const href = result.href();
   const query = href.includes("?") ? href.slice(href.indexOf("?")) : "";
   return {
-    csv: `${LIBRARY_PATH}.csv${query}`,
-    json: `${LIBRARY_PATH}.json${query}`,
-    markdown: `${LIBRARY_PATH}.md`,
+    csv: `${path}.csv${query}`,
+    json: `${path}.json${query}`,
+    markdown: `${path}.md`,
   };
 }
 

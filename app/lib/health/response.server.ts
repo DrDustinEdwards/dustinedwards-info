@@ -8,6 +8,7 @@
 
 import { cronCheck } from "@dustinedwards/site-runtime/cron";
 import {
+  browserCheck,
   durableObjectCheck,
   healthResponse,
   imagesCheck,
@@ -25,7 +26,7 @@ import { backupStatus } from "~/lib/backup/d1-backup.server";
 export function siteHealthResponse(env: Env): Promise<Response> {
   /* The drift checks run once, started here and not awaited, so each named check below waits on the run inside
      healthResponse's checkTimeoutMs, beside the binding checks: a slow run holds /health no longer than any other
-     check. A detail carries only "present of expected" (rows.mjs reads it back), because this is public; the full
+     check. A detail carries only "present of expected" (site-runtime ./health-read reads it back), because this is public; the full
      detail (the missing keys) goes to Workers Logs under alert=health-check-failed. */
   const drift = runHealthChecks(env);
   drift.then(
@@ -64,13 +65,7 @@ export function siteHealthResponse(env: Env): Promise<Response> {
       purgeCheck(env.APP_KV),
       { ...r2Check("media-revisions", env.MEDIA_REVISIONS), level: "warn" },
       imagesCheck("images", env.IMAGES),
-      // No helper for Browser Rendering, and a probe would spend browser minutes: the binding is there or not.
-      {
-        name: "browser",
-        level: "warn",
-        run: async () =>
-          typeof env.BROWSER?.fetch === "function" || { ok: false, detail: "binding missing" },
-      },
+      browserCheck("browser", env.BROWSER),
       queueCheck("webmention-verify", env.WEBMENTION_VERIFY),
       durableObjectCheck("ask-budget", env.ASK_BUDGET),
       // The deploy's time holds a job back until its first window since the deploy has passed: a job added

@@ -25,7 +25,7 @@ import katexCssUrl from "./styles/katex.generated.css?url";
 
 export function loader({ request, context }: Route.LoaderArgs) {
   // The nonce is carried through the loader because `Layout` cannot reach the request context.
-  // Admin only: undefined on every public page, which is edge-cached and trusted by hash instead.
+  // Every render's (site-runtime ./worker), renewed per reader on a stored page.
   return { theme: themeFromRequest(request), nonce: getNonce(context) };
 }
 
@@ -42,21 +42,18 @@ export const links: Route.LinksFunction = () => [
   ...iconLinks(),
   // feed+json although served as application/json: readers scan autodiscovery for the feed types.
   {
-    tagName: "link",
     rel: "alternate",
     type: "application/rss+xml",
     title: `${SITE.name} blog`,
     href: `${SITE_ORIGIN}/writing/rss.xml`,
   },
   {
-    tagName: "link",
     rel: "alternate",
     type: "application/atom+xml",
     title: `${SITE.name} blog`,
     href: `${SITE_ORIGIN}/writing/atom.xml`,
   },
   {
-    tagName: "link",
     rel: "alternate",
     type: "application/feed+json",
     title: `${SITE.name} blog`,
@@ -97,6 +94,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Before any stylesheet: data-theme means nothing to the browser until the CSS is parsed. */}
         <meta name="color-scheme" content={colorSchemeMeta(data?.theme ?? "system")} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="text-scale" content="scale" />
         {/* Literal hexes, the palette's ground: browser chrome does not resolve a custom property. */}
         <ThemeColor choice={theme ?? null} ground={THEME_GROUND} />
         <Meta />
@@ -106,12 +104,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
             would lift the element above the color-scheme meta. */}
         {linksMath ? <link rel="stylesheet" href={katexCssUrl} /> : null}
         {/* Starts every <template data-island> once the document is parsed (devkit's startIslands, app/site.ts).
-            Same-origin, so 'self' allows it with no hash; the nonce is admin's, undefined on public pages. */}
+            Same-origin, so 'self' allows it with no hash; it carries the render's nonce like every script. */}
         <script src="/site.js" defer nonce={nonce} />
       </head>
       <body>
         {adminPlane ? null : (
-          <a className="skip-link" href="#main">
+          <a className="cap-skip" href="#main">
             Skip to content
           </a>
         )}

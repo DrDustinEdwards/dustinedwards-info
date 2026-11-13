@@ -118,7 +118,7 @@ function stringList(v) {
 export function mediaSyncSummary(report) {
   if (report.converged) {
     return (
-      `Media index converged: ${report.expected} expected, ${report.present} present, ` +
+      `Site file index converged: ${report.expected} expected, ${report.present} present, ` +
       `${report.indexed} indexed, ${report.removed} removed.`
     );
   }

@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-import { longDateUTC } from "~/lib/long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { tagPath } from "~/lib/tag-path.mjs";
 
 type RowPost = {
@@ -21,7 +21,7 @@ export function PostRow({ post, mark }: { post: RowPost; mark?: string }) {
       <p className="entry-when">
         {post.publishAt && (
           <time className="dt-published" dateTime={new Date(post.publishAt).toISOString()}>
-            {longDateUTC(post.publishAt)}
+            {formatDate(post.publishAt)}
           </time>
         )}
         {post.readingTimeMinutes ? (
@@ -52,26 +52,5 @@ export function PostRow({ post, mark }: { post: RowPost; mark?: string }) {
         )}
       </div>
     </li>
-  );
-}
-
-export function Pager({
-  page,
-  pageCount,
-  hrefFor,
-}: {
-  page: number;
-  pageCount: number;
-  hrefFor: (page: number) => string;
-}) {
-  if (pageCount <= 1) return null;
-  return (
-    <nav className="pager" aria-label="Pagination">
-      {page > 1 && <Link to={hrefFor(page - 1)}>Newer</Link>}
-      <span className="pager-where">
-        Page {page} of {pageCount}
-      </span>
-      {page < pageCount && <Link to={hrefFor(page + 1)}>Older</Link>}
-    </nav>
   );
 }

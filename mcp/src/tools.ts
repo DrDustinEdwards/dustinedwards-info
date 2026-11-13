@@ -27,11 +27,12 @@
  * (12.4). A tool handler never runs without all three.
  */
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { logEvent } from "@dustinedwards/site-runtime/log";
 import { z } from "zod";
 
-import { callOperator, ApiLegError, type ApiEnv } from "./api-client";
+import { callSiteOperator, ApiLegError, type ApiEnv } from "./api-client";
 import { SCOPE_READ, SCOPE_WRITE, type Scope } from "./auth";
 
 export type ToolEnv = Partial<ApiEnv> & Partial<AuditEnv> & { ADMIN_EMAIL?: string };
@@ -73,12 +74,12 @@ const limitSchema = z
  */
 const CURSOR = /^[A-Za-z0-9+/]{1,16}$/;
 
-function encodeCursor(offset: number): string {
+function encodeOffsetCursor(offset: number): string {
   return btoa(`o:${offset}`).replace(/=+$/, "");
 }
 
 /** The offset a cursor names, or null for one this server never gave. */
-export function decodeCursor(cursor: string): number | null {
+export function decodeOffsetCursor(cursor: string): number | null {
   if (!CURSOR.test(cursor)) return null;
   let decoded = "";
   try {
@@ -93,7 +94,7 @@ export function decodeCursor(cursor: string): number | null {
 const cursorSchema = z
   .string()
   .refine(
-    (cursor) => decodeCursor(cursor) !== null,
+    (cursor) => decodeOffsetCursor(cursor) !== null,
     "cursor is not one this tool gave. Leave it out to start from the first page.",
   )
   .optional()
@@ -167,7 +168,7 @@ function refusal(result: { status: number; error?: string; detail?: unknown }): 
 function wrapperFailure(cause: unknown): ToolOutput {
   // The detail goes to the Worker log only (checklist S4): the client hears what kind of failure it was, never the
   // error's own text, which can name a binding, an address or an upstream answer.
-  const detail = cause instanceof Error ? cause.message : String(cause);
+  const detail = errorMessage(cause);
   logEvent(
     "wrapper_failure",
     { kind: cause instanceof ApiLegError ? cause.kind : "unexpected", detail },
@@ -183,7 +184,7 @@ function wrapperFailure(cause: unknown): ToolOutput {
 /** Runs one operator tool and shapes the result for MCP. */
 async function run(env: ToolEnv, tool: string, args: Record<string, unknown>): Promise<ToolOutput> {
   try {
-    const result = await callOperator(env, tool, args);
+    const result = await callSiteOperator(env, tool, args);
     if (!result.ok) return refusal(result);
     return ok((result.data ?? {}) as Record<string, unknown>);
   } catch (cause) {
@@ -203,7 +204,7 @@ async function runPaged(
   page: { limit?: unknown; cursor?: unknown },
 ): Promise<ToolOutput> {
   try {
-    const result = await callOperator(env, tool, args);
+    const result = await callSiteOperator(env, tool, args);
     if (!result.ok) return refusal(result);
     const data = { ...((result.data ?? {}) as Record<string, unknown>) };
     const key = Object.keys(data).find((k) => Array.isArray(data[k]));
@@ -211,14 +212,14 @@ async function runPaged(
     const all = data[key] as unknown[];
     const limit = typeof page.limit === "number" ? page.limit : 25;
     // The schema refused a cursor this server never gave, so a string here decodes.
-    const offset = typeof page.cursor === "string" ? (decodeCursor(page.cursor) ?? 0) : 0;
+    const offset = typeof page.cursor === "string" ? (decodeOffsetCursor(page.cursor) ?? 0) : 0;
     data[key] = all.slice(offset, offset + limit);
     const hasMore = offset + limit < all.length;
     data.page = {
       limit,
       total: all.length,
       has_more: hasMore,
-      next_cursor: hasMore ? encodeCursor(offset + limit) : null,
+      next_cursor: hasMore ? encodeOffsetCursor(offset + limit) : null,
     };
     return ok(data);
   } catch (cause) {

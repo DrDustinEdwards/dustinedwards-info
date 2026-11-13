@@ -1,3 +1,5 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
+
 console.log("\ncheck:machine-readable");
 
 const PARTS = [
@@ -26,9 +28,7 @@ for (const part of PARTS) {
     if (outcome.checks === 0) failed.push(`${part}: asserted nothing`);
     else if (outcome.failures > 0) failed.push(`${part}: ${outcome.failures} failure(s)`);
   } catch (error) {
-    failed.push(
-      `${part}: stopped early, ${error instanceof Error ? error.message : String(error)}`,
-    );
+    failed.push(`${part}: stopped early, ${errorMessage(error)}`);
   }
 }
 

@@ -110,18 +110,18 @@ admin keeps the Knowledge Base editor, media, mentions and its upkeep tools.
 
 ## Media
 
-R2 is the store and the truth; D1 is a queryable index over it, and the health
-endpoint's `media-index-drift` check compares the two. **R2 wins every conflict:**
-a row with no object is deleted, an object with no row is backfilled, never the
-reverse.
-
-The write path is an **event notification, not a dual write**. The Worker writes
-only to R2; the bucket emits; a queue consumer derives the row, idempotently,
-with a dead-letter queue behind it.
+R2 is the store. The media library's uploads are indexed in site-api's standard
+tables (`media`, written by its media library); the site's own files, `public/`
+and the generated cards in OG, are indexed in `site_assets`, and the health
+endpoint's `media-index-drift` check compares that index with them. **The files
+win every conflict:** a row with no file is deleted, a file with no row is
+indexed, never the reverse. Its write path is an **event notification, not a dual
+write**: OG emits, and a queue consumer derives the row, idempotently, with a
+dead-letter queue behind it.
 
 Keys are content-addressed (`sha256` truncated, plus extension), so the filename
-lives in `original_name` and in the object's custom metadata rather than in the
-key itself. Static assets under `public/` are indexed in place rather than
+lives in the library's `filename` and in the object's custom metadata rather than
+in the key itself. Static assets under `public/` are indexed in place rather than
 moved.
 
 ## Gates

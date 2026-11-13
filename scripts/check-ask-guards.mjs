@@ -10,9 +10,10 @@ import { stripComments } from "./lib/strip-comments.mjs";
 import { functionBody } from "./lib/source-body.mjs";
 
 import { originVerdict } from "@dustinedwards/site-runtime/origin";
-import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
-import { assertFloor } from "./lib/floor.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { isPubliclyVisible } from "@drdustinedwards/site-helpers/search";
+import { statusForDraft } from "../app/lib/search/visibility.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -41,7 +42,7 @@ const { eq } = tally;
   /* And the question is read from the BODY, or a restored loader bills on a hand-made GET. */
   eq(
     "ask: the question is read from the request body, to a ceiling",
-    /cappedForm\(\s*request\s*,/.test(askCode),
+    /readForm\(\s*request\s*,/.test(askCode),
     true,
   );
   eq(
@@ -147,28 +148,23 @@ const { eq } = tally;
     let scanned = 0;
     for (const name of readdirSync(routeDir).filter((f) => f.endsWith(".tsx"))) {
       const code = stripComments(readFileSync(join(routeDir, name), "utf8"));
-      if (!code.includes("ld+json")) continue;
-      scanned += 1;
-      let at = code.indexOf("ld+json");
-      while (at !== -1) {
-        const window = code.slice(at, at + 400);
-        if (/dangerouslySetInnerHTML/.test(window) && /JSON\.stringify\(/.test(window)) {
-          bare.push(name);
-        }
-        at = code.indexOf("ld+json", at + 1);
-      }
+      // Capsomer's JsonLd (capsomer/react/json-ld) escapes through Prelum's jsonLdText and sets the text
+      // through the Trusted Types policy; a route that writes its own ld+json script bypasses both.
+      if (code.includes("<JsonLd")) scanned += 1;
+      if (code.includes("ld+json")) bare.push(name);
     }
     eq("json-ld: the scan found the emitters at all", scanned >= 4, true);
     eq(
-      `json-ld: no emitter bypasses the helper (${bare.join(", ") || "none"})`,
+      `json-ld: no emitter bypasses Capsomer's JsonLd (${bare.join(", ") || "none"})`,
       bare.length === 0,
       true,
     );
   }
 
   /* Stripped: a comment naming the rule would otherwise stand in for it. Prelum's robotsDocument writes each path in
-     the route's `disallow` list into every group; the list is ROBOTS_DISALLOW in app/lib/seo.ts, which /ai.txt shares. */
-  const robots = stripComments(readFileSync(join(root, "app/routes/robots.ts"), "utf8"));
+     the `disallow` list workers/app.ts hands standardFiles into every group; the list is ROBOTS_DISALLOW in app/lib/seo.ts,
+     which /ai.txt shares. */
+  const robots = stripComments(readFileSync(join(root, "workers/app.ts"), "utf8"));
   const seo = stripComments(readFileSync(join(root, "app/lib/seo.ts"), "utf8"));
   eq(
     "ask: robots.txt disallows /search/ask",
@@ -229,7 +225,8 @@ const { eq } = tally;
 
   eq(
     "syncAskCorpus sources its records from askCorpusRecords",
-    /const records = await askCorpusRecords\(env\)/.test(askSource),
+    // The first of the reads syncAskCorpus runs together, destructured as `records`.
+    /const \[records,[^\]]*\] = await Promise\.all\(\[\s*askCorpusRecords\(env\),/.test(askSource),
     true,
   );
   eq(

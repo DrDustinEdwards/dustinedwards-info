@@ -57,7 +57,7 @@ describe("calculators in a procedure's steps", () => {
       );
       const folded = [
         ...html.matchAll(
-          /<details class="phage-tool phage-tool-step"><summary>Calculator: ([^<]+)<\/summary>/g,
+          /<details class="cap-disclosure phage-tool-step"[^>]*><summary>Calculator: ([^<]+)<\/summary>/g,
         ),
       ].map((m) => m[1]);
       expect(folded).toEqual([
@@ -67,11 +67,11 @@ describe("calculators in a procedure's steps", () => {
       ]);
       // The embedded forms submit to the tool's own page, and no two controls share an id.
       expect(html).toContain('action="/research/tools/webbed-plate"');
-      expect(html).toContain('data-tool-embedded=""');
+      expect(html).toContain('data-embedded=""');
       const ids = [...html.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
       expect(new Set(ids).size).toBe(ids.length);
       // Computed on the server from the worked example, so a reader without script sees an answer.
-      expect(html).toContain("phage-tool-answer");
+      expect(html).toContain("cap-calculator-answer");
       expect(html).toContain('<template data-island="tools"></template>');
     },
   );

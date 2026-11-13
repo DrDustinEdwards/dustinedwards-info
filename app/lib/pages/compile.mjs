@@ -2,6 +2,7 @@
 // the search input. build:content, sync:content and the adapter's page save all call compilePage, so
 // a file CI passes is the file the save tool accepts and the page draws (docs/PAGES.md).
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import matter from "gray-matter";
 
 import { gitBlobSha } from "../content/hashes.mjs";
@@ -253,10 +254,7 @@ export async function compilePage({
   } catch (error) {
     return {
       ok: false,
-      errors: [
-        ...errors,
-        `the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
-      ],
+      errors: [...errors, `the front matter is not valid YAML: ${errorMessage(error)}`],
     };
   }
   const fm = /** @type {Record<string, unknown>} */ (parsed.data);
@@ -331,7 +329,7 @@ export async function compilePage({
       },
     });
   } catch (error) {
-    return { ok: false, errors: [error instanceof Error ? error.message : String(error)] };
+    return { ok: false, errors: [errorMessage(error)] };
   }
   if (rendered.blockedUrls.length > 0) {
     errors.push(

@@ -28,7 +28,7 @@ import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
 import { convergeAsk, convergeCvPdf, convergeMedia, readAskDrift } from "./lib/operator-sync.mjs";
 import { ASK_POLL_WINDOW_MS, settleAskDrift } from "../app/lib/health/ask-converge.mjs";
 import { readOperatorToken } from "./lib/operator-token.mjs";
-import { missReport } from "./lib/converge-misses.mjs";
+import { INDEX_ADVICE, RENDER_ADVICE, missReport } from "./lib/converge-misses.mjs";
 import { uptimeStepOutcome } from "./lib/uptime-step.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -395,11 +395,11 @@ console.log(`\n  NOT run here: verify-live (bills per Ask probe) and check:all -
 
 /* Nonzero on any miss, after the record. Every miss is named: the faults are independent. */
 const misses = [
-  { key: "ask", title: "THE ASK INDEX", text: askMiss },
+  { key: "ask", title: "THE ASK INDEX", text: askMiss, advice: INDEX_ADVICE },
   { key: "cv-pdf", title: "THE CV PDF", text: cvPdfMiss },
   { key: "cards", title: "THE SHARE CARDS", text: cardsMiss },
-  { key: "media", title: "THE MEDIA INDEX", text: mediaMiss },
-  { key: "render", title: "THE RENDER", text: renderDriftMiss },
+  { key: "media", title: "THE MEDIA INDEX", text: mediaMiss, advice: INDEX_ADVICE },
+  { key: "render", title: "THE RENDER", text: renderDriftMiss, advice: RENDER_ADVICE },
   { key: "uptime", title: "THE UPTIME MONITORS", text: uptimeMiss },
   { key: "deferred", title: "DEFERRED DRIFT", text: deferredMiss },
   { key: "browser", title: "THE BROWSER TEST", text: browserMiss },

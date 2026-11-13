@@ -1,8 +1,10 @@
 /**
- * One row of /health, as ship reads it (rows.mjs healthChecks). `waitedMs` is set only by settleAskDrift.
+ * One row of /health, as ship reads it (site-runtime ./health-read healthChecks). `waitedMs` is set only by settleAskDrift.
  *
  * @typedef {{ name?: string, ok?: boolean, expected?: number, present?: number, waitedMs?: number }} HealthCheckRow
  */
+
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 export const ASK_POLL_ATTEMPTS = 12;
 export const ASK_POLL_INTERVAL_MS = 10_000;
@@ -48,7 +50,7 @@ export async function awaitAskConvergence({
       observed = await reading();
     } catch (thrown) {
       // A failing HTTP status is not this: it is a readable answer, and the caller parses the body.
-      error = thrown instanceof Error ? thrown.message : String(thrown);
+      error = errorMessage(thrown);
       lastError = error;
     }
 

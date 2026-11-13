@@ -1,4 +1,5 @@
-import { Link, data } from "react-router";
+import { Pagination } from "capsomer/react/pagination";
+import { Link, data, redirect } from "react-router";
 
 import { AskMount } from "~/components/ask-panel";
 import { SearchForm } from "~/components/search-form";
@@ -7,7 +8,7 @@ import { SiteHeader } from "~/components/site-header";
 import { nextScheduledPublishAt } from "~/db";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { prefersType } from "~/lib/negotiate.mjs";
-import { hasFilters } from "~/lib/search/query.mjs";
+import { hasFilters } from "@drdustinedwards/site-helpers/search";
 import { askAvailable } from "~/lib/search/ask.server";
 import { recordZeroResult } from "~/lib/search/zero-result.server";
 import { SEARCH_BASES, baseLabel } from "~/kb/search-bases.mjs";
@@ -31,11 +32,16 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/search";
 
-import "~/styles/blog-search.css";
 import "~/styles/search-page.css";
+import "~/styles/search-form.css";
+import "capsomer/pagination.css";
+import "capsomer/field.css";
+import "capsomer/button.css";
+import "capsomer/chips.css";
 import "~/styles/ask.css";
 import "~/styles/search-facets.css";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
+import { markup } from "capsomer/behavior/trusted-html";
 
 const PAGE_SIZE = 10;
 
@@ -68,9 +74,9 @@ export const middleware: Route.MiddlewareFunction[] = [
           parsed: {
             terms: result.parsed.terms,
             phrases: result.parsed.phrases,
-            tags: result.parsed.tags,
-            types: result.parsed.types,
-            bases: result.parsed.bases,
+            tags: result.parsed.filters.tag,
+            types: result.parsed.filters.type,
+            bases: result.parsed.filters.base,
             year: result.parsed.year,
           },
           total: result.total,
@@ -109,6 +115,10 @@ export const middleware: Route.MiddlewareFunction[] = [
   },
 ];
 
+function pageCountOf(result: { total: number; pageSize: number }) {
+  return Math.max(1, Math.ceil(result.total / result.pageSize));
+}
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const params = readParams(url);
@@ -118,6 +128,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     search(env, { ...params, pageSize: PAGE_SIZE }),
     nextScheduledPublishAt(env),
   ]);
+
+  // Out of range goes to the last real page, as the blog's listings do.
+  const pageCount = pageCountOf(result);
+  if (params.page > pageCount) throw redirect(searchHref(params, { page: pageCount }));
 
   const asked = !result.parsed.isEmpty || hasFilters(result.parsed);
   const suggestions = asked && result.total === 0 ? await zeroState(env, result.parsed) : null;
@@ -201,7 +215,7 @@ function ActiveFilterChip({
 }) {
   return (
     <li>
-      <Link to={searchHref(params, { [facet]: null })} className="search-chip is-active">
+      <Link to={searchHref(params, { [facet]: null })} className="cap-chip" aria-current="true">
         {label} <span aria-hidden="true">x</span>
         <span className="sr-only">remove filter</span>
       </Link>
@@ -229,9 +243,9 @@ function FacetSection({
       <ul>
         {values.map((entry) => (
           <li key={entry.value}>
-            <Link to={searchHref(params, { [facet]: String(entry.value) })} className="search-chip">
+            <Link to={searchHref(params, { [facet]: String(entry.value) })} className="cap-chip">
               {entry.label ?? entry.value}{" "}
-              <span className="search-chip-count">
+              <span className="cap-chip-count">
                 {entry.count}
                 {floor}
               </span>
@@ -271,7 +285,7 @@ function Result({ hit }: { hit: SearchHit }) {
 
       {/* Safe as HTML: the snippet was escaped before its <mark> markers were
           substituted in. See renderSnippet in search.server.ts. */}
-      <p className="search-snippet" dangerouslySetInnerHTML={{ __html: hit.snippet }} />
+      <p className="search-snippet" dangerouslySetInnerHTML={markup(hit.snippet)} />
 
       <p className="search-why">
         matched on{" "}
@@ -314,7 +328,7 @@ function ZeroState({
           <ul className="search-chip-row">
             {suggestions.nearestTags.map((tag) => (
               <li key={tag}>
-                <Link to={`/search?tag=${encodeURIComponent(tag)}`} className="search-chip">
+                <Link to={`/search?tag=${encodeURIComponent(tag)}`} className="cap-chip">
                   {tag}
                 </Link>
               </li>
@@ -338,46 +352,35 @@ function ZeroState({
   );
 }
 
-/** Previous and next around "Page n of m"; an empty span holds each missing side's place. */
-function Pagination({
+/** Capsomer's steps pager. A truncated match set has no true total, so it reads "Page n" with no "of m". */
+function ResultsPagination({
   params,
   page,
   pageCount,
-  floor,
+  truncated,
 }: {
   params: SearchParams;
   page: number;
   pageCount: number;
-  floor: string;
+  truncated: boolean;
 }) {
   return (
-    <nav className="search-pagination" aria-label="Search results pages">
-      {page > 1 ? (
-        <Link rel="prev" to={searchHref(params, { page: page - 1 })}>
-          Previous
-        </Link>
-      ) : (
-        <span aria-hidden="true" />
-      )}
-      <span>
-        Page {page} of {pageCount}
-        {floor}
-      </span>
-      {page < pageCount ? (
-        <Link rel="next" to={searchHref(params, { page: page + 1 })}>
-          Next
-        </Link>
-      ) : (
-        <span aria-hidden="true" />
-      )}
-    </nav>
+    <Pagination
+      form="steps"
+      label="Search results pages"
+      page={page}
+      pageCount={truncated ? 0 : pageCount}
+      hasNext={page < pageCount}
+      hrefFor={(n) => searchHref(params, { page: n })}
+      renderLink={({ href, ...rest }) => <Link to={href} {...rest} />}
+    />
   );
 }
 
 export default function SearchPage({ loaderData }: Route.ComponentProps) {
   const { params, result, suggestions, askAvailable } = loaderData;
   const { facets } = result;
-  const pageCount = Math.max(1, Math.ceil(result.total / result.pageSize));
+  const pageCount = pageCountOf(result);
   /* A truncated match set makes every count a floor, so it says so rather than reading as exact. */
   const floor = result.truncated ? "+" : "";
   // `isEmpty` means no matchable text, not no request: a bare year or tag is answered by the browse path.
@@ -453,7 +456,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
               <li>
                 <Link
                   to={searchHref(params, { sort: "relevance" })}
-                  className="search-chip"
+                  className="cap-chip"
                   aria-current={params.sort === "relevance" ? "true" : undefined}
                 >
                   Relevance
@@ -462,7 +465,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
               <li>
                 <Link
                   to={searchHref(params, { sort: "date" })}
-                  className="search-chip"
+                  className="cap-chip"
                   aria-current={params.sort === "date" ? "true" : undefined}
                 >
                   Newest
@@ -534,7 +537,12 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
         ) : null}
 
         {pageCount > 1 ? (
-          <Pagination params={params} page={result.page} pageCount={pageCount} floor={floor} />
+          <ResultsPagination
+            params={params}
+            page={result.page}
+            pageCount={pageCount}
+            truncated={result.truncated}
+          />
         ) : null}
       </main>
       <ShellFooter />

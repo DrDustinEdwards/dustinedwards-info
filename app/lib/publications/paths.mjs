@@ -4,21 +4,6 @@
 
 import { ASSET_PREFIX } from "../media/classify.mjs";
 
-/**
- * Casefolded: DOIs are case-insensitive and some are deposited mixed case. The collapse is lossy, so
- * check:machine-readable asserts uniqueness.
- *
- * @param {string} doi as deposited
- * @returns {string}
- */
-export function doiSlug(doi) {
-  return String(doi ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export const PUBLICATIONS_PATH = "/research/publications";
 
 /** Every publication response carries it (the index, the pages, the exports, the twins); a save purges it. */

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { trustedHtml } from "capsomer/behavior/trusted-html";
 import { Form, Link, useNavigation } from "react-router";
 
 import { Alert, Banner } from "capsomer/react/banner";
@@ -19,6 +20,7 @@ import {
   type Values,
 } from "~/components/admin/kb-form-fields";
 import { BodyEditor, type Inserts, goTo } from "~/components/admin/kb-form-steps";
+import { SLUG_ATTRIBUTE_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
 /*
  * The Knowledge Base's form editor (docs/KNOWLEDGE-BASE.md): every field its own input, the values nobody has yet at the
@@ -108,6 +110,11 @@ function PreviewPane({
       : result && "error" in result
         ? [result.error]
         : null;
+  // Set through the policy: React would turn a TrustedHTML prop back into a string.
+  const frame = useRef<HTMLIFrameElement>(null);
+  useEffect(() => {
+    if (frame.current && doc) frame.current.srcdoc = trustedHtml(doc);
+  }, [doc]);
   return (
     <Panel
       title="Preview"
@@ -130,7 +137,7 @@ function PreviewPane({
           className="kb-preview-frame"
           title={`Preview of the page${publicHref ? ` at ${publicHref}` : ""}`}
           sandbox=""
-          srcDoc={doc}
+          ref={frame}
         />
       ) : (
         <p className="kb-preview-note">{busy || !result ? "Drawing the page…" : null}</p>
@@ -427,7 +434,7 @@ export function KbFormEditor({
                 id="kb-dup-slug"
                 name="slug"
                 className="cap-input"
-                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                pattern={SLUG_ATTRIBUTE_PATTERN}
                 placeholder="made from the title"
               />
             </div>

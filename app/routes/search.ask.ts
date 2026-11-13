@@ -3,13 +3,14 @@
  * then a cached answer, then the model.
  */
 
-import { FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { FORM_BYTES } from "~/lib/body.server";
+import { readForm } from "@dustinedwards/site-runtime/body";
 import {
   answerLeaksPrompt,
   askAvailable,
   askStream,
   citedSlugs,
-  guardAnswerStream,
+  guardAsk,
   replayCachedAnswer,
   teeForCache,
 } from "~/lib/search/ask.server";
@@ -95,7 +96,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     return new Response("Ask is not enabled.", { status: 404 });
   }
 
-  const body = await cappedForm(request, FORM_BYTES);
+  const body = await readForm(request, FORM_BYTES);
   const question = String(body.get("q") ?? "").trim();
 
   if (!question) {
@@ -143,7 +144,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     let refused = false;
     let cut = false;
     const { toReader, captured } = teeForCache(
-      guardAnswerStream(
+      guardAsk(
         upstream,
         (slugs) => publiclyVisibleSlugs(env, slugs),
         () => {

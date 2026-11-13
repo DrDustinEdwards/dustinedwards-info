@@ -1,21 +1,15 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
-import { mediaRecord } from "~/db";
 import { handleMediaEvents } from "../../workers/media-events";
 
-import { bytesFor, envWithImages as imagesEnv, pngKey, seedMediaRow } from "./media-fixtures";
+import { bytesFor, envWithImages, pngKey } from "./media-fixtures";
 
-/* An absent placeholder must never be written as NULL over one a bulk pass derived, and nothing
- * in the consumer mentions the column. `IMAGES` has no local emulation, so each case hands it a
- * RECORDED shape. */
+/* The consumer keeps the site file index (site_assets) in step with OG, and leaves MEDIA's keys to the library.
+ * `IMAGES` has no local emulation, so each case hands it a RECORDED shape. */
 
-/* What the recorded transformer's RIFF bytes read as once stored. */
-const PLACEHOLDER_URI = `data:image/webp;base64,${btoa("RIFF")}`;
-
-/* `encodes: false` is the unreadable-source case. */
-const envWithImages = (dimensions: { width: number; height: number } | null, encodes: boolean) =>
-  imagesEnv(dimensions, encodes) as unknown as Parameters<typeof handleMediaEvents>[1];
+const consumerEnv = (dimensions: { width: number; height: number } | null) =>
+  envWithImages(dimensions) as unknown as Parameters<typeof handleMediaEvents>[1];
 
 /** One `PutObject` notification, in the shape R2 actually sends. */
 function batchFor(key: string) {
@@ -32,64 +26,59 @@ function batchFor(key: string) {
   return { batch, acked };
 }
 
-async function seedObject(seed: string) {
-  const key = await pngKey(seed, { width: 800, height: 600 });
-  await env.MEDIA.put(key, bytesFor(seed));
+const assetRow = (key: string) =>
+  env.DB.prepare("SELECT storage, role, width, height FROM site_assets WHERE key = ?1")
+    .bind(key)
+    .first<{ storage: string; role: string; width: number | null; height: number | null }>();
+
+async function seedCard(seed: string) {
+  const key = `og/dustin-edwards-${seed}-0123abcd.png`;
+  await env.OG.put(key, bytesFor(seed));
   return key;
 }
 
-describe("the queue consumer derives the placeholder", () => {
-  it("writes one from the object the event names, with no rebuild", async () => {
-    const key = await seedObject("derives");
-    const { batch, acked } = batchFor(key);
+describe("the queue consumer", () => {
+  it("indexes a generated OG object, and drops its row once the object is gone", async () => {
+    const key = await seedCard("indexed");
+    const put = batchFor(key);
+    await handleMediaEvents(put.batch, consumerEnv({ width: 1200, height: 630 }));
+    expect(put.acked).toEqual(["ack"]);
+    expect(await assetRow(key)).toEqual({
+      storage: "r2-derived",
+      role: "generated",
+      width: 1200,
+      height: 630,
+    });
 
-    await handleMediaEvents(batch, envWithImages({ width: 800, height: 600 }, true));
-
-    const row = await mediaRecord(env as unknown as Parameters<typeof mediaRecord>[0], key);
-    expect(acked).toEqual(["ack"]);
-    expect(row, "the consumer wrote no row at all").not.toBeNull();
-    expect(row?.width).toBe(800);
-
-    expect(row?.placeholder).toBe(PLACEHOLDER_URI);
+    await env.OG.delete(key);
+    const gone = batchFor(key);
+    await handleMediaEvents(gone.batch, consumerEnv(null));
+    expect(gone.acked).toEqual(["ack"]);
+    expect(await assetRow(key)).toBeNull();
   });
 
-  it("NEVER WRITES NULL OVER A STORED PLACEHOLDER when it cannot derive one", async () => {
-    /* The row carries a placeholder from a bulk rebuild and the transformer cannot read the
-     * source: the upsert must not write NULL over it. */
-    const key = await seedObject("preserves");
-    await seedMediaRow(key);
-    const db = env as unknown as Parameters<typeof mediaRecord>[0];
-    await env.DB.prepare("UPDATE media SET placeholder = ?1 WHERE key = ?2")
-      .bind("data:image/webp;base64,PRIOR", key)
-      .run();
-    expect((await mediaRecord(db, key))?.placeholder, "the seed did not apply").toBe(
-      "data:image/webp;base64,PRIOR",
-    );
-
+  it("WRITES NOTHING for a MEDIA upload, whose row is the library's", async () => {
+    const key = await pngKey("library-upload", { width: 800, height: 600 });
+    await env.MEDIA.put(key, bytesFor("library-upload"));
     const { batch, acked } = batchFor(key);
-    await handleMediaEvents(batch, envWithImages({ width: 800, height: 600 }, false));
-
-    const row = await mediaRecord(db, key);
+    await handleMediaEvents(batch, consumerEnv({ width: 800, height: 600 }));
     expect(acked).toEqual(["ack"]);
-    // The rest of the row IS re-derived, which is what makes the preserved
-    // column a decision rather than a write that did not happen.
-    expect(row?.width).toBe(800);
-    expect(row?.placeholder).toBe("data:image/webp;base64,PRIOR");
+    expect(await assetRow(key)).toBeNull();
+    expect(
+      await env.DB.prepare("SELECT key FROM media WHERE key = ?1").bind(key).first(),
+    ).toBeNull();
   });
 });
 
 describe("the queue consumer and a failed Images read", () => {
   it("KEEPS THE STORED SIZES and asks for a retry instead of acking", async () => {
-    const key = await seedObject("images-outage");
-    const db = env as unknown as Parameters<typeof mediaRecord>[0];
-    await handleMediaEvents(batchFor(key).batch, envWithImages({ width: 800, height: 600 }, true));
-    expect((await mediaRecord(db, key))?.width, "the seed did not measure").toBe(800);
+    const key = await seedCard("images-outage");
+    await handleMediaEvents(batchFor(key).batch, consumerEnv({ width: 1200, height: 630 }));
+    expect((await assetRow(key))?.width, "the seed did not measure").toBe(1200);
 
-    const measuring = envWithImages(null, true) as unknown as { IMAGES: object };
     const failing = {
       ...env,
       IMAGES: {
-        ...measuring.IMAGES,
         info: async () => {
           throw new Error("planted Images outage");
         },
@@ -98,9 +87,7 @@ describe("the queue consumer and a failed Images read", () => {
     const { batch, acked } = batchFor(key);
     await handleMediaEvents(batch, failing);
 
-    const row = await mediaRecord(db, key);
     expect(acked).toEqual(["retry"]);
-    expect(row?.width).toBe(800);
-    expect(row?.height).toBe(600);
+    expect(await assetRow(key)).toMatchObject({ width: 1200, height: 630 });
   });
 });

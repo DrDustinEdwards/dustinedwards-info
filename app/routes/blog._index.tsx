@@ -1,15 +1,21 @@
-import { Form, data, redirect } from "react-router";
+import { data, redirect } from "react-router";
 
 import { EvidenceRow } from "~/components/evidence-row";
 import { FilterLink } from "~/components/filter-link";
-import { PostRow, Pager } from "~/components/post-row";
+import { Pagination } from "capsomer/react/pagination";
+import { routerRenderLink } from "capsomer/react/link";
+import "capsomer/pagination.css";
+import { PostRow } from "~/components/post-row";
+import { SearchForm } from "~/components/search-form";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears, nextScheduledPublishAt } from "~/db";
-import { POSTS_PER_PAGE, listingFacts, readPage, splitFeatured } from "~/lib/blog-listing.mjs";
+import { parsePage } from "capsomer/react/pagination";
+import { POSTS_PER_PAGE, listingFacts, splitFeatured } from "~/lib/blog-listing.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
-import { timed, timedLoader } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timedLoader } from "~/lib/timing";
 import {
   cacheTags,
   EDGE_CACHE_HEADER,
@@ -22,6 +28,10 @@ import type { Route } from "./+types/blog._index";
 /* evidence-row.css is imported here, not by the component: every sheet a page loads shows in its route's imports. */
 import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
+import "~/styles/search-form.css";
+import "capsomer/field.css";
+import "capsomer/button.css";
+import "capsomer/chips.css";
 import "~/styles/entry-list.css";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -30,7 +40,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const tag = url.searchParams.get("tag");
   const year = url.searchParams.get("year");
-  const page = readPage(url.searchParams.get("page"));
+  const page = parsePage(url.searchParams.get("page"));
 
   return timedLoader(context, async (timings) => {
     const [listing, tagList, yearList, nextPublishAt] = await timed(timings, "queries_all", () =>
@@ -158,50 +168,43 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 
-        <Form method="get" action="/search" role="search" className="list-search">
-          <label className="sr-only" htmlFor="blog-search-input">
-            Search the blog
-          </label>
-          <input
-            type="search"
-            id="blog-search-input"
-            name="q"
-            placeholder="Search the blog"
-            autoComplete="off"
-          />
+        <SearchForm label="Search the blog" labelHidden placeholder="Search the blog">
           <input type="hidden" name="type" value="post" />
-          <button type="submit">Search</button>
-        </Form>
+        </SearchForm>
 
         {tags.length > 0 && (
-          <nav className="list-filter" aria-label="Filter posts by tag">
-            <span className="list-filter-label">Tags</span>
-            <FilterLink to={filterHref({ tag: null })} label="All" active={!activeTag} />
-            {tags.map((tag) => (
-              <FilterLink
-                key={tag.slug}
-                to={filterHref({ tag: tag.slug })}
-                label={tag.name}
-                count={tag.total}
-                active={activeTag === tag.slug}
-              />
-            ))}
+          <nav className="list-filter cap-chips" aria-label="Filter posts by tag">
+            <span className="cap-chips-label">Tags</span>
+            <ul className="cap-chips">
+              <FilterLink to={filterHref({ tag: null })} label="All" active={!activeTag} />
+              {tags.map((tag) => (
+                <FilterLink
+                  key={tag.slug}
+                  to={filterHref({ tag: tag.slug })}
+                  label={tag.name}
+                  count={tag.total}
+                  active={activeTag === tag.slug}
+                />
+              ))}
+            </ul>
           </nav>
         )}
 
         {years.length > 1 && (
-          <nav className="list-filter" aria-label="Filter posts by year">
-            <span className="list-filter-label">Years</span>
-            <FilterLink to={filterHref({ year: null })} label="All" active={!activeYear} />
-            {years.map((entry) => (
-              <FilterLink
-                key={entry.year}
-                to={filterHref({ year: String(entry.year) })}
-                label={String(entry.year)}
-                count={entry.total}
-                active={activeYear === entry.year}
-              />
-            ))}
+          <nav className="list-filter cap-chips" aria-label="Filter posts by year">
+            <span className="cap-chips-label">Years</span>
+            <ul className="cap-chips">
+              <FilterLink to={filterHref({ year: null })} label="All" active={!activeYear} />
+              {years.map((entry) => (
+                <FilterLink
+                  key={entry.year}
+                  to={filterHref({ year: String(entry.year) })}
+                  label={String(entry.year)}
+                  count={entry.total}
+                  active={activeYear === entry.year}
+                />
+              ))}
+            </ul>
           </nav>
         )}
 
@@ -216,7 +219,15 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           </ul>
         )}
 
-        <Pager page={page} pageCount={pageCount} hrefFor={pageHref} />
+        <Pagination
+          form="steps"
+          page={page}
+          pageCount={pageCount}
+          hrefFor={pageHref}
+          prevLabel="Newer"
+          nextLabel="Older"
+          renderLink={routerRenderLink}
+        />
       </main>
       <ShellFooter />
       {/* No blog island: its enhancements target `.prose` markup, which this page has none of. */}

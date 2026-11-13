@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { buildArtifact } from "./build-content.mjs";
 import { buildPhages } from "./lib/phages.mjs";
 import { buildRegistry } from "./lib/registry.mjs";
@@ -361,6 +362,6 @@ function swatchProblems(post) {
 }
 
 main().catch((/** @type {unknown} */ error) => {
-  console.error(`check:content failed. ${error instanceof Error ? error.message : String(error)}`);
+  console.error(`check:content failed. ${errorMessage(error)}`);
   process.exitCode = 1;
 });

@@ -1,5 +1,15 @@
 // Coordinates are lifted from the approved canvas file (part-c/09-solid-lawn.html), not retyped.
 // One departure: the canvas's 375 frame clips labels i, iv and v, so in NARROW those leaders fold inward.
+// The placing helpers are Capsomer's annotated figure's (capsomer/behavior/annotated-figure).
+
+import {
+  round1,
+  scalePathData,
+  scalePoint,
+  sideCallout,
+  type Point,
+  type Segment,
+} from "capsomer/behavior/annotated-figure";
 
 type Fill = "paper" | "lawn" | "turbid" | "none";
 type Stroke = "ink" | "dust" | "none";
@@ -8,8 +18,6 @@ type Paint = { fill: Fill; stroke: Stroke; width: number; dash: string | null };
 export type Shape =
   | ({ kind: "circle"; c: [number, number, number] } & Paint)
   | ({ kind: "path"; d: string } & Paint);
-
-type Segment = [number, number, number, number];
 
 export type PlateLayout = {
   size: number;
@@ -167,10 +175,8 @@ const RIGHT_LABELS = 96;
 const LEADER = 31;
 const K = (WIDE_WIDTH - 2 * LEADER - LEFT_LABELS - RIGHT_LABELS) / 2 / CANVAS_WIDE.dish.rim;
 const RIM = CANVAS_WIDE.dish.rim * K;
-const at = (x: number, y: number): [number, number] => [
-  +((x - CANVAS_WIDE.dish.cx) * K).toFixed(1),
-  +((y - CANVAS_WIDE.dish.cy) * K).toFixed(1),
-];
+const CENTER: Point = [CANVAS_WIDE.dish.cx, CANVAS_WIDE.dish.cy];
+const at = (p: Point): Point => scalePoint(p, K, CENTER);
 
 // Label side and elbow height (fraction of rim), chosen so no leader crosses a plaque.
 const SIDE_LABELS: Record<string, { side: 1 | -1; y: number }> = {
@@ -184,23 +190,20 @@ const SIDE_LABELS: Record<string, { side: 1 | -1; y: number }> = {
 
 function scaleShape(s: Shape): Shape {
   if (s.kind === "circle") {
-    const [x, y] = at(s.c[0], s.c[1]);
-    return { ...s, c: [x, y, +(s.c[2] * K).toFixed(1)] };
+    const [x, y] = at([s.c[0], s.c[1]]);
+    return { ...s, c: [x, y, round1(s.c[2] * K)] };
   }
-  const d = s.d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x: string, y: string) =>
-    at(Number(x), Number(y)).join(" "),
-  );
-  return { ...s, d };
+  return { ...s, d: scalePathData(s.d, at) };
 }
 
 export const WIDE: PlateLayout = {
-  size: +(CANVAS_WIDE.size * K).toFixed(1),
-  dish: { cx: 0, cy: 0, rim: +RIM.toFixed(1), lawn: +(CANVAS_WIDE.dish.lawn * K).toFixed(1) },
+  size: round1(CANVAS_WIDE.size * K),
+  dish: { cx: 0, cy: 0, rim: round1(RIM), lawn: round1(CANVAS_WIDE.dish.lawn * K) },
   scale: (() => {
     const [x1, , x2] = CANVAS_WIDE.scale.line;
     const right = Math.round(RIM);
     const y = Math.round(RIM) - 4;
-    const left = +(right - (x2 - x1) * K).toFixed(1);
+    const left = round1(right - (x2 - x1) * K);
     return {
       line: [left, y, right, y],
       label: { x: left, y: y - 8, text: CANVAS_WIDE.scale.label.text },
@@ -210,18 +213,15 @@ export const WIDE: PlateLayout = {
     const place = SIDE_LABELS[p.id];
     const start = p.leader[0];
     if (!place || !start) throw new Error(`Plate I: no label side or leader for plaque "${p.id}"`);
-    const [sx, sy] = at(start[0], start[1]);
-    const y = Math.round(place.y * RIM);
-    const elbow = place.side * Math.round(RIM + 8);
-    const tail = place.side * Math.round(RIM + 26);
     return {
       id: p.id,
       shapes: p.shapes.map(scaleShape),
-      leader: [
-        [sx, sy, elbow, y],
-        [elbow, y, tail, y],
-      ],
-      label: { x: tail + place.side * 5, y: y + 4, anchor: place.side === 1 ? "start" : "end" },
+      ...sideCallout({
+        from: at([start[0], start[1]]),
+        side: place.side,
+        y: place.y * RIM,
+        edge: RIM,
+      }),
     };
   }),
 };

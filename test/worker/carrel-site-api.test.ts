@@ -1,4 +1,5 @@
 import { createExecutionContext } from "cloudflare:test";
+import { RouterContextProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { getBlogPost } from "~/db";
@@ -12,9 +13,7 @@ import { documentHandlerContext, postPreviewContext } from "~/lib/context";
 import { LLMS_PATH } from "~/lib/llms/validate.mjs";
 import { ALLOWED, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
 import { authenticateOperator } from "~/lib/operator/auth.server";
-import { action, loader } from "~/routes/api.carrel.v1.$";
 import { loader as postLoader } from "~/routes/blog.$slug";
-import { loader as previewLinkLoader } from "~/routes/preview.$token";
 
 import { post } from "./fixtures";
 import {
@@ -27,11 +26,18 @@ import {
   type SourceStub,
 } from "./source-stub";
 import { bytesFor, envWithImages } from "./media-fixtures";
-import { routeContext } from "./route-helpers";
+import { routeContext, carrelRequest } from "./route-helpers";
 import { seedPost } from "./seed";
 import { testEnv } from "./test-env";
 
-/* Through the real route module, so the package's guard, the site's limiter and the adapter are the
+/** The title of the post a preview render was handed, through the context its `set` writes. */
+function previewTitle(set: (context: RouterContextProvider) => void): string | undefined {
+  const context = new RouterContextProvider();
+  set(context);
+  return context.get(postPreviewContext)?.title;
+}
+
+/* Through the real gateway step (carrelStep), so the package's guard, the site's limiter and the adapter are the
  * ones that run in production. Each refusal also checks that the repository did not change. */
 
 const ORIGIN = "https://example.com";
@@ -50,7 +56,7 @@ const headersFor = (key: string) => ({
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
 
 function get(url: string, key: string = testEnv.CARREL_SITE_KEY): Promise<Response> {
-  return loader(argsFor(new Request(url, { headers: headersFor(key) })));
+  return carrelRequest(argsFor(new Request(url, { headers: headersFor(key) })));
 }
 
 function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
@@ -59,7 +65,7 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
     headers: headersFor(testEnv.CARREL_SITE_KEY),
     body: JSON.stringify(body),
   });
-  return action(argsFor(request));
+  return carrelRequest(argsFor(request));
 }
 
 let gh: SourceStub;
@@ -86,9 +92,7 @@ describe("the Carrel key reaches only its prefix", () => {
   });
 
   it("REFUSES to serve a path outside /api/carrel/v1 even with the key", async () => {
-    await expect(get(`${ORIGIN}/api/carrel/v2/content`)).rejects.toMatchObject({
-      init: { status: 404 },
-    });
+    expect((await get(`${ORIGIN}/api/carrel/v2/content`)).status).toBe(404);
   });
 
   it("REFUSES the operator token on the Carrel prefix", async () => {
@@ -384,12 +388,12 @@ describe("the preview", () => {
     const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
     args.context.set(
       documentHandlerContext,
-      async (_request, context) =>
-        new Response(`<title>${context.get(postPreviewContext)?.title}</title>`, {
+      async (_request, set) =>
+        new Response(`<title>${previewTitle(set)}</title>`, {
           headers: { "content-type": "text/html" },
         }),
     );
-    const preview = await action(args as never);
+    const preview = await carrelRequest(args as never);
     expect(preview.status).toBe(200);
     expect(await preview.text()).toContain("<title>Untitled</title>");
 
@@ -431,7 +435,7 @@ function mediaCall(
     }),
     params: {},
   } as never;
-  return method === "GET" ? loader(args) : action(args);
+  return carrelRequest(args);
 }
 
 /** Uploads through the API and answers the stored id. */
@@ -783,7 +787,7 @@ describe("media: the v0.13.0 library", () => {
     await testEnv.MEDIA_REVISIONS.put(copyKey, bytesFor("legacy-copy-case-before"));
     await testEnv.DB.prepare("DELETE FROM media_revisions WHERE media_key = ?1").bind(id).run();
     await testEnv.DB.prepare(
-      "INSERT INTO media_revisions (media_key, at, bytes, width, height, reason, backup_key) VALUES (?1, '2026-01-01T00:00:00.000Z', 1, 10, 10, 'upload', ?2), (?1, '2026-01-02T03:04:05.000Z', 1, 10, 10, 'replace', NULL)",
+      "INSERT INTO media_revisions (media_key, at, bytes, width, height, reason, sha256, copy_key) VALUES (?1, '2026-01-01T00:00:00.000Z', 1, 10, 10, 'upload', '', ?2), (?1, '2026-01-02T03:04:05.000Z', 1, 10, 10, 'replace', '', NULL)",
     )
       .bind(id, copyKey)
       .run();
@@ -1010,12 +1014,8 @@ describe("media: meta declares what the site accepts", () => {
 
 describe("media: the key still reaches only its prefix", () => {
   it("REFUSES the media routes off the prefix even with the key", async () => {
-    await expect(mediaCall("GET", `${ORIGIN}/api/carrel/v2/media`)).rejects.toMatchObject({
-      init: { status: 404 },
-    });
-    await expect(mediaCall("GET", `${ORIGIN}/api/carrel/media`)).rejects.toMatchObject({
-      init: { status: 404 },
-    });
+    expect((await mediaCall("GET", `${ORIGIN}/api/carrel/v2/media`)).status).toBe(404);
+    expect((await mediaCall("GET", `${ORIGIN}/api/carrel/media`)).status).toBe(404);
   });
 
   it("REFUSES the operator token on the media routes", async () => {
@@ -1375,12 +1375,12 @@ describe("the v0.17.0 contract on posts", () => {
       const context = routeContext();
       context.set(
         documentHandlerContext,
-        async (_request, ctx) =>
-          new Response(`<title>${ctx.get(postPreviewContext)?.title}</title>`, {
+        async (_request, set) =>
+          new Response(`<title>${previewTitle(set)}</title>`, {
             headers: { "content-type": "text/html" },
           }),
       );
-      return previewLinkLoader({
+      return carrelRequest({
         request: new Request(`${ORIGIN}${path}`),
         params: {},
         context,
@@ -1396,7 +1396,7 @@ describe("the v0.17.0 contract on posts", () => {
 });
 
 describe("the site-api conformance suite", () => {
-  it("passes against the real route, with write probes", async () => {
+  it("passes against the real step, with write probes", async () => {
     const { runConformance } = await import("@dustinedwards/site-api/conformance");
     // The list is built from D1 and the generated artifacts, the history from the repository, and the stub
     // repository holds only what a case puts there: the first listed item (llms.txt) gets its file, as the
@@ -1421,21 +1421,18 @@ describe("the site-api conformance suite", () => {
           },
         });
         try {
-          if (request.method === "GET") return await loader(argsFor(request));
-          // The Worker puts the app's document renderer on the context (workers/app.ts); a test has no app build, so
+          if (request.method === "GET") return await carrelRequest(argsFor(request));
+          // The Worker puts site-runtime's in-process render on the context (workers/app.ts); a test has no app build, so
           // this stand-in renders the post the preview handed it, which is what the preview case reads.
           const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
           args.context.set(
             documentHandlerContext,
-            async (_request, context) =>
-              new Response(
-                `<!doctype html><title>${context.get(postPreviewContext)?.title}</title>`,
-                {
-                  headers: { "content-type": "text/html; charset=utf-8" },
-                },
-              ),
+            async (_request, set) =>
+              new Response(`<!doctype html><title>${previewTitle(set)}</title>`, {
+                headers: { "content-type": "text/html; charset=utf-8" },
+              }),
           );
-          return await action(args as never);
+          return await carrelRequest(args as never);
         } catch (thrown) {
           // A refusal outside the prefix is thrown (a Response or router data); the wire would carry it as its status.
           if (thrown instanceof Response) return thrown;

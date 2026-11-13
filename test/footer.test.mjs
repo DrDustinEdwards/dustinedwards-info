@@ -4,13 +4,8 @@ import assert from "node:assert/strict";
 import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";
 import { readFileSync } from "node:fs";
 
-import {
-  LEGAL_LINKS,
-  SOCIAL_LINKS,
-  footerHrefs,
-  legalLinks,
-  siteLinks,
-} from "../app/lib/footer.ts";
+import { LEGAL_LINKS, footerHrefs, legalLinks, siteLinks } from "../app/lib/footer.ts";
+import { SOCIAL_LINKS } from "capsomer/behavior/family-footer";
 import { PUBLISHED_PAGES } from "../app/lib/published-pages.generated.mjs";
 import { readPublishedPages } from "../scripts/lib/published-pages.mjs";
 import { OWNER_PROFILES } from "../app/lib/seo.ts";

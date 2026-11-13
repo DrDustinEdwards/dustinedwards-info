@@ -3,12 +3,13 @@
 // build and the Carrel adapter's save all call compilePublication, so a file CI passes is the file the
 // save accepts and the page draws, and the twin a machine reads is the one a person's page agrees with.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { gitBlobSha } from "../content/hashes.mjs";
 import { keyForUrl, urlForKey } from "../search/ask-keys.mjs";
-import { buildCitationTags, REQUIRED_CITATION_TAGS } from "./citation-tags.mjs";
+import { citationTags, REQUIRED_CITATION_TAGS } from "@drdustinedwards/site-helpers/scholar";
 import { citedByFetchedAt, citedByFor } from "./cited-by.mjs";
 import { decodeEntities } from "./entities.mjs";
-import { organismsIn, toBibtex, toRis } from "./exports.mjs";
+import { organismsIn, paperBibtex, paperRis } from "./exports.mjs";
 import { parsePublication, publicationPath } from "./parse.mjs";
 import { paperAskUrl, paperMarkdownPath, paperPath, paperPdfPath } from "./paths.mjs";
 import { recordFromData } from "./record.mjs";
@@ -36,7 +37,7 @@ function derivedProblems(record, built) {
 
   if (record.doi !== null) {
     try {
-      const tags = buildCitationTags(record, {
+      const tags = citationTags(record, {
         abstractUrl: `${ORIGIN}${paperPath(slug)}`,
         pdfUrl: hosted ? `${ORIGIN}${paperPdfPath(slug)}` : null,
       });
@@ -57,11 +58,11 @@ function derivedProblems(record, built) {
         errors.push(`citation tags: citation_pdf_url is not under ${paperPath(slug)}`);
       }
     } catch (error) {
-      errors.push(error instanceof Error ? error.message : String(error));
+      errors.push(errorMessage(error));
     }
 
-    const bib = toBibtex(record);
-    const ris = toRis(record);
+    const bib = paperBibtex(record);
+    const ris = paperRis(record);
     if (!bib.includes(record.doi) || !ris.includes(record.doi))
       errors.push("exports: the DOI is missing from the BibTeX or RIS entry");
     if (record.doi !== record.doi.toLowerCase() && !bib.includes(`doi = {${record.doi}}`)) {

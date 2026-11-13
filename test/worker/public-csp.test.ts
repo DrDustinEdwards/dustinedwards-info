@@ -95,20 +95,21 @@ async function render(path: string) {
   return { response, html, scripts, policy: response.headers.get("content-security-policy") ?? "" };
 }
 
-it("renders a public page with no inline script, no hash and no nonce, and /site.js to start its islands", async () => {
+it("renders a public page with no inline script and no hash, and /site.js to start its islands", async () => {
   const { response, html, scripts, policy } = await render("/");
   expect(response.status).toBe(200);
 
-  /* The policy: no nonce and no hash; 'self' covers /site.js and the islands it imports. */
-  expect(policy).not.toContain("nonce-");
+  /* The policy: no hash, and the render's nonce (site-runtime ./worker renews it per reader on a stored page); 'self'
+   * covers /site.js and the islands it imports. */
+  const nonce = /'nonce-([^']+)'/.exec(policy)?.[1];
+  expect(nonce).toBeTruthy();
   expect(policy).not.toMatch(/'sha256-/);
 
-  /* The document: no nonce anywhere, and one script, /site.js, deferred. */
-  expect(html).not.toMatch(/\snonce=/);
+  /* The document: one script, /site.js, deferred, carrying the policy's nonce. */
   expect([...html.matchAll(/<script\b[^>]*\ssrc="([^"]*)"[^>]*>/g)].map((m) => m[1])).toEqual([
     "/site.js",
   ]);
-  expect(html).toMatch(/<script src="\/site\.js" defer="">/);
+  expect(html).toContain(`<script src="/site.js" defer="" nonce="${nonce}">`);
   expect(scripts.filter((s) => s.type !== "application/ld+json").map((s) => s.text)).toEqual([""]);
   expect(scripts.filter((s) => s.type === "application/ld+json")).toHaveLength(1);
 

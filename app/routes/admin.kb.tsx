@@ -1,13 +1,15 @@
+import { useState } from "react";
 import { Form, Link, data } from "react-router";
 
 import { Empty } from "capsomer/react/empty";
+import { SearchField } from "capsomer/react/field";
 import { Panel } from "capsomer/react/panel";
 import { Row, RowList, type RowLinkProps } from "capsomer/react/row-list";
 import { Status } from "capsomer/react/status";
-import { TabsNav } from "capsomer/react/tabs";
+import { TabLink, TabsNav } from "capsomer/react/tabs";
 
 import { PageHead } from "capsomer/react/page-head";
-import { TabLink } from "~/components/admin/tab-link";
+import { tabLink } from "~/components/admin/shell-parts";
 import { listProceduresForAdmin } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";
 import {
@@ -22,9 +24,11 @@ import {
 } from "~/kb/admin.mjs";
 import { BASES } from "~/kb/bases.mjs";
 import { getEnv } from "~/lib/context";
-import { timed, timedLoader } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timedLoader } from "~/lib/timing";
 
 import type { Route } from "./+types/admin.kb";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 /*
  * The Knowledge Base (docs/KNOWLEDGE-BASE.md, steps 2 and 3): a tab per base listing its entries, and Needs info, every
@@ -58,6 +62,20 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 /** A row opens its file in the editor, inside the admin. */
+function KbSearch({ label, defaultValue }: { label: string; defaultValue: string }) {
+  const [value, setValue] = useState(defaultValue);
+  return (
+    <SearchField
+      label={label}
+      landmark="Search"
+      name="q"
+      value={value}
+      onChange={setValue}
+      placeholder="Title, description or slug"
+    />
+  );
+}
+
 function AdminLink({ href, children, ...rest }: RowLinkProps) {
   return (
     <Link to={href} {...rest}>
@@ -82,10 +100,6 @@ function ViewLink({ href, what }: { href: string; what: string }) {
   );
 }
 
-function plural(count: number, one: string, many: string) {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
 export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps) {
   const { tab, q, tabs, rows, gaps } = loaderData;
   const base = BASES.find((b) => b.id === tab);
@@ -102,11 +116,11 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
         }
       />
 
-      <TabsNav aria-label="Knowledge bases" variant="line">
+      <TabsNav aria-label="Knowledge bases" variant="line" renderLink={tabLink}>
         {tabs.map((t) => (
           <TabLink
             key={t.id}
-            to={tabHref(t.id, q)}
+            href={tabHref(t.id, q)}
             current={t.id === tab}
             count={t.count}
             aria-label={`${t.label}, ${plural(t.count, t.id === NEEDS_INFO ? "gap" : "entry", t.id === NEEDS_INFO ? "gaps" : "entries")}`}
@@ -118,21 +132,9 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
 
       {base ? (
         <>
-          <Form method="get" action={KB_ADMIN_PATH} role="search" className="app-filters">
+          <Form method="get" action={KB_ADMIN_PATH} className="app-filters">
             <input type="hidden" name="tab" value={tab} />
-            <div className="cap-field">
-              <label className="cap-field-label" htmlFor="kb-q">
-                Search {base.name.toLowerCase()}
-              </label>
-              <input
-                id="kb-q"
-                className="cap-input"
-                type="search"
-                name="q"
-                defaultValue={q}
-                placeholder="Title, description or slug"
-              />
-            </div>
+            <KbSearch label={`Search ${base.name.toLowerCase()}`} defaultValue={q} />
           </Form>
 
           {rows.length === 0 ? (

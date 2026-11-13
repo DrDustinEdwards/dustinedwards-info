@@ -20,7 +20,6 @@ declare module "virtual:islands" {
     | "palette"
     | "plate"
     | "platforms"
-    | "podcast"
     | "pronounce"
     | "run"
     | "search"

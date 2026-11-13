@@ -2,6 +2,7 @@
 // artifact references while the live site serves D1, so run outside a ship window it deletes live cards.
 // The target is never defaulted: `-- --remote` or `-- --local` on every run that touches R2.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { execSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -10,16 +11,14 @@ import path from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
 
-import {
-  cardDescription,
-  cardTitle,
-  ogImageKey,
-  titleFontSize,
-} from "../app/lib/content/og-card-text.mjs";
+import { CARD_TITLE_SIZES, titleFontSize } from "@dustinedwards/site-runtime/share-card";
+
+import { cardDescription, cardTitle, ogImageKey } from "../app/lib/content/og-card-text.mjs";
 import { contentPageCardInput, hasPageCard } from "../app/lib/content-pages.mjs";
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
-import { longDateUTC } from "../app/lib/long-date.mjs";
-import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
+import { formatDate } from "capsomer/behavior/time";
+import { isPubliclyVisible } from "@drdustinedwards/site-helpers/search";
+import { statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, renderContentPages } from "./build-content.mjs";
 import { deleteFloor, requirePosts } from "./lib/delete-floor.mjs";
 import { markElement } from "./lib/mark.mjs";
@@ -167,7 +166,7 @@ function card(post) {
 
   // Filtered, because the formatter returns null rather than "Invalid Date", which would be permanent
   // on an immutable object.
-  const date = longDateUTC(post.publishAt);
+  const date = formatDate(post.publishAt);
 
   /* THE MEASURE: the side padding sets the width og-card-text.mjs's ladder was measured against. */
   const PAD_X = 72;
@@ -210,7 +209,7 @@ function card(post) {
         {
           style: {
             display: "flex",
-            fontSize: titleFontSize(title),
+            fontSize: titleFontSize(title, CARD_TITLE_SIZES),
             fontWeight: 600,
             color: INK,
             lineHeight: 1.12,
@@ -533,7 +532,7 @@ async function main() {
 
 if (isMain(import.meta.url)) {
   main().catch((error) => {
-    console.error(`build:og failed. ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`build:og failed. ${errorMessage(error)}`);
     process.exit(1);
   });
 }

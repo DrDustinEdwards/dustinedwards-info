@@ -1,11 +1,12 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertFloor } from "./lib/floor.mjs";
-import { createTally } from "./lib/tally.mjs";
-import { walkFiles } from "./lib/walk-files.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
+import { createTally } from "@dustinedwards/devkit/node";
+import { walkFiles } from "@dustinedwards/devkit/node";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test", "worker");
@@ -66,7 +67,7 @@ try {
     try {
       report = JSON.parse(readFileSync(reportPath, "utf8"));
     } catch (error) {
-      reportProblem = `the report did not parse: ${error instanceof Error ? error.message : String(error)}`;
+      reportProblem = `the report did not parse: ${errorMessage(error)}`;
     }
   }
 } finally {

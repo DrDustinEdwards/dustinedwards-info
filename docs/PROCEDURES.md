@@ -79,7 +79,7 @@ not marked, so the sentence stays the one a person wrote.
 - A computational command that differs by system is given once per platform: ` ```bash platform=linux `,
   ` ```bash platform=macos `, ` ```powershell platform=windows `, each with its own output block. A step names
   each platform once and never one alone. The page shows them as tabs (links to each block with no script;
-  `app/enhance/platforms.ts` makes them tabs and remembers the reader's platform); the twin and the sheet list
+  `app/enhance/platforms.ts` runs Capsomer's tabs, which remember the platform as `capsomer.tabs.platform`); the twin and the sheet list
   every one under its name.
 - A tutorial's step may set a task: `> CHALLENGE:` with the task, then `> SOLUTION:` with its answer. The page
   folds the solution into a `<details>`, which opens with no script, and the twin carries both.
@@ -299,7 +299,7 @@ linked to their registry pages from its Primers section; reagents and strains wi
 ## Run mode
 
 Every procedure page offers "Run this procedure". The page is complete as served; run mode is an enhancement
-(`app/enhance/run.ts`, styled by `app/styles/run.css`) that puts a checklist over the steps the page already has,
+(Capsomer's checklist-run, started by `app/enhance/run.ts` and styled by `capsomer/checklist-run.css`) that puts a checklist over the steps the page already has,
 for a person working it at the bench, on a phone:
 
 - **Each step** gets a Done check, a note, and a button for every timer the step states (`~{5%minutes}`). A
@@ -325,8 +325,8 @@ for a person working it at the bench, on a phone:
   the only copy.
 
 The pure half (what a run is, how timers count, the record and its Markdown, and parsing a stored run, which accepts
-only the shape this module writes) is `app/kb/procedures/run.mjs`, tested in `test/run.test.mjs`; the browser
-behavior is the run-mode case of `check:browser`.
+only the shape this module writes) is `capsomer/behavior/checklist-run-model`, tested in Capsomer; the site's own JSON
+(a Bioschemas LabProcess) is `app/kb/procedures/run.mjs`; the browser behavior is the run-mode case of `check:browser`.
 
 ## Keep on this device
 
@@ -336,7 +336,7 @@ the copy that needs neither.
 
 - **Only what the reader keeps.** Nothing is stored and no worker is registered until the button is pressed. Pressing it
   stores the page at its own address (with no scale or units) and the same-origin files it uses (stylesheets, the
-  enhancement bundles, fonts, images) in the `kept-v1` cache, then registers `public/sw.js` at the root.
+  enhancement bundles, fonts, images) in the `kept-v1` cache, then registers Capsomer's `capsomer/offline-sw.js` (served at `/sw.js`) at the root.
 - **Online, nothing changes.** The worker answers pages, stylesheets, scripts, fonts and images from the network, and
   only when the network fails from the kept copy; everything else passes it by. A kept page loaded online is stored
   again, so the copy follows the page. A scaled address opens the kept page offline; a page nobody kept fails as it
@@ -346,8 +346,7 @@ the copy that needs neither.
 - **No policy change.** The page's policy has no `worker-src`, so it falls back to `script-src`, whose `'self'` allows a
   same-origin worker.
 
-`app/enhance/offline.ts` is the button; `test/offline-keep.test.mjs` and `test/offline-worker.test.mjs` run it and the
-worker with no browser, and the offline case of `check:browser` keeps a protocol, cuts the network and reloads it.
+`app/enhance/offline.ts` places Capsomer's offline-keep button (its module and worker are tested in Capsomer), and the offline case of `check:browser` keeps a protocol, cuts the network and reloads it.
 
 ## Where it goes
 

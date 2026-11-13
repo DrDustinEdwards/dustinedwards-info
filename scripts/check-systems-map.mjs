@@ -14,6 +14,7 @@
 //
 // Network tier, like check:browser, and for its reason: a preview boot past the readiness
 // ceiling on a loaded machine must not fail a ship for a reason that is not the site.
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import lighthouse from "lighthouse";
 import puppeteer from "puppeteer";
 
@@ -119,11 +120,7 @@ try {
     );
   }
 } catch (error) {
-  ok(
-    "check:systems-map measured /systems",
-    false,
-    error instanceof Error ? error.message : String(error),
-  );
+  ok("check:systems-map measured /systems", false, errorMessage(error));
 } finally {
   await proxy?.close();
   await cleanupChildren(browser);

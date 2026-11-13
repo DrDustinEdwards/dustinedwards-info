@@ -8,6 +8,7 @@
 //
 //   npm run build:cv-pdf [-- --out <path>]
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -94,7 +95,7 @@ async function main() {
 
 if (isMain(import.meta.url)) {
   main().catch((error) => {
-    console.error(`build:cv-pdf failed. ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`build:cv-pdf failed. ${errorMessage(error)}`);
     process.exit(1);
   });
 }

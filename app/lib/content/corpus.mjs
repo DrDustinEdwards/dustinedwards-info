@@ -1,6 +1,7 @@
 // Corpus-wide passes, run over every post at once in both writers: related posts and backlinks.
 
-import { isPubliclyVisible, statusForDraft } from "../search/visibility.mjs";
+import { isPubliclyVisible } from "@drdustinedwards/site-helpers/search";
+import { statusForDraft } from "../search/visibility.mjs";
 
 const RELATED_LIMIT = 3;
 

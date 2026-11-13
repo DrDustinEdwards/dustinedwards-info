@@ -1,6 +1,7 @@
 // The blog listing and its pages, every draft's absence from every surface, and the Ask probes.
 
-import { POSTS_PER_PAGE, pageCount, pageForPosition } from "../../../app/lib/blog-listing.mjs";
+import { pageEnvelope } from "capsomer/behavior/pagination";
+import { POSTS_PER_PAGE, pageForPosition } from "../../../app/lib/blog-listing.mjs";
 import { ownsAskKey } from "../../../app/lib/search/ask-keys.mjs";
 import { readArtifact } from "../artifact.mjs";
 import { ASK_TIMEOUT_MS, check, get, ORIGIN, UA } from "./client.mjs";
@@ -57,7 +58,7 @@ export async function run() {
     corpus.live = live.length;
     corpus.drafts = drafts.length;
 
-    const pages = pageCount(live.length);
+    const pages = pageEnvelope(1, POSTS_PER_PAGE, live.length).pageCount;
     const fetched = await Promise.all(
       Array.from({ length: pages }, (_, i) => get(i === 0 ? "/writing" : `/writing?page=${i + 1}`)),
     );

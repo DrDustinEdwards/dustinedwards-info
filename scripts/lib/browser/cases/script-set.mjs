@@ -53,9 +53,17 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
       inline: [...document.querySelectorAll("script:not([src])")]
         .filter((s) => (s.getAttribute("type") ?? "") !== "application/ld+json")
         .map((s) => s.textContent ?? ""),
-      /* hasAttribute, because a browser hides a nonce's value from getAttribute. */
-      nonced: document.querySelectorAll("[nonce]").length,
+      /* The IDL property, because a browser hides a nonce's value from getAttribute. */
+      nonce: /** @type {HTMLElement | null} */ (document.querySelector("[nonce]"))?.nonce ?? "",
     }));
+    /* A second reader of the same (by now stored) page: site-runtime's renewNonce gives each its own.
+       Past this browser's own cache, whose 304 revalidation keeps the first reader's copy. */
+    await page.setCacheEnabled(false);
+    await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+    await page.setCacheEnabled(true);
+    const again = await page.evaluate(
+      () => /** @type {HTMLElement | null} */ (document.querySelector("[nonce]"))?.nonce ?? "",
+    );
     const named = [...new Set(shape.markers)].filter((name) => enhanceStems.has(name)).sort();
     ok(
       `${path}: /site.js started exactly the islands the markers name`,
@@ -67,13 +75,17 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
         `refused by the policy, or the island threw.`,
     );
     ok(
-      `${path}: the one same-origin script is /site.js, nothing runs inline, and nothing carries a nonce`,
+      `${path}: the one same-origin script is /site.js, nothing runs inline, and each reader gets its own nonce`,
       JSON.stringify(shape.srcs) === JSON.stringify(["/site.js"]) &&
         shape.inline.length === 0 &&
-        shape.nonced === 0,
-      `scripts [${shape.srcs.join(", ")}], ${shape.inline.length} inline script(s), ${shape.nonced} nonced element(s). ` +
-        `The public policy allows same-origin files and nothing inline, and a nonce on a cached page is shared ` +
-        `by every reader.`,
+        shape.nonce !== "" &&
+        again !== "" &&
+        shape.nonce !== again,
+      `scripts [${shape.srcs.join(", ")}], ${shape.inline.length} inline script(s), ` +
+        `nonce ${shape.nonce ? "present" : "absent"} then ${again ? "present" : "absent"}, ` +
+        `${shape.nonce && shape.nonce === again ? "the same for both readers" : "not repeated"}. ` +
+        `The public policy allows same-origin files and nothing inline; a nonce two readers share is one ` +
+        `anyone can copy from a stored page.`,
     );
   }
 

@@ -3,6 +3,7 @@
 // already use (saveProcedure, saveRegistryItem). It adds no write path and no second validator: Check runs the save's
 // own checks and commits nothing, and Save is that save, refused when the file changed since it was opened.
 
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 import matter from "gray-matter";
 
 import { ContentInvalid } from "~/lib/carrel/errors.server";
@@ -59,10 +60,8 @@ const slugOf = (target: Extract<KbTarget, { type: "item" }>) => `${target.kind}/
 /** The repository path a target names, or null when it names nothing the Knowledge Base holds. */
 function targetFile(target: KbTarget): string | null {
   if (target.type === "entry")
-    return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(target.slug) ? procedurePath(target.slug) : null;
-  return KINDS[target.kind] && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(target.id)
-    ? registryPath(slugOf(target))
-    : null;
+    return SLUG_PATTERN.test(target.slug) ? procedurePath(target.slug) : null;
+  return KINDS[target.kind] && SLUG_PATTERN.test(target.id) ? registryPath(slugOf(target)) : null;
 }
 
 /** What Save's checks say of `raw`, without committing anything. */

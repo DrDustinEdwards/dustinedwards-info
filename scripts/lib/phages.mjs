@@ -1,7 +1,7 @@
 // Every phage file compiled the one way the Carrel adapter's phage save compiles it
 // (app/lib/phages/compile.mjs), for build:content, sync:content, the gates and the tests.
 
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,6 +12,7 @@ import {
   phageSetErrors,
   sortPhages,
 } from "../../app/lib/phages/compile.mjs";
+import { paperExists } from "./content-source.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The D1 rows sync:content writes. */
@@ -19,16 +20,7 @@ export const PHAGES_ARTIFACT_PATH = path.join("content", "generated", "phages.js
 
 /** The repository's papers, read from content/publications as a clone has them. */
 export const repoHost = {
-  /** @param {string} slug a publication's file key */
-  async paper(slug) {
-    const info = await stat(path.join(ROOT, "content", "publications", `${slug}.md`)).catch(
-      (error) => {
-        if (error?.code === "ENOENT") return null;
-        throw error;
-      },
-    );
-    return info !== null && info.isFile();
-  },
+  paper: paperExists,
 };
 
 /**

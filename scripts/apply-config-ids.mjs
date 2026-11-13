@@ -1,12 +1,13 @@
 // Writes the redacted values into wrangler.jsonc for the deploy (deploy.yml's pre-deploy
 // guard and its converge job): each value is read from what the live Worker is bound to now, through the Cloudflare
-// API, as scripts/apply-mcp-config.mjs does for the admin MCP. So the deploy needs no secret beyond the Cloudflare
+// API, as mcp/scripts/apply-config.mjs does for the admin MCP. So the deploy needs no secret beyond the Cloudflare
 // token and account id that devkit's worker-deploy passes, and a Worker keeps the database, namespace and address it
 // was last deployed with. The account id comes from CLOUDFLARE_ACCOUNT_ID.
 //
 // Patches placeholders by text and never parse-and-reserialises, which would strip the comments these configs depend
 // on. It never prints a value.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,11 +63,7 @@ for (const worker of new Set(FIELDS.flatMap((f) => (f.worker ? [f.worker] : []))
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(30_000),
     },
-  ).catch((error) =>
-    refuse(
-      `the Cloudflare API could not be reached: ${error instanceof Error ? error.message : String(error)}.`,
-    ),
-  );
+  ).catch((error) => refuse(`the Cloudflare API could not be reached: ${errorMessage(error)}.`));
   const body = await response.json().catch(() => ({}));
   if (!response.ok || !Array.isArray(body?.result?.bindings))
     refuse(`the settings of ${worker} could not be read (HTTP ${response.status}).`);

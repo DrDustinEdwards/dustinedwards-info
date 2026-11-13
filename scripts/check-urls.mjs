@@ -1,10 +1,11 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { frontmatterSchema, isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
-import { parseSource, ts } from "./lib/syntax.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { parseSource, ts } from "@dustinedwards/devkit/node/syntax";
+import { createTally } from "@dustinedwards/devkit/node";
 import { parseJsonc } from "./lib/wrangler-surface.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -62,7 +63,7 @@ for (const probe of fixture.cases) {
     html = out.html;
     blocked = out.blockedUrls;
   } catch (error) {
-    assert(`render: ${probe.label}`, false, error instanceof Error ? error.message : String(error));
+    assert(`render: ${probe.label}`, false, errorMessage(error));
     continue;
   }
 
@@ -206,68 +207,6 @@ for (const [label, property] of SCHEMA_FIELDS) {
   );
 }
 
-// Asserted by position: asserting a stage exists passes on an arrangement that runs it too late.
-// Positions are of the CALLS on the syntax tree, so a mention in a string or comment cannot move them.
-// The gateway's redirects (the WordPress map, the paper slash form) are decided without the database,
-// so none of them may run after the cache loopback, where a stored response could outlive the fix.
-{
-  const workerPath = join(root, "workers", "app.ts");
-  const workerTree = parseSource(workerPath, readFileSync(workerPath, "utf8"));
-  /** @param {(n: ts.Node) => boolean} test */
-  const firstAt = (test) => {
-    const hits = findAll(workerTree, test).map((n) => n.getStart(workerTree));
-    return hits.length > 0 ? Math.min(...hits) : -1;
-  };
-  /** @param {string} name */
-  const callTo = (name) => (/** @type {ts.Node} */ n) =>
-    ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === name;
-  const loopbackAt = firstAt(
-    (n) =>
-      ts.isPropertyAccessExpression(n) &&
-      n.getText(workerTree).replace(/\s+/g, "") === "ctx.exports.Renderer",
-  );
-  const httpsAt = firstAt(callTo("canonicalRedirect"));
-  assert(
-    "redirects: the cache loopback was located",
-    loopbackAt !== -1,
-    "ctx.exports.Renderer not found",
-  );
-  assert(
-    "redirects: the HTTPS redirect was located",
-    httpsAt !== -1,
-    "canonicalRedirect is not called",
-  );
-  // The map is read before the canonical redirect (which leaves a mapped path's slash for it), but answered after.
-  /** @type {Record<string, number>} */
-  const decidedAt = {
-    wordpressDisposition: firstAt(
-      (n) =>
-        ts.isPropertyAccessExpression(n) &&
-        n.getText(workerTree).replace(/\s+/g, "") === "wordpress.location",
-    ),
-    paperSlashTarget: firstAt(callTo("paperSlashTarget")),
-  };
-  for (const name of ["wordpressDisposition", "paperSlashTarget"]) {
-    const callAt = firstAt(callTo(name));
-    assert(
-      `redirects: the gateway calls ${name}`,
-      callAt !== -1,
-      `it is not called anywhere in workers/app.ts, so that redirect is decoration`,
-    );
-    assert(
-      `redirects: ${name} IS DECIDED BEFORE THE CACHE LOOPBACK`,
-      callAt !== -1 && loopbackAt !== -1 && callAt < loopbackAt,
-      "a redirect resolved after the loopback is one the cache can outlive, and it would have " +
-        "cost a render and a database read to discover",
-    );
-    assert(
-      `redirects: the HTTPS redirect still runs before ${name}'s redirect`,
-      httpsAt !== -1 && decidedAt[name] !== -1 && httpsAt < decidedAt[name],
-      "a plaintext request must reach HTTPS before anything else decides anything",
-    );
-  }
-}
-
 // Which entrypoint the platform may cache, read off wrangler.jsonc.example: gateway cache on would serve these redirects
 // from a store and hide readership, Renderer cache off renders every request, cross_version on serves stale.
 {
@@ -322,7 +261,7 @@ console.log(
 
 // Measured by running it, with slack smaller than one fixture case, so deleting a case cannot hide
 // inside the tolerance.
-const MINIMUM_CHECKS = 113;
+const MINIMUM_CHECKS = 106;
 tally.floor("check:urls", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {

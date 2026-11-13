@@ -1,13 +1,13 @@
-import { data } from "react-router";
-
+import { JsonLd } from "capsomer/react/json-ld";
+import { DraftNotice } from "capsomer/react/draft-notice";
 import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
 import { ProcedureView } from "~/components/procedure";
 import { listFrozenVersions } from "~/db/procedure-versions";
-import { getProcedureByPath, listPublishedLibraryRecords } from "~/db/procedures";
+import { getProcedureByPath, listPublishedRecordsOfProfile } from "~/db/procedures";
+import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
 import { lineageFor } from "~/kb/procedures/lineage.server";
 import { libraryItems, workflowContext } from "~/kb/procedures/library.mjs";
@@ -19,8 +19,13 @@ import type { Route } from "./+types/procedure";
 
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "~/styles/prose.css";
+import "capsomer/field.css";
 import "~/styles/procedure.css";
-import "~/styles/run.css";
+import "capsomer/button.css";
+import "capsomer/offline-keep.css";
+import "capsomer/checklist-run.css";
+import "capsomer/field.css";
+import "capsomer/manual.css";
 
 /**
  * Every procedure page (docs/PROCEDURES.md): a protocol, a recipe or a computational procedure, drawn
@@ -36,15 +41,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "");
-  const row = await getProcedureByPath(env, path);
-  if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request)))
-    throw data(null, { status: 404 });
+  const { row, draft } = await draftGate(await getProcedureByPath(env, path), () =>
+    isAdminViewer(env, request),
+  );
   const { count, factor, units } = readScale(row.record, url);
   // Where a protocol sits in the phage workflow: its neighbors are the other published protocols, so they are read here.
   const workflow =
     row.record.profile === "protocol"
-      ? workflowContext(libraryItems(await listPublishedLibraryRecords(env)), row.record.path)
+      ? workflowContext(
+          libraryItems(await listPublishedRecordsOfProfile(env, "protocol")),
+          row.record.path,
+        )
       : null;
   // Proof of use is slugs in the file; the papers' and phages' words and addresses are read from their rows.
   const proof = await proofFor(env, row.record.proofOfUse);
@@ -54,7 +61,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const lineage = await lineageFor(env, row.record);
   return {
     record: row.record,
-    draft: row.status === "draft",
+    draft,
     count,
     factor,
     units,
@@ -81,7 +88,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       type: "text/markdown",
       href: `${SITE_ORIGIN}${record.path}.md`,
     },
-    ...(draft ? [{ name: "robots", content: "noindex" }] : []),
+    ...draftRobots(draft),
   ];
 }
 
@@ -95,19 +102,10 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
     url: SITE_ORIGIN,
   };
   return (
-    <PageShell
-      trail={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)),
-          }}
-        />
-      }
-    >
+    <PageShell trail={<JsonLd data={procedureJsonLd(record, SITE_ORIGIN, person, lineage)} />}>
       <Breadcrumb trail={trail} />
       <h1 className="page-title cap-layout-grid">{record.title}</h1>
-      {draft ? <p className="procedure-draft">Draft: only you can see this page.</p> : null}
+      <DraftNotice show={draft} />
       <ProcedureView
         record={record}
         count={count}

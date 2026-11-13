@@ -1,43 +1,10 @@
-import { chooseAd, scopeArt } from "./model.mjs";
+import { chooseAd, scopeArt, type Ad } from "capsomer/behavior/error-ad";
 
 /**
  * Every ad, found by folder: adding `<id>/ad.json` and `<id>/art.svg` here is the whole of adding an ad, and it
  * reaches the utility pages and the gallery with no other edit (docs/UTILITY-ADS.md). Eager, so the data is in the
  * Worker bundle and a request reads no file.
  */
-export interface AdPart {
-  kind: "text" | "burst" | "rect" | "use";
-  x?: number;
-  y?: number;
-  cx?: number;
-  cy?: number;
-  w?: number;
-  h?: number;
-  ref?: string;
-  anchor?: "start" | "middle" | "end";
-  font?: "display" | "slab" | "serif";
-  size?: number;
-  leading?: number;
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: number;
-  shadow?: { dx: number; dy: number; fill: string };
-  rotate?: number;
-  lines?: string[];
-  outer?: number;
-  inner?: number;
-  points?: number;
-  color?: string;
-}
-export interface Ad {
-  id: string;
-  title: string;
-  era: string;
-  credit: string;
-  viewBox: [number, number];
-  parts: AdPart[];
-}
-
 const data = import.meta.glob<Ad>("./*/ad.json", { eager: true, import: "default" });
 const art = import.meta.glob<string>("./*/art.svg", {
   eager: true,

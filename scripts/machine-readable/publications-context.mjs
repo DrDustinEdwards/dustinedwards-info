@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { assertFloor } from "../lib/floor.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
 import { compileAllPublications, readCitedBy } from "../lib/publications.mjs";
-import { createTally } from "../lib/tally.mjs";
+import { createTally } from "@dustinedwards/devkit/node";
 import { stripTsxComments } from "../lib/strip-comments.mjs";
 
 /*
@@ -54,6 +54,11 @@ export const records = compiled.map((c) => c.record);
 export const hosted = compiled.filter((c) => c.record.access === "self-hosted");
 
 export const citedBy = /** @type {any} */ (await readCitedBy());
+
+/** The first eight messages, then a count of the rest. @param {string[]} messages */
+export const shown = (messages) =>
+  messages.slice(0, 8).join("; ") +
+  (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
 
 /**
  * The refusals whose message starts with one of the fields, so a part can report a rule by name while the

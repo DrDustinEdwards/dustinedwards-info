@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 import { LIBRARY_BASES } from "../app/kb/libraries.mjs";
 import { LAB_PATH } from "../app/kb/registry/catalog.mjs";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_OWN_ROUTE } from "../app/lib/content-pages.mjs";
-import { SITE_MAP_PATH, lineText, sectionOf, siteMapSections } from "../app/lib/site-map.mjs";
+import { lineText, sectionOf, siteMapSections } from "@drdustinedwards/site-helpers/site-map";
+
+import { SITE_MAP_PATH, SITE_MAP_SECTIONS } from "../app/lib/site-map.mjs";
 import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";
 
 const read = (/** @type {string} */ rel) => readFileSync(new URL(rel, import.meta.url), "utf8");
@@ -59,7 +61,6 @@ const EXEMPT = new Map([
   ["/webmention", "the webmention endpoint"],
   ["/login", "forwards to /admin"],
   ["/health", "the uptime probe's JSON, not a page"],
-  ["/csp-report", "the CSP and Reporting API sink, a POST endpoint"],
 ]);
 
 await test("every public page route is in the sitemap's list or exempted by name with a reason", async () => {
@@ -85,15 +86,19 @@ await test("every public page route is in the sitemap's list or exempted by name
 });
 
 await test("a path goes to the section that owns its root, and anything else to Site", () => {
-  assert.equal(sectionOf("/research/tools/titer"), "research");
-  assert.equal(sectionOf("/systems"), "software");
-  assert.equal(sectionOf("/software/how-tos"), "software");
-  assert.equal(sectionOf("/recipes"), "about");
-  assert.equal(sectionOf("/cv"), "about");
-  assert.equal(sectionOf("/writing/tags/x"), "writing");
-  assert.equal(sectionOf("/"), "site");
-  assert.equal(sectionOf("/privacy"), "site");
-  assert.equal(sectionOf("/researcher"), "site", "a root matches whole segments only");
+  assert.equal(sectionOf("/research/tools/titer", SITE_MAP_SECTIONS), "research");
+  assert.equal(sectionOf("/systems", SITE_MAP_SECTIONS), "software");
+  assert.equal(sectionOf("/software/how-tos", SITE_MAP_SECTIONS), "software");
+  assert.equal(sectionOf("/recipes", SITE_MAP_SECTIONS), "about");
+  assert.equal(sectionOf("/cv", SITE_MAP_SECTIONS), "about");
+  assert.equal(sectionOf("/writing/tags/x", SITE_MAP_SECTIONS), "writing");
+  assert.equal(sectionOf("/", SITE_MAP_SECTIONS), "site");
+  assert.equal(sectionOf("/privacy", SITE_MAP_SECTIONS), "site");
+  assert.equal(
+    sectionOf("/researcher", SITE_MAP_SECTIONS),
+    "site",
+    "a root matches whole segments only",
+  );
 });
 
 await test("papers, registry items, procedures, posts and tags collapse to one counted line each", () => {
@@ -102,23 +107,26 @@ await test("papers, registry items, procedures, posts and tags collapse to one c
   const posts = tally("posts", "Articles", "/writing");
   const tags = tally("tags", "Tags", "/writing", false);
   const protocols = tally("procedures:protocols", "Protocols", "/research/protocols");
-  const sections = siteMapSections([
-    { path: "/", lastmod: none, title: "Home" },
-    { path: "/writing", lastmod: none, title: "Articles" },
-    { path: "/research/publications", lastmod: none, title: "Publications" },
-    { path: "/research", lastmod: none, title: "Research" },
-    { path: "/research/protocols", lastmod: none, title: "Protocol library" },
-    { path: "/research/publications/a/", lastmod: none, title: "Paper A", tally: papers },
-    { path: "/research/publications/b/", lastmod: none, title: "Paper B", tally: papers },
-    { path: "/research/protocols/x", lastmod: none, title: "X", tally: protocols },
-    { path: "/writing/one", lastmod: none, title: "One", tally: posts },
-    { path: "/writing/two", lastmod: none, title: "Two", tally: posts },
-    { path: "/writing/tags/a", lastmod: none, title: "a", tally: tags },
-    { path: "/writing/tags/b", lastmod: none, title: "b", tally: tags },
-    { path: "/writing/tags/c", lastmod: none, title: "c", tally: tags },
-    { path: "/writing/series/s", lastmod: none, title: "A series" },
-    { path: "/privacy", lastmod: none, title: "Privacy" },
-  ]);
+  const sections = siteMapSections(
+    [
+      { path: "/", lastmod: none, title: "Home" },
+      { path: "/writing", lastmod: none, title: "Articles" },
+      { path: "/research/publications", lastmod: none, title: "Publications" },
+      { path: "/research", lastmod: none, title: "Research" },
+      { path: "/research/protocols", lastmod: none, title: "Protocol library" },
+      { path: "/research/publications/a/", lastmod: none, title: "Paper A", tally: papers },
+      { path: "/research/publications/b/", lastmod: none, title: "Paper B", tally: papers },
+      { path: "/research/protocols/x", lastmod: none, title: "X", tally: protocols },
+      { path: "/writing/one", lastmod: none, title: "One", tally: posts },
+      { path: "/writing/two", lastmod: none, title: "Two", tally: posts },
+      { path: "/writing/tags/a", lastmod: none, title: "a", tally: tags },
+      { path: "/writing/tags/b", lastmod: none, title: "b", tally: tags },
+      { path: "/writing/tags/c", lastmod: none, title: "c", tally: tags },
+      { path: "/writing/series/s", lastmod: none, title: "A series" },
+      { path: "/privacy", lastmod: none, title: "Privacy" },
+    ],
+    SITE_MAP_SECTIONS,
+  );
   const shown = Object.fromEntries(
     sections.map((s) => [
       s.id,
@@ -146,14 +154,17 @@ await test("papers, registry items, procedures, posts and tags collapse to one c
 });
 
 await test("a counted kind whose index is not listed still gets its line", () => {
-  const sections = siteMapSections([
-    {
-      path: "/recipes/bread",
-      lastmod: null,
-      title: "Bread",
-      tally: tally("procedures:recipes", "Recipes", "/recipes"),
-    },
-  ]);
+  const sections = siteMapSections(
+    [
+      {
+        path: "/recipes/bread",
+        lastmod: null,
+        title: "Bread",
+        tally: tally("procedures:recipes", "Recipes", "/recipes"),
+      },
+    ],
+    SITE_MAP_SECTIONS,
+  );
   assert.deepEqual(sections, [
     {
       id: "about",

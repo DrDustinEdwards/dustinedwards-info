@@ -1,3 +1,4 @@
+import { JsonLd } from "capsomer/react/json-ld";
 import type { ReactNode } from "react";
 import { Link, data } from "react-router";
 
@@ -5,11 +6,11 @@ import { ShellFooter } from "~/components/shell-footer";
 import { HomeIntro } from "~/components/home-intro";
 import { SiteHeader } from "~/components/site-header";
 import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { getEnv } from "~/lib/context";
 import { HOME_PRELOADS } from "~/lib/preloads";
-import { longDateUTC } from "~/lib/long-date.mjs";
-import { timed, timingsContext } from "~/lib/timing";
+import { formatDate } from "capsomer/behavior/time";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { getTimings } from "@dustinedwards/site-runtime/context";
 import {
   cacheTags,
   EDGE_CACHE_HEADER,
@@ -79,7 +80,7 @@ function homePapers(papers: PublicationSummary[]) {
 
 export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const timings = context.get(timingsContext).timings;
+  const timings = getTimings(context);
 
   const [start, podcast, nextPublishAt, papers, cohorts] = await Promise.all([
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),
@@ -364,7 +365,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                         className="dt-published"
                         dateTime={new Date(post.publishAt).toISOString()}
                       >
-                        {longDateUTC(post.publishAt)}
+                        {formatDate(post.publishAt)}
                       </time>
                     ) : null}
                   </span>
@@ -407,11 +408,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <HomePodcast episode={podcast} />
 
         {structuredData.map((data, i) => (
-          <script
-            key={i}
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
-          />
+          <JsonLd key={i} data={data} />
         ))}
       </main>
       <ShellFooter />

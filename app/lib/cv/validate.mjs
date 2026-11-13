@@ -4,11 +4,13 @@
 // rules that need the whole CV: a cited paper exists and lists Dustin, and each section reads newest first.
 // Pure: no Env, no filesystem, no clock beyond the year bound below.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import matter from "gray-matter";
 
 import { findWideDashes } from "@drdustinedwards/site-helpers/text";
 import { canonicalAuthor } from "../publications/authors.mjs";
 import { AREAS, ROLES } from "./view.mjs";
+import { DOI_PATTERN } from "@drdustinedwards/site-helpers/scholar";
 
 const AREA_IDS = new Set(AREAS.map(([id]) => /** @type {string} */ (id)));
 const ROLE_IDS = new Set(ROLES.map(([id]) => /** @type {string} */ (id)));
@@ -23,7 +25,6 @@ const EDITION_PATTERN = /^(Spring|Summer|Fall|Winter) (\d{4})$/;
 const YEAR_MIN = 1950;
 const YEAR_MAX = 2100;
 
-const DOI_PATTERN = /^10\.\d{4,9}\/\S+$/;
 const HTTPS = /^https:\/\/\S+$/;
 
 /** The sections an appointment or a service line sits under, in the order the CV prints them. */
@@ -357,10 +358,7 @@ export function parseCvFile(file, raw) {
   } catch (error) {
     return {
       ok: false,
-      errors: [
-        ...errors,
-        `the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
-      ],
+      errors: [...errors, `the front matter is not valid YAML: ${errorMessage(error)}`],
     };
   }
   const data = /** @type {Record<string, unknown>} */ (parsed.data);

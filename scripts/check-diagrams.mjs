@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,8 +24,8 @@ import { DIAGRAM_ROLE_TOKENS } from "../app/lib/content/diagram.mjs";
 import { ASSET_PREFIX } from "../app/lib/media/classify.mjs";
 import { renderBody } from "../app/lib/content/pipeline.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
-import { assertFloor } from "./lib/floor.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const fileName = (/** @type {string} */ key, /** @type {string} */ theme) =>
   basename(diagramAssetPath(key, theme, ASSET_PREFIX));
@@ -80,7 +81,7 @@ function paletteFor(theme) {
     assert(`the ${theme} palette resolves`, true);
     return palette;
   } catch (error) {
-    assert(error instanceof Error ? error.message : String(error), false);
+    assert(errorMessage(error), false);
     return {};
   }
 }
@@ -107,12 +108,18 @@ const proseCss = readFileSync(join(root, "app/styles/prose.css"), "utf8");
 for (const tone of TONES) {
   assert(`prose.css defines --diagram-${tone}`, proseCss.includes(`--diagram-${tone}:`));
 }
-const svgRule = proseCss.match(/\.blog-diagram svg\s*\{([^}]*)\}/)?.[1] ?? "";
+// The SVG is sized by Capsomer's prose blocks (the `.blog-diagram` rule's nested `& svg`), which prose.css imports.
+const blocksCss = readFileSync(
+  join(root, "node_modules/capsomer/components/prose-blocks/prose-blocks.css"),
+  "utf8",
+);
+const svgRule = blocksCss.match(/:where\(\.blog-diagram\)\s*\{[^]*?& svg\s*\{([^}]*)\}/)?.[1] ?? "";
 assert(
   "an inline diagram keeps its natural width and only shrinks",
-  /max-width:\s*100%/.test(svgRule) &&
-    /height:\s*auto/.test(svgRule) &&
-    !/(?<![\w-])width:\s*100%/.test(svgRule),
+  proseCss.includes('@import "capsomer/prose-blocks.css"') &&
+    /max-inline-size:\s*100%/.test(svgRule) &&
+    /block-size:\s*auto/.test(svgRule) &&
+    !/(?<![\w-])(inline-size|width):\s*100%/.test(svgRule),
 );
 
 /**

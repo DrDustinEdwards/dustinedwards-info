@@ -3,7 +3,7 @@
 // (app/lib/pages/compile.mjs).
 import { and, asc, eq, inArray } from "drizzle-orm";
 
-import { PUBLISHED_STATUS } from "~/lib/search/visibility.mjs";
+import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import type { PageRecord } from "~/lib/pages/compile.mjs";
 
 import { getDb } from "./client";

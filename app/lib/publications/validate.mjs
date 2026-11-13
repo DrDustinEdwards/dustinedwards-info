@@ -6,14 +6,16 @@
 // (is this id or DOI taken) arrive as `host` and `others`, so CI reads a clone and the Worker asks GitHub
 // and D1 without this module knowing which.
 
-import { isSlug } from "@drdustinedwards/site-helpers/slug";
-
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { contentIdFits } from "../carrel/content-id.mjs";
 import { accessionUrl, accessionsInText } from "./accessions.mjs";
 import { HOSTED_WITHOUT_LICENSE, permitsRedistribution } from "./hosting.mjs";
-import { doiSlug, paperPdfPath } from "./paths.mjs";
+import { DOI_PATTERN, doiSlug } from "@drdustinedwards/site-helpers/scholar";
+import { paperPdfPath } from "./paths.mjs";
 import { updateNoticeProblem } from "./update-notice.mjs";
 import { TOPIC_IDS } from "./topics.mjs";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
+import { hasWideDash } from "@drdustinedwards/site-helpers/text";
 
 const PUBLICATION_KIND = "publication";
 const TYPES = /** @type {const} */ ([
@@ -62,15 +64,12 @@ const FRONT_MATTER_FIELDS = new Set([
   "csl",
 ]);
 
-const DOI_PATTERN = /^10\.\d{4,9}\/\S+$/;
 const PMC_URL = /^https:\/\/pmc\.ncbi\.nlm\.nih\.gov\/articles\/PMC\d+\/$/;
 const DATE_PATTERN = /^\d{4}(-\d{2}){0,2}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 /** A character reference: titles are stored decoded, so one left in is a value that would render twice-decoded. */
 const CHARACTER_REFERENCE = /&(?:#\d+|#[xX][0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/;
-/** The PreToolUse hook cannot reach data files; escapes keep this file free of the dashes. */
-const WIDE_DASH = new RegExp("[\\u2013\\u2014]");
 /** A scanned PDF extracts to nothing and everything else still passes. */
 const MIN_FULL_TEXT_CHARS = 500;
 const SUMMARY_MAX = 200;
@@ -129,7 +128,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
   }
   const submitted = status === "submitted";
 
-  if (!isSlug(slug)) {
+  if (!SLUG_PATTERN.test(slug)) {
     bad("slug", `the file name "${slug}" is not a lowercase kebab-case slug`);
   } else if (!contentIdFits(PUBLICATION_KIND, slug)) {
     bad(
@@ -155,7 +154,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
       );
   } else if (!isString(doi) || !DOI_PATTERN.test(doi)) {
     bad("doi", `${JSON.stringify(doi)} is not a DOI name (10.<registrant>/<suffix>)`);
-  } else if (isSlug(slug) && doiSlug(doi) !== slug) {
+  } else if (SLUG_PATTERN.test(slug) && doiSlug(doi) !== slug) {
     bad(
       "doi",
       `its page slug would be "${doiSlug(doi)}", but the file is named "${slug}". The file name is the DOI's slug and never changes after Google Scholar has indexed it`,
@@ -305,7 +304,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
   const hasPdfPath = data.pdfPath !== undefined && data.pdfPath !== null;
   if (access === "self-hosted") {
     if (submitted) bad("access", "a submitted manuscript has no PDF on this site; use external");
-    const derived = isSlug(slug) ? paperPdfPath(slug) : null;
+    const derived = SLUG_PATTERN.test(slug) ? paperPdfPath(slug) : null;
     if (!hasPdfPath) {
       bad("pdfPath", `is required for a self-hosted paper (${derived ?? "the derived path"})`);
     } else if (derived && data.pdfPath !== derived) {
@@ -394,8 +393,8 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
       if (summary.length > SUMMARY_MAX)
         bad("summary", `is ${summary.length} characters; the limit is ${SUMMARY_MAX}`);
       if (/[.!?]\s+[A-Z]/.test(summary)) bad("summary", "is more than one sentence");
-      if (WIDE_DASH.test(summary))
-        bad("summary", "carries an em dash or en dash; use a comma, period, parentheses or colon");
+      if (hasWideDash(summary))
+        bad("summary", "carries a wide dash; use a hyphen, comma, period, parentheses or colon");
     }
   }
 
@@ -445,7 +444,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
         bad(`accessions[${i}]`, `builds ${url}, which is not an NCBI URL ending in its own id`);
       }
     } catch (error) {
-      bad(`accessions[${i}].kind`, error instanceof Error ? error.message : String(error));
+      bad(`accessions[${i}].kind`, errorMessage(error));
     }
   });
   // Both directions: the statement in the paper, not a bare regex, decides what this paper deposited.

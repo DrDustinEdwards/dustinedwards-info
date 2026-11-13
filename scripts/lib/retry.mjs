@@ -3,6 +3,7 @@
  * Cloudflare transients show up as both a fast death and a hang.
  */
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { spawnSync } from "node:child_process";
 
 import { descendantPids, killTree, readProcessTable } from "./child-processes.mjs";
@@ -47,7 +48,7 @@ export async function retryRead(fn, { label, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   try {
     return /** @type {T} */ (await attempt());
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorMessage(error);
     console.error(
       `  transient read failed, retrying once: ${label}\n` +
         `    first error: ${message.split("\n")[0].slice(0, 200)}`,

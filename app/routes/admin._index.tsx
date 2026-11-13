@@ -9,13 +9,15 @@ import { Pill, Status } from "capsomer/react/status";
 import { StatTile, StatTiles } from "capsomer/react/stat-tile";
 
 import { PageHead } from "capsomer/react/page-head";
-import { timed, timedLoader } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timedLoader } from "~/lib/timing";
 import { humanCheck, statusSentence } from "~/lib/admin/check-copy.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { syncStatus } from "~/lib/operator/api.server";
 import { getEnv } from "~/lib/context";
 import { askStatusContext } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin._index";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 export function meta() {
   return [{ title: "Overview · Admin" }, { name: "robots", content: "noindex" }];
@@ -54,7 +56,7 @@ type Check = Route.ComponentProps["loaderData"]["checks"][number];
 /** The passing checks, each named in words with what it found, folded away: nothing in it needs a person. */
 function PassingChecks({ checks }: { checks: Check[] }) {
   return (
-    <Disclosure summary={`The ${checks.length} passing check${checks.length === 1 ? "" : "s"}`}>
+    <Disclosure summary={`The ${plural(checks.length, "passing check")}`}>
       <RowList label="Passing checks" gap="xs">
         {checks.map((check) => {
           const copy = humanCheck(check);

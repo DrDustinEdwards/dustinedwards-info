@@ -52,9 +52,10 @@
       "what": "The admin has no post editor. Carrel writes posts through /api/carrel/v1, and the operator API calls the same save. A save validates the frontmatter, writes the file and its revision in one D1 batch, renders the rows and purges the cache by tag. Ask is updated last and cannot fail the save. The save names the blob sha it loaded, and a file changed since is refused, with the same check inside the batch.",
       "anchors": [
         {
-          "kind": "route",
-          "path": "/api/carrel/v1/*",
-          "anonymousGet": false
+          "kind": "assertion",
+          "gate": "check:worker",
+          "file": "test/worker/carrel-site-api.test.ts",
+          "text": "answers the key on its prefix"
         },
         {
           "kind": "gate",
@@ -557,7 +558,7 @@
     {
       "component": "Reading aids",
       "name": "Posts add reading aids without script",
-      "what": "A reading-progress bar, a table of contents that follows the section on screen, copy buttons on code blocks, footnote previews, an image lightbox and click-to-copy heading links are each added by script to a page that is complete without them.",
+      "what": "A reading-progress bar (CSS only, where the browser has scroll-driven animations), a table of contents that follows the section on screen, copy buttons on code blocks, footnote previews, an image lightbox and click-to-copy heading links are each added to a page that is complete without them.",
       "anchors": [
         {
           "kind": "route",

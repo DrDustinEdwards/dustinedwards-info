@@ -10,7 +10,7 @@
 
 import { ogImageKey } from "./content/og-card-text.mjs";
 import { dictionaryEntryMarkdown, dictionaryEntryText } from "./dictionary-entries.mjs";
-import { longDateUTC } from "./long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { splitSections } from "./search/records.mjs";
 
 export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
@@ -204,7 +204,7 @@ export function contentPageMarkdownBody(page, entry) {
   // A legal page's banner and date are facts a reader sees under the title, so the twin states them too.
   const stated = [
     page.banner,
-    page.lastUpdated ? `Last updated: ${longDateUTC(page.lastUpdated)}` : "",
+    page.lastUpdated ? `Last updated: ${formatDate(page.lastUpdated)}` : "",
   ].filter(Boolean);
   const legal = stated.length > 0 ? `${stated.join("\n\n")}\n\n` : "";
   return `# ${page.title}\n\n${legal}${lead}${body}`;

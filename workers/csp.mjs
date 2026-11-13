@@ -1,7 +1,8 @@
-import { LAB_BENCH_PATH } from "../app/lab/path.mjs";
+import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 
 // Separate from app.ts so the worker tests can call it on both branches.
 
+import { TRUSTED_TYPES_NAMES } from "@dustinedwards/site-runtime/trusted-types";
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
 
 /**
@@ -65,10 +66,10 @@ export function isMediaPath(pathname) {
 
 /**
  * What this site loads, the one list site-runtime's pageSecurity builds the policy from (workers/security-headers.mjs).
- * Public pages get no nonce: header and body are edge-cached together, so a nonce there would be one value shared by every
- * reader for the cache lifetime. They run no inline script at all: /site.js and the islands it imports are same-origin, so
+ * Every render gets a nonce (site-runtime ./worker), and a stored public page has it renewed per reader (`renew`), so no
+ * two readers share one. Public pages run no inline script at all: /site.js and the islands it imports are same-origin, so
  * 'self' covers them, and the prefetch rules come from a same-origin file the response header names (site-runtime
- * ./prefetch), which needs no allowance. The private planes are `private, no-store`, so their per-request nonce is sound.
+ * ./prefetch), which needs no allowance. The private planes are `private, no-store` and rendered for their reader alone.
  * A /media path keeps the UPLOAD_HEADERS policy its response carries (workers/app.ts), which the package leaves alone.
  * No 'strict-dynamic': browsers ignore every host
  * source while it is present, so an approved file could never run; 'self' covers /site.js and the islands. The
@@ -86,5 +87,7 @@ export function pagePolicy({ nonce }) {
     // The post players (YouTube, Spotify and the rest of Dustin's list) a post may embed; the registry entry's `embeds`
     // opt-in delegates their features in the Permissions-Policy.
     embeds: true,
+    // Trusted Types is enforced: every sink takes a policy's value (site-runtime ./trusted-types, installed by startPage).
+    trustedTypes: TRUSTED_TYPES_NAMES,
   };
 }

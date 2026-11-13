@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Link } from "react-router";
+import { SearchField } from "capsomer/react/field";
 
 import { EvidenceRow } from "~/components/evidence-row";
 import { getEnv } from "~/lib/context";
-import { readHealthTile } from "~/lib/health/snapshot.server";
+import { readHealthTile } from "@dustinedwards/site-runtime/health-snapshot";
 import type { Route } from "./+types/colophon";
 
 import features from "../../content/features.json";
@@ -36,8 +38,11 @@ import "~/styles/evidence-row.css";
 import "capsomer/tokens.css";
 import "~/styles/prose.css";
 import "capsomer/chips.css";
+import "capsomer/field.css";
+import "capsomer/button.css";
 import "capsomer/panel.css";
 import "~/styles/colophon.css";
+import { PROSE } from "~/lib/prose-context";
 
 /**
  * Publicly cacheable for cookieless readers only; workers/app.ts downgrades the rest. The short edge
@@ -53,7 +58,7 @@ export function headers() {
  * edge round trip naming an origin that changes at cutover.
  */
 export async function loader({ context }: Route.LoaderArgs) {
-  return { health: await readHealthTile(getEnv(context)) };
+  return { health: await readHealthTile({ kv: getEnv(context).APP_KV }) };
 }
 
 /**
@@ -72,6 +77,23 @@ export function meta() {
 }
 
 /** `recordsForPage` reads the same list, so no record can point at a fragment the page does not render. */
+/** A filter for one list below it. Hidden until app/enhance/colophon.ts runs, since it does nothing without script. */
+function ColophonFind({ label, list }: { label: string; list: string }) {
+  const [value, setValue] = useState("");
+  return (
+    <div className="colophon-find" data-find-field hidden>
+      <SearchField
+        label={label}
+        labelHidden
+        value={value}
+        onChange={setValue}
+        placeholder="Filter"
+        data-find={list}
+      />
+    </div>
+  );
+}
+
 function SectionHead({ id }: { id: string }) {
   const section = COLOPHON_SECTIONS.find((s) => s.id === id);
   if (!section) throw new Error(`unknown colophon section "${id}"`);
@@ -326,7 +348,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
 
       <StackDiagram />
 
-      <div className="prose colophon-body" data-colophon>
+      <div className="prose colophon-body" {...PROSE} data-colophon>
         <SectionHead id="run" />
         {SITE_OPERATION.map((sentence) => (
           <p key={sentence.slice(0, 32)}>{sentence}</p>
@@ -495,14 +517,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           <div>
             <SectionHead id="schema" />
             <p>{stack.migrations.length} migrations.</p>
-            <input
-              type="search"
-              className="colophon-find"
-              aria-label="Filter migrations"
-              placeholder="Filter"
-              data-find="migrations"
-              hidden
-            />
+            <ColophonFind label="Filter migrations" list="migrations" />
             <div className="colophon-scroll" tabIndex={0} role="region" aria-label="Migrations">
               <ul data-list="migrations">
                 {stack.migrations.map((file) => (
@@ -516,14 +531,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           <div>
             <SectionHead id="gates" />
             <p>{stack.gates.length} checks.</p>
-            <input
-              type="search"
-              className="colophon-find"
-              aria-label="Filter checks"
-              placeholder="Filter"
-              data-find="checks"
-              hidden
-            />
+            <ColophonFind label="Filter checks" list="checks" />
             <div className="colophon-scroll" tabIndex={0} role="region" aria-label="Checks">
               <ul data-list="checks">
                 {stack.gates.map((gate) => (
@@ -537,14 +545,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           <div>
             <SectionHead id="dependencies" />
             <p>{stack.dependencies.length} runtime dependencies.</p>
-            <input
-              type="search"
-              className="colophon-find"
-              aria-label="Filter runtime dependencies"
-              placeholder="Filter"
-              data-find="dependencies"
-              hidden
-            />
+            <ColophonFind label="Filter runtime dependencies" list="dependencies" />
             <div
               className="colophon-scroll"
               tabIndex={0}

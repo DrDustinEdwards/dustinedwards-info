@@ -20,16 +20,15 @@ import { SEARCH_FIELDS } from "@dustinedwards/site-api/frontmatter";
 import { d1ScheduledUpdates } from "@dustinedwards/site-api/schedules";
 import { notFoundReport } from "@dustinedwards/site-runtime/not-found";
 import { getTableColumns } from "drizzle-orm";
-import { RouterContextProvider } from "react-router";
+import type { RouterContextProvider } from "react-router";
 
 import { listAllPostsForAdmin, previewBlogPost, type PostRow } from "~/db";
 import { posts } from "~/db/schema";
 import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { carrelMentionsAdapter } from "~/lib/carrel/mentions-adapter.server";
 import { postSchedules } from "~/lib/carrel/schedules-adapter.server";
-import { isSlug } from "@drdustinedwards/site-helpers/slug";
-import { postPath, SLUG_MAX_LENGTH } from "~/lib/content/slug.mjs";
-import { cloudflareContext, cspNonceContext, postPreviewContext } from "~/lib/context";
+import { postPath, SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
+import { postPreviewContext } from "~/lib/context";
 import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { publicationHandler } from "~/lib/carrel/publication-handler.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
@@ -73,7 +72,10 @@ export { withPublication };
 
 type CarrelEnv = Env;
 
-type RenderDocument = (request: Request, context: RouterContextProvider) => Promise<Response>;
+type RenderDocument = (
+  request: Request,
+  set: (context: RouterContextProvider) => void,
+) => Promise<Response>;
 
 /**
  * A revision's version is a commit sha. A post's own version is different: the git blob sha of its file at
@@ -397,7 +399,7 @@ export function carrelSiteAdapter(options: {
     async rename(id, input) {
       const file = await current(id, input.expectedVersion);
       const to = input.newSlug;
-      if (!isSlug(to, { max: SLUG_MAX_LENGTH })) {
+      if (!SLUG_PATTERN.test(to) || to.length > SLUG_MAX_LENGTH) {
         throw new RefusedError(
           `"${to}" is not a post slug: lower case letters and digits joined by single hyphens.`,
         );
@@ -438,15 +440,9 @@ export function carrelSiteAdapter(options: {
       }
       const post = await previewPost(env, record);
 
-      // Every context the Renderer sets for a public path: the nonce is undefined there, as a
-      // public page carries none (workers/csp.mjs).
-      const context = new RouterContextProvider();
-      context.set(cloudflareContext, { env, ctx });
-      context.set(cspNonceContext, null);
-      context.set(postPreviewContext, post);
       const response = await renderDocument(
         new Request(`${origin}/writing/${slug}`, { headers: { accept: "text/html" } }),
-        context,
+        (context) => context.set(postPreviewContext, post),
       );
       if (!response.ok) {
         throw new RefusedError(

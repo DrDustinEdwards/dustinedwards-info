@@ -8,8 +8,9 @@ import { MENTION_POST_PATH } from "../seed.mjs";
 
 /*
  * Keying the public cache on path plus theme is sound only if public bytes depend on
- * the theme alone. Nothing is masked for the CSP: public pages carry no nonce, so one
- * appearing is a difference this case should report.
+ * the theme alone. The one value masked for the CSP is the nonce: site-runtime gives every
+ * reader of a stored page its own (renewNonce), so only its value differs; where it appears
+ * is still compared.
  */
 /** @param {import("../harness.mjs").CaseContext} ctx */
 export async function run({ page, browser }) {
@@ -113,6 +114,7 @@ export async function run({ page, browser }) {
   const mask = (html) =>
     html
       .replace(/csp-endpoint="[^"]*"/g, 'csp-endpoint="E"')
+      .replace(/ nonce="[A-Za-z0-9+/=_-]+"/g, ' nonce="N"')
       .replace(/data-health-age="\d+"/g, 'data-health-age="A"')
       /*
        * The age sentence differs between same-cookie renders (KV edge cache plus clock), so
@@ -283,14 +285,15 @@ export async function run({ page, browser }) {
       } else {
         ok(
           `${path}: the seeded approved mentions render`,
-          stranger.includes('class="post-mentions"') && stranger.includes('id="mentions-heading"'),
+          stranger.includes('class="cap-related" data-kind="mentions"') &&
+            stranger.includes('">Mentions</h2>'),
           `no Mentions section in the served document, so the seed did not reach the ` +
             `render and every assertion below it, INCLUDING the byte-identity pair, is ` +
             `about a page without the feature on it.`,
         );
         ok(
           `${path}: the ordinary mention is an anchor carrying the full rel`,
-          /<a href="https:\/\/gate\.example\/about" rel="nofollow ugc noopener noreferrer">A Reader<\/a>/.test(
+          /<a class="cap-related-name" href="https:\/\/gate\.example\/about" rel="nofollow ugc noopener noreferrer">A Reader<\/a>/.test(
             stranger,
           ),
           `the anchor is missing or its rel is not the four tokens. A ugc link that ` +
@@ -318,7 +321,7 @@ export async function run({ page, browser }) {
         ok(
           `${path}: a javascript: author_url renders NO anchor`,
           !/javascript:/i.test(stranger),
-          `a javascript: URL survived into the document. safeHttpHref refuses it at ` +
+          `a javascript: URL survived into the document. Capsomer's httpHref refuses it at ` +
             `render time and the name is meant to fall back to plain text; nothing on ` +
             `this page may put a stranger's scheme in an href.`,
         );
@@ -390,8 +393,8 @@ export async function run({ page, browser }) {
       `${label}: an ${accept} request is answered with ${wanted}`,
       type.includes(wanted),
       `got ${JSON.stringify(type)}. The route stopped negotiating, or the gateway's ` +
-        `key stopped excluding the negotiated representation. See ` +
-        `negotiatesAwayFromHtml in app/lib/negotiate.mjs and cacheDimensions in ` +
+        `cache stopped skipping the negotiated representation. See ` +
+        `negotiatesAwayFromHtml in app/lib/negotiate.mjs and \`cacheable\` in ` +
         `workers/app.ts.`,
     );
     /* `no-store` keeps the platform from storing it under the HTML reader's key. */

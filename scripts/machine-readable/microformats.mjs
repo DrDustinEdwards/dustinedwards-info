@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
@@ -7,14 +8,14 @@ import { postLoaderData } from "../lib/route-fixtures.mjs";
 
 import {
   POSTS_PER_PAGE,
-  pageCount,
   picksFirst,
   splitFeatured,
   startHere,
 } from "../../app/lib/blog-listing.mjs";
 import { postPath } from "../../app/lib/content/pipeline.mjs";
-import { assertFloor } from "../lib/floor.mjs";
-import { createTally } from "../lib/tally.mjs";
+import { pageEnvelope } from "capsomer/behavior/pagination";
+import { assertFloor } from "@dustinedwards/devkit/node";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const { mf2 } = await import("microformats-parser");
 
@@ -80,7 +81,7 @@ try {
 } catch (error) {
   console.error(
     `  FAIL  microformats: the corpus would not build, so there is nothing to ` +
-      `render.\n\n  ${error instanceof Error ? error.message : String(error)}\n\n  ` +
+      `render.\n\n  ${errorMessage(error)}\n\n  ` +
       `If this names content/generated/stack.json, run npm run build:stack first; ` +
       `check:all builds it for the tier.\n`,
   );
@@ -277,7 +278,7 @@ const ordered = [...published].sort(
   (/** @type {any} */ a, /** @type {any} */ b) =>
     new Date(b.publishAt).getTime() - new Date(a.publishAt).getTime(),
 );
-const totalPages = pageCount(ordered.length);
+const totalPages = pageEnvelope(1, POSTS_PER_PAGE, ordered.length).pageCount;
 
 /**
  * @param {number} page

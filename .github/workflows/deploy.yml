@@ -81,7 +81,7 @@ jobs:
   site:
     needs: decide
     if: needs.decide.outputs.deploy == 'true'
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@250d737c13b6f4c74987652818d262cb1d1c9cf7 # v0.27.0
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@33c4651984133498e49380b1cfea0894fe7f1bae # v0.43.0
     with:
       worker-name: dustinedwards
       # site-runtime withAdminIdle's key, minted once by the deploy and never shown (devkit "generated-secrets").
@@ -154,17 +154,17 @@ jobs:
         run: rm -f "$RUNNER_TEMP/operator-token"
 
   # After the site it binds (SITE is a service binding). Its config is gitignored, so it is rebuilt from the tracked
-  # example and the live Worker's own bindings (scripts/apply-mcp-config.mjs).
+  # example and the live Worker's own bindings (mcp/scripts/apply-config.mjs).
   mcp:
     needs: site
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@250d737c13b6f4c74987652818d262cb1d1c9cf7 # v0.27.0
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@33c4651984133498e49380b1cfea0894fe7f1bae # v0.43.0
     with:
       worker-name: dustinedwards-admin-mcp
       # site-runtime audit-log's signing key (0.85), minted once by the deploy and never shown (devkit "generated-secrets").
       generated-secrets: AUDIT_SIGNING_KEY
       working-directory: mcp
       install: npm ci
-      pre-deploy: node ../scripts/apply-mcp-config.mjs
+      pre-deploy: node scripts/apply-config.mjs
       health-url: https://admin-mcp.dustinedwards.info/health
       sha-var: DEPLOY_SHA
       verify-command: node ../scripts/verify-mcp.mjs

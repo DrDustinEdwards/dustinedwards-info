@@ -5,10 +5,14 @@ import { Link, useLocation, useMatches } from "react-router";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SiteNavPanel } from "~/components/site-nav-panel";
 import { buildNav, type NavItem } from "~/lib/nav";
-import { type RunningHeadHandle, sectionOf } from "~/lib/running-head";
+import { type RunningHeadHandle, runningHeadSection } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
 import askCss from "~/styles/ask.css?url";
+import listboxCss from "capsomer/listbox.css?url";
+import buttonCss from "capsomer/button.css?url";
+import commandMenuCss from "capsomer/command-menu.css?url";
 import paletteDialogCss from "~/styles/palette-dialog.css?url";
+import { markup } from "capsomer/behavior/trusted-html";
 
 const NAV_ID = "site-nav";
 
@@ -69,7 +73,7 @@ function NavEntry({ item, pathname }: { item: NavItem; pathname: string }) {
 function RunningHead({ pathname }: { pathname: string }) {
   const matches = useMatches();
   if (pathname === "/") return null;
-  const section = sectionOf(pathname);
+  const section = runningHeadSection(pathname);
   let folio: string | null | undefined;
   for (const match of matches) {
     const handle = match.handle as RunningHeadHandle | undefined;
@@ -109,7 +113,7 @@ export function SiteHeader() {
         data-variant="letterhead"
         data-site-header=""
         data-palette=""
-        data-palette-css={`${paletteDialogCss},${askCss}`}
+        data-palette-css={`${listboxCss},${commandMenuCss},${buttonCss},${paletteDialogCss},${askCss}`}
       >
         <Link to="/" className="cap-site-header-logo" aria-label={SITE.name}>
           {/* Decorative: the name beside it is the link's name. */}
@@ -138,7 +142,7 @@ export function SiteHeader() {
           <div
             className="cap-site-header-search"
             data-cap-part="search"
-            dangerouslySetInnerHTML={{ __html: SEARCH_INNER }}
+            dangerouslySetInnerHTML={markup(SEARCH_INNER)}
           />
           {/* Capsomer's no-script theme form: each button posts to /theme, which sets the cookie the server reads,
             and with script the theme module switches at once. The admin plane's shell reads the same choice

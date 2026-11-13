@@ -1,18 +1,13 @@
+import type { SiteSecrets } from "@dustinedwards/site-runtime/worker";
+
 /**
- * Secrets set with `wrangler secret put` are not in the generated Env type, so they are declared here.
- * `check:secrets` asserts this list matches its own in both directions: add a secret to both.
+ * Secrets set with `wrangler secret put` are not in the generated Env type, so they are declared here. The ones every
+ * site holds (OPERATOR_TOKEN, CARREL_SITE_KEY, ADMIN_IDLE_SECRET, ADMIN_EMAIL, CO_OWNER_EMAILS, ANTHROPIC_API_KEY and
+ * the rest) are site-runtime's SiteSecrets; this file keeps only dustinedwards.info's own. `check:secrets` asserts
+ * every secret in app/lib/secrets.mjs is declared here or in SiteSecrets, and that each one declared here is listed.
  */
 declare global {
-  interface Env {
-    /** Optional by contract: `POST /api/operator` returns 503 when it is absent or too short. */
-    OPERATOR_TOKEN?: string;
-    /**
-     * Carrel's key, reaching only /api/carrel/v1. Optional by contract: absent or under 32 characters,
-     * the site-api package refuses every request. Two holders, this Worker and Carrel: rotate both.
-     */
-    CARREL_SITE_KEY?: string;
-    /** Keys site-runtime's admin idle cookie (withAdminIdle `secret`). Minted by the deploy (devkit worker-deploy `generated-secrets`), never shown; unset, the admin paths fail (site-runtime 0.82 requires it). */
-    ADMIN_IDLE_SECRET: string;
+  interface Env extends SiteSecrets {
     /** Optional by contract: absent or too short, the middleware refuses a presented token with 503. */
     SMOKE_TOKEN?: string;
     /**
@@ -29,15 +24,6 @@ declare global {
      */
     PRIMARY_OWNER_EMAIL?: string;
     /**
-     * The main admin, the only person who may change who is admin (site-runtime's `adminRoster`), checked in code
-     * behind the Access policy `dustinedwards-admin`. A secret for the same reason as PRIMARY_OWNER_EMAIL. Optional by
-     * contract: absent, nobody is an administrator and /admin refuses every person (the read-only smoke bearer still
-     * renders), co-owners included.
-     */
-    ADMIN_EMAIL?: string;
-    /** Co-owners, comma-separated: full use of /admin, no say over who is admin. A secret. Optional. */
-    CO_OWNER_EMAILS?: string;
-    /**
      * This site's Capsid agent key, holding the write grant on the `dustinedwards` namespace, for POST
      * /ops/access-sync only: Capsid holds the Cloudflare token and writes the lab's Access group. Optional by
      * contract: absent, /lab-bench/members still records every change and says the allow list was not touched.
@@ -49,8 +35,6 @@ declare global {
      * Optional by contract: absent, the check-publications job fails and says so.
      */
     ALERT_EMAIL?: string;
-    /** The media suggestions' key (app/lib/media/suggest.server.ts): Claude Haiku 5.5 straight at Anthropic. Optional by contract: absent, a suggestion is refused. */
-    ANTHROPIC_API_KEY?: string;
   }
 }
 

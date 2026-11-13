@@ -8,7 +8,8 @@ import {
   scheduledEdgeCacheControl,
   siteHead,
 } from "~/lib/seo";
-import { SITE_MAP_PATH, lineText, siteMapSections } from "~/lib/site-map.mjs";
+import { lineText, siteMapSections } from "@drdustinedwards/site-helpers/site-map";
+import { SITE_MAP_PATH, SITE_MAP_SECTIONS } from "~/lib/site-map.mjs";
 import { SITE_URLS_CACHE_TAGS, gatherSiteUrls } from "~/lib/site-urls.server";
 
 import type { Route } from "./+types/site-map";
@@ -23,7 +24,7 @@ import "~/styles/site-map.css";
 export async function loader({ context }: Route.LoaderArgs) {
   const { urls, nextPublishAt } = await gatherSiteUrls(getEnv(context));
   return data(
-    { sections: siteMapSections(urls) },
+    { sections: siteMapSections(urls, SITE_MAP_SECTIONS) },
     { headers: { [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt) } },
   );
 }

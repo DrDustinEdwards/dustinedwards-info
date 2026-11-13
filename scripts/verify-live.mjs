@@ -4,8 +4,9 @@
 // This file is the ordered runner and the floor. Each section lives in scripts/lib/live/ and the
 // shared client (origin, requests, counter) in scripts/lib/live/client.mjs.
 
-import { pageCount } from "../app/lib/blog-listing.mjs";
-import { assertFloor } from "./lib/floor.mjs";
+import { pageEnvelope } from "capsomer/behavior/pagination";
+import { POSTS_PER_PAGE } from "../app/lib/blog-listing.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
 import * as blogDraftsAsk from "./lib/live/blog-drafts-ask.mjs";
 import { ASK_PROBE_LIMIT } from "./lib/live/blog-drafts-ask.mjs";
 import * as cache from "./lib/live/cache.mjs";
@@ -37,7 +38,10 @@ console.log(`\n${tally.checks - tally.failures} passed, ${tally.failures} failed
    add checks per post and per draft, so a fixed floor would let each new post's checks absorb a
    skipped section; the corpus part of the floor is derived instead. */
 const corpusChecks = (/** @type {number} */ live, /** @type {number} */ drafts) =>
-  live + pageCount(live) + drafts * 8 + Math.min(drafts, ASK_PROBE_LIMIT);
+  live +
+  pageEnvelope(1, POSTS_PER_PAGE, live).pageCount +
+  drafts * 8 +
+  Math.min(drafts, ASK_PROBE_LIMIT);
 const MINIMUM_CHECKS =
   189 + Math.max(0, corpusChecks(corpus.live, corpus.drafts) - corpusChecks(11, 1));
 const breach = assertFloor("verify-live", "checks", tally.checks, MINIMUM_CHECKS);

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { ts } from "./syntax.mjs";
+import { ts } from "@dustinedwards/devkit/node/syntax";
 
 /**
  * TypeScript's own JSONC reader, which knows a string from a comment. The regex it replaces took
@@ -98,6 +98,15 @@ const READERS = {
             ? `allowed_sender_addresses=${[...mail.allowed_sender_addresses].sort().join("|")}`
             : "unrestricted";
       out.set(`send_email:${mail.name}`, restriction);
+    }
+  },
+  // The namespace and the limit are compared: a second Worker on the same namespace shares the count.
+  ratelimits: (config, out) => {
+    for (const limit of config.ratelimits ?? []) {
+      out.set(
+        `ratelimit:${limit.name}`,
+        `namespace_id=${limit.namespace_id} limit=${limit.simple?.limit} period=${limit.simple?.period}`,
+      );
     }
   },
   queues: (config, out) => {

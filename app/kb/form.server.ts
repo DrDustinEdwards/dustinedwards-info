@@ -2,8 +2,8 @@
 // pickers choose from; the file a submitted form describes, which then goes through the same Check and Save as the raw
 // editor (editor.server.ts); and Duplicate, a new draft copied from an entry that records where it came from.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import matter from "gray-matter";
-import { isSlug } from "@drdustinedwards/site-helpers/slug";
 
 import { listRegistry } from "~/db/registry";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
@@ -15,6 +15,7 @@ import { entryFields, gapReason, itemFields, type FieldSpec } from "./form-field
 import { fileToForm, formToFile, STEP_FLAGS, type FormModel } from "./form.mjs";
 import { compile as compileProcedure, saveProcedure } from "./procedures/save.server";
 import { KINDS } from "./registry/kinds.mjs";
+import { SLUG_PATTERN, slugify } from "@drdustinedwards/site-helpers/slug";
 
 type FormEnv = Env;
 
@@ -146,20 +147,8 @@ export function rawFromForm(
   try {
     return { raw: formToFile(original, { ...model, data }) };
   } catch (error) {
-    return { errors: [error instanceof Error ? error.message : String(error)] };
+    return { errors: [errorMessage(error)] };
   }
-}
-
-/** A slug from a title: lower-case words joined by hyphens. */
-function slugFor(title: string): string {
-  return title
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60)
-    .replace(/-+$/, "");
 }
 
 export type DuplicateResult =
@@ -178,10 +167,10 @@ export async function duplicateEntry(
   actor: Actor,
 ): Promise<DuplicateResult> {
   const title = wanted.title.trim();
-  const slug = (wanted.slug.trim() || slugFor(title)).toLowerCase();
+  const slug = (wanted.slug.trim() || slugify(title, { max: 60 })).toLowerCase();
   const errors: string[] = [];
   if (!title) errors.push("The copy needs a title.");
-  if (!isSlug(slug))
+  if (!SLUG_PATTERN.test(slug))
     errors.push(`"${slug}" is not a file name: use lower-case letters, digits and hyphens.`);
   if (slug === from.slug) errors.push("The copy needs a file name of its own.");
   if (errors.length > 0) return { outcome: "refused", errors };

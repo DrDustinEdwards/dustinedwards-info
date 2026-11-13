@@ -34,6 +34,7 @@ import puppeteer from "puppeteer";
 
 import { SITE_ORIGIN } from "../app/lib/site-origin.mjs";
 import { METRICS, exitCode, firstArticlePath, gradeRuns } from "./lib/web-vitals.mjs";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 const FIXED_PAGES = ["/", "/research/retroviruses", "/research/protocols/phage-isolation"];
 
@@ -113,7 +114,7 @@ async function measure(url, port) {
 async function main() {
   const { origin, runs } = parseArgs(process.argv.slice(2));
   console.log(`check:web-vitals: ${origin}, Lighthouse mobile profile (simulated slow 4G, 4x CPU)`);
-  console.log(`${runs} run${runs === 1 ? "" : "s"} per page${runs > 1 ? ", median reported" : ""}`);
+  console.log(`${plural(runs, "run")} per page${runs > 1 ? ", median reported" : ""}`);
   console.log(
     "Thresholds: " +
       METRICS.map(

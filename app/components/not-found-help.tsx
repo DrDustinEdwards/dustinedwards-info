@@ -5,8 +5,9 @@ import { NAV } from "~/lib/nav";
 import { notFoundQuery } from "~/lib/not-found-query.mjs";
 // `?url` and in-body links, not module imports: the root error boundary renders this, and a module
 // import there would put the search page's sheets on every page of the site.
-import blogSearchCssUrl from "~/styles/blog-search.css?url";
-import searchPageCssUrl from "~/styles/search-page.css?url";
+import buttonCssUrl from "capsomer/button.css?url";
+import fieldCssUrl from "capsomer/field.css?url";
+import searchFormCssUrl from "~/styles/search-form.css?url";
 
 /**
  * Somewhere to go from a 404, for a reader who came in on an old link: the site search, started
@@ -18,8 +19,9 @@ export function NotFoundHelp() {
   return (
     <>
       {/* No `precedence`: React would lift the sheets above the color-scheme meta. */}
-      <link rel="stylesheet" href={searchPageCssUrl} />
-      <link rel="stylesheet" href={blogSearchCssUrl} />
+      <link rel="stylesheet" href={fieldCssUrl} />
+      <link rel="stylesheet" href={buttonCssUrl} />
+      <link rel="stylesheet" href={searchFormCssUrl} />
       <SearchForm defaultValue={notFoundQuery(pathname)} />
       <nav aria-labelledby="not-found-sections">
         <h2 id="not-found-sections">Or start from a section</h2>

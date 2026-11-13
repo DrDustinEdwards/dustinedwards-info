@@ -1,9 +1,13 @@
-import { LAB_BENCH_PATH } from "~/lab/path.mjs";
-import { Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } from "react-router";
+import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
+import { Outlet, data, useLocation, useRouteLoaderData } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
-import { Empty } from "capsomer/react/empty";
 import { MessageProvider } from "capsomer/react/message";
-import { AdminShell, FAMILY_APPS, type AdminEntry } from "capsomer/react/admin-shell";
+import {
+  AdminErrorView,
+  AdminShell,
+  FAMILY_APPS,
+  type AdminEntry,
+} from "capsomer/react/admin-shell";
 import { themeScript } from "capsomer/theme-server";
 
 import { Icon, shellLink } from "~/components/admin/shell-parts";
@@ -26,6 +30,8 @@ import type { loader as rootLoader } from "~/root";
 import "capsomer/fonts.css";
 import "~/admin.css";
 import "~/lab.css";
+import { markup } from "capsomer/behavior/trusted-html";
+import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta() {
   return [{ title: "Lab bench" }, { name: "robots", content: "noindex" }];
@@ -108,7 +114,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       reads: can(actor, PERMISSION.read),
       records: can(actor, PERMISSION.recordRun),
     },
-    { headers: { "cache-control": "private, no-store" } },
+    { headers: { "cache-control": UNCACHED } },
   );
 }
 
@@ -122,8 +128,6 @@ const ICONS = {
 };
 
 const RouterLink = shellLink(LAB_BENCH_PATH);
-
-const ACCESS_LOGOUT_PATH = "/cdn-cgi/access/logout";
 
 export default function LabLayout({ loaderData }: Route.ComponentProps) {
   const rootData = useRouteLoaderData<typeof rootLoader>("root");
@@ -178,7 +182,7 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: themeScript() }} />
+      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={markup(themeScript())} />
       <AdminShell
         title="Lab bench"
         letterhead
@@ -200,7 +204,7 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
           role: loaderData.title,
           email: loaderData.email,
           appLinks: [{ label: "View site", href: "/" }],
-          onSignOut: () => window.location.assign(ACCESS_LOGOUT_PATH),
+          accessLogout: true,
         }}
         prefKey="lab-rail"
       >
@@ -214,19 +218,7 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
   );
 }
 
-/** The lab's own error page, in Capsomer: a refusal's words are the answer, never a login page. */
+/** The lab's own error page, Capsomer's (AdminErrorView): a refusal's words are the answer, never a login page. */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const known = isRouteErrorResponse(error);
-  const title = known
-    ? error.status === 403
-      ? "No access"
-      : `${error.status} ${error.statusText}`
-    : "Something went wrong";
-  return (
-    <main className="app-page">
-      <Empty kind={known && error.status === 404 ? "no-match" : "failed"} title={title}>
-        {known && typeof error.data === "string" ? error.data : "Nothing you entered is lost."}
-      </Empty>
-    </main>
-  );
+  return <AdminErrorView error={error} home={LAB_BENCH_PATH} dev={import.meta.env.DEV} />;
 }

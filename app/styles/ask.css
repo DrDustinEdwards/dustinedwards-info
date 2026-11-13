@@ -2,27 +2,6 @@
   margin: 1rem 0 0;
 }
 
-.ask-trigger {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
-  min-height: 1.5rem;
-}
-
-.ask-trigger:hover {
-  border-color: var(--brand);
-}
-
-.ask-trigger:active {
-  border-color: var(--brand-pressed);
-  color: var(--brand-pressed);
-}
-
 .ask-panel {
   margin: 0.75rem 0 0;
   padding: 0.875rem 1rem;

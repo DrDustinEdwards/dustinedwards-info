@@ -12,7 +12,8 @@ import { BASE, ok, pollUntil, skip } from "../harness.mjs";
  * @param {import("../harness.mjs").CaseContext} ctx
  */
 export async function run({ page }) {
-  await page.setViewport({ width: 390, height: 844 });
+  // A phone has a touch screen: Capsomer sizes its tap targets at 44px only for a coarse pointer.
+  await page.setViewport({ width: 390, height: 844, hasTouch: true });
   const path = "/research/protocols/phage-dna-extraction";
   /** @type {string[]} */
   const errors = [];
@@ -33,11 +34,11 @@ export async function run({ page }) {
   await page.reload({ waitUntil: "networkidle0" });
 
   const shape = await page.evaluate(() => ({
-    start: document.querySelector(".run-start")?.textContent ?? null,
+    start: document.querySelector(".cap-run-start")?.textContent ?? null,
     steps: document.querySelectorAll("li.procedure-step[data-step]").length,
     stepsWithTimers: document.querySelectorAll("li.procedure-step[data-timers]").length,
-    toolsBefore: document.querySelectorAll(".run-tools").length,
-    barHidden: document.querySelector(".run-bar")?.hasAttribute("hidden") ?? null,
+    toolsBefore: document.querySelectorAll(".cap-run-tools").length,
+    barHidden: document.querySelector(".cap-run-bar")?.hasAttribute("hidden") ?? null,
   }));
   ok(
     "a protocol page offers to run it, and shows nothing of run mode until it is started",
@@ -50,11 +51,11 @@ export async function run({ page }) {
   );
   if (shape.steps === 0) return;
 
-  await page.click(".run-start");
+  await page.click(".cap-run-start");
   const started = await page.evaluate(() => ({
-    tools: document.querySelectorAll(".run-tools").length,
+    tools: document.querySelectorAll(".cap-run-tools").length,
     steps: document.querySelectorAll("li.procedure-step[data-step]").length,
-    progress: document.querySelector(".run-progress")?.textContent ?? "",
+    progress: document.querySelector(".cap-run-progress")?.textContent ?? "",
     current: document.querySelectorAll('li.procedure-step[aria-current="step"]').length,
     mode: document.querySelector(".procedure")?.getAttribute("data-run") ?? "",
   }));
@@ -127,11 +128,13 @@ export async function run({ page }) {
 
   // The 44px tap target a phone needs, on the controls a gloved hand uses.
   const targets = await page.evaluate(() =>
-    [".run-done", ".run-bar button", ".run-timer-act", ".run-note > summary"].map((sel) => {
-      const node = document.querySelector(sel);
-      const box = node?.getBoundingClientRect();
-      return { sel, height: box ? Math.round(box.height) : null };
-    }),
+    [".cap-run-done", ".cap-run-bar button", "[data-run=timer]", ".cap-run-note > summary"].map(
+      (sel) => {
+        const node = document.querySelector(sel);
+        const box = node?.getBoundingClientRect();
+        return { sel, height: box ? Math.round(box.height) : null };
+      },
+    ),
   );
   ok(
     "the run controls are at least 44px tall, so they work with a thumb at the bench",
@@ -140,10 +143,10 @@ export async function run({ page }) {
   );
 
   // Check the first step.
-  await page.click("li.procedure-step[data-step] .run-done-check");
+  await page.click("li.procedure-step[data-step] .cap-run-done input");
   const afterCheck = await page.evaluate(() => ({
-    progress: document.querySelector(".run-progress")?.textContent ?? "",
-    done: document.querySelectorAll("li.procedure-step.run-step-done").length,
+    progress: document.querySelector(".cap-run-progress")?.textContent ?? "",
+    done: document.querySelectorAll("li.procedure-step.cap-run-step-done").length,
   }));
   ok(
     "checking a step updates the progress and marks the step done",
@@ -153,11 +156,11 @@ export async function run({ page }) {
 
   // A timer counts, pauses, and is stored as an end time.
   if (shape.stepsWithTimers > 0) {
-    const before = await page.$eval(".run-timer .run-clock", (n) => n.textContent ?? "");
-    await page.click(".run-timer-act");
+    const before = await page.$eval(".cap-run-timer .cap-run-clock", (n) => n.textContent ?? "");
+    await page.click("[data-run=timer]");
     /** @type {string} */
     const counting = await pollUntil(
-      () => page.$eval(".run-timer .run-clock", (n) => n.textContent ?? ""),
+      () => page.$eval(".cap-run-timer .cap-run-clock", (n) => n.textContent ?? ""),
       (now) => now !== before,
       { tries: 12, everyMs: 300 },
     );
@@ -166,11 +169,11 @@ export async function run({ page }) {
       counting !== before,
       `the clock read ${before} and stayed there.`,
     );
-    await page.click(".run-timer-act");
-    const paused = await page.$eval(".run-timer", (n) => n.getAttribute("data-state"));
-    const frozen = await page.$eval(".run-timer .run-clock", (n) => n.textContent ?? "");
+    await page.click("[data-run=timer]");
+    const paused = await page.$eval(".cap-run-timer", (n) => n.getAttribute("data-state"));
+    const frozen = await page.$eval(".cap-run-timer .cap-run-clock", (n) => n.textContent ?? "");
     await new Promise((r) => setTimeout(r, 1300));
-    const later = await page.$eval(".run-timer .run-clock", (n) => n.textContent ?? "");
+    const later = await page.$eval(".cap-run-timer .cap-run-clock", (n) => n.textContent ?? "");
     ok(
       "a paused timer holds its time",
       paused === "paused" && later === frozen,
@@ -184,23 +187,23 @@ export async function run({ page }) {
   }
 
   // A note is kept.
-  await page.evaluate(() => document.querySelector(".run-note")?.setAttribute("open", ""));
-  await page.type(".run-note-text", "tube 3 cloudy");
+  await page.evaluate(() => document.querySelector(".cap-run-note")?.setAttribute("open", ""));
+  await page.type(".cap-run-note textarea", "tube 3 cloudy");
   await page.evaluate(() =>
-    /** @type {HTMLElement | null} */ (document.querySelector(".run-note-text"))?.blur(),
+    /** @type {HTMLElement | null} */ (document.querySelector(".cap-run-note textarea"))?.blur(),
   );
 
   // The scale changes in place: no navigation, the address follows, the materials are the server's numbers.
-  const hasScale = await page.$("form.procedure-scale input[name]");
+  const hasScale = await page.$("form.cap-scale-control input[name]");
   if (hasScale) {
     await page.evaluate(() => {
       /** @type {any} */ (window).__runMarker = 1;
     });
     const beforeScale = await page.$eval('[data-run-swap="materials"]', (n) => n.textContent ?? "");
-    await page.$eval("form.procedure-scale input[name]", (n) => {
+    await page.$eval("form.cap-scale-control input[name]", (n) => {
       /** @type {HTMLInputElement} */ (n).value = "9";
     });
-    await page.click("form.procedure-scale button[type=submit]");
+    await page.click("form.cap-scale-control button[type=submit]");
     /** @type {string} */
     const swapped = await pollUntil(
       () => page.$eval('[data-run-swap="materials"]', (n) => n.textContent ?? ""),
@@ -217,7 +220,7 @@ export async function run({ page }) {
       `materials changed ${swapped !== beforeScale}, the page marker ${state.marker === 1 ? "survived" : "was lost (the page reloaded)"}, search "${state.search}".`,
     );
     const stillChecked = await page.evaluate(
-      () => document.querySelectorAll("li.procedure-step.run-step-done").length,
+      () => document.querySelectorAll("li.procedure-step.cap-run-step-done").length,
     );
     ok(
       "a scale change keeps the steps already checked",
@@ -236,16 +239,18 @@ export async function run({ page }) {
         .map((li) => li.getAttribute("data-step")),
     );
   const everyStep = (await visibleSteps()).length;
-  await page.click(".run-bar .run-view");
+  await page.click(".cap-run-bar [data-run=view]");
   const oneShown = await visibleSteps();
-  const pressed = await page.$eval(".run-bar .run-view", (n) => n.getAttribute("aria-pressed"));
+  const pressed = await page.$eval(".cap-run-bar [data-run=view]", (n) =>
+    n.getAttribute("aria-pressed"),
+  );
   ok(
     "one step at a time shows only the step being worked",
     oneShown.length === 1 && pressed === "true",
     `${oneShown.length} step(s) visible of ${everyStep}; the toggle says aria-pressed=${pressed}.`,
   );
   if (everyStep > 1) {
-    await page.click(".run-bar .run-step-next");
+    await page.click(".cap-run-bar [data-run=next]");
     const moved = await visibleSteps();
     ok(
       "Next step shows the following step, alone",
@@ -253,7 +258,7 @@ export async function run({ page }) {
       `before ${oneShown.join(",")}, after ${moved.join(",")}.`,
     );
   }
-  await page.click(".run-bar .run-view");
+  await page.click(".cap-run-bar [data-run=view]");
   const back = (await visibleSteps()).length;
   ok(
     "Show every step brings the whole procedure back",
@@ -264,18 +269,18 @@ export async function run({ page }) {
   // Reload: the run is kept on this device, and offered.
   await new Promise((r) => setTimeout(r, 500));
   await page.reload({ waitUntil: "networkidle0" });
-  const resume = await page.$eval(".run-start", (n) => n.textContent ?? "");
+  const resume = await page.$eval(".cap-run-start", (n) => n.textContent ?? "");
   ok(
     "a run survives a reload and is offered as Resume, with its progress",
     /^Resume your run \(1 of \d+ done\)$/.test(resume),
     `the start button read "${resume}".`,
   );
-  await page.click(".run-start");
+  await page.click(".cap-run-start");
   const restored = await page.evaluate(() => ({
-    checked: document.querySelectorAll("li.procedure-step.run-step-done").length,
+    checked: document.querySelectorAll("li.procedure-step.cap-run-step-done").length,
     note:
-      /** @type {HTMLTextAreaElement | null} */ (document.querySelector(".run-note-text"))?.value ??
-      "",
+      /** @type {HTMLTextAreaElement | null} */ (document.querySelector(".cap-run-note textarea"))
+        ?.value ?? "",
   }));
   ok(
     "a resumed run keeps its checked steps and its notes",
@@ -284,12 +289,14 @@ export async function run({ page }) {
   );
 
   // Finish: the record.
-  await page.click(".run-finish");
+  await page.click("[data-run=finish]");
   const record = await page.evaluate(() => ({
-    visible: !document.querySelector(".run-summary")?.hasAttribute("hidden"),
-    buttons: [...document.querySelectorAll(".run-summary button")].map((b) => b.textContent ?? ""),
+    visible: !document.querySelector(".cap-run-summary")?.hasAttribute("hidden"),
+    buttons: [...document.querySelectorAll(".cap-run-summary button")].map(
+      (b) => b.textContent ?? "",
+    ),
     saidSaved: /nothing was sent anywhere/i.test(
-      document.querySelector(".run-summary")?.textContent ?? "",
+      document.querySelector(".cap-run-summary")?.textContent ?? "",
     ),
   }));
   ok(
@@ -304,15 +311,15 @@ export async function run({ page }) {
 
   // Start over clears it.
   const startOver = await page.evaluateHandle(() =>
-    [...document.querySelectorAll(".run-summary button")].find(
+    [...document.querySelectorAll(".cap-run-summary button")].find(
       (b) => b.textContent === "Start over",
     ),
   );
   await /** @type {import("puppeteer").ElementHandle<HTMLElement>} */ (startOver).click();
   const cleared = await page.evaluate(() => ({
     stored: Object.keys(localStorage).filter((k) => k.startsWith("dustinedwards.run:")).length,
-    start: document.querySelector(".run-start")?.textContent ?? "",
-    tools: document.querySelectorAll(".run-tools").length,
+    start: document.querySelector(".cap-run-start")?.textContent ?? "",
+    tools: document.querySelectorAll(".cap-run-tools").length,
   }));
   ok(
     "Start over discards the run and returns the page to how it was served",

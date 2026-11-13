@@ -1,6 +1,7 @@
 // Remote takes the UUID: by name resolves through wrangler.jsonc, which a clean checkout bootstraps
 // with a placeholder id. Local keeps the name, Miniflare having no UUID.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { runWrangler, wranglerTail } from "./wrangler-run.mjs";
 
 /** @typedef {(command: string) => { status: number | null, stdout: string, output?: string }} Run */
@@ -26,7 +27,7 @@ export function listD1Databases(run = runWrangler) {
   try {
     return { databases: JSON.parse(listed.stdout.slice(start)), failure: "" };
   } catch (error) {
-    const why = error instanceof Error ? error.message : String(error);
+    const why = errorMessage(error);
     return { databases: [], failure: ` (d1 list output did not parse: ${why})` };
   }
 }

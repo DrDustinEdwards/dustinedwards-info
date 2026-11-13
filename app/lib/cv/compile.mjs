@@ -3,6 +3,7 @@
 // sync:content, the CV save and the sync_cv tool all call these, so a file CI passes is the file a save accepts
 // and the CV draws (docs/CV.md).
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { gitBlobSha } from "../content/hashes.mjs";
 import { compilePage } from "../pages/compile.mjs";
 import { buildCv } from "./entries.mjs";
@@ -121,7 +122,7 @@ export function compileCv({ records, publications }) {
   try {
     cv = buildCv(assembled.source, publications);
   } catch (error) {
-    return { ok: false, errors: [error instanceof Error ? error.message : String(error)] };
+    return { ok: false, errors: [errorMessage(error)] };
   }
   const ordering = orderErrors(cv.entries);
   if (ordering.length > 0) return { ok: false, errors: ordering };

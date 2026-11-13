@@ -2,14 +2,13 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { pageSourcePath } from "~/lib/pages/compile.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
-import { action } from "~/routes/api.carrel.v1.$";
 import About, { headers, loader as aboutLoader, meta as aboutMeta } from "~/routes/about";
 import { loader as sitemapLoader } from "~/routes/sitemap";
 
 import aboutFile from "../../content/pages/about.md?raw";
 
 import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext } from "./route-helpers";
+import { renderRoute, routeContext, carrelRequest } from "./route-helpers";
 import { seedPages } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -32,7 +31,7 @@ const headersFor = (key: string) => ({
 });
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
 const send = (method: "PUT" | "POST", url: string, body: unknown) =>
-  action(
+  carrelRequest(
     argsFor(
       new Request(url, {
         method,
@@ -205,7 +204,7 @@ describe("About has a route of its own", () => {
       const downBody = (await down.json()) as { status: string; version: string };
       expect(downBody.status).toBe("draft");
 
-      await expect(aboutData()).rejects.toMatchObject({ init: { status: 404 } });
+      await expect(aboutData()).rejects.toHaveProperty("status", 404);
       expect(await sitemapPaths()).not.toContain("/about");
 
       const up = await send("POST", `${PREFIX}/content/${ID}/publish`, {
@@ -225,7 +224,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
     { timeout: 180_000 },
     async () => {
       await testEnv.DB.prepare("DELETE FROM pages WHERE slug = ?1").bind(SLUG).run();
-      await expect(aboutData()).rejects.toMatchObject({ init: { status: 404 } });
+      await expect(aboutData()).rejects.toHaveProperty("status", 404);
 
       const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: aboutFile,

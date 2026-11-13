@@ -16,7 +16,6 @@ import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { loader as contentPageLoader, meta as contentPageMeta } from "~/routes/content-page";
 import { loader as paperLoader, meta as paperMeta } from "~/routes/publications.$slug";
 import { loader as paperTwinLoader } from "~/routes/publications.$slug[.md]";
-import { loader as robotsLoader } from "~/routes/robots";
 import { loader as llmsLoader } from "~/routes/llms";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
 import { loader as sitemapLoader } from "~/routes/sitemap";
@@ -36,8 +35,8 @@ import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /*
  * THE AGENT PATH WITH NO VISIBLE LINK (job_5670dd43eef2, 2026-09-27): nothing a person sees points an
- * agent at the machine surfaces, so these cases walk the routes an agent actually takes. robots.txt names
- * the sitemap and llms.txt; the head of a page with a markdown twin declares it with
+ * agent at the machine surfaces, so these cases walk the routes an agent actually takes. robots.txt (Prelum's
+ * standardFiles, tested there) names the sitemap and llms.txt; the head of a page with a markdown twin declares it with
  * <link rel="alternate" type="text/markdown">; every twin and both llms files answer with a
  * Link: rel="canonical" naming the HTML page; and the sitemap lists HTML pages only.
  *
@@ -137,12 +136,6 @@ beforeAll(async () => {
 }, 240_000);
 
 describe("discovery an agent starts from", () => {
-  it("robots.txt names both the sitemap and llms.txt", async () => {
-    const body = await (await response(robotsLoader as Loader, "/robots.txt")).text();
-    expect(body).toContain(`Sitemap: ${SITE_ORIGIN}/sitemap.xml`);
-    expect(body).toContain(`${SITE_ORIGIN}/llms.txt`);
-  });
-
   it("every page's head declares the feeds", () => {
     const feeds = (rootLinks() as unknown as Descriptor[]).filter((d) => d.rel === "alternate");
     expect(feeds.map((d) => d.type).sort()).toEqual([

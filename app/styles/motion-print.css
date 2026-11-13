@@ -1,34 +1,10 @@
-@media (prefers-reduced-motion: reduce) {
-  .reading-progress {
-    transition: none;
-  }
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
 @media print {
-  /* Never a theme token: check:contrast requires every theme token in a measured screen pair. */
-  :root {
-    --print-rule: #999;
-  }
-
   .cap-site-header,
   .site-shell-footer,
-  .reading-progress,
   .post-toc,
   .post-actions,
   .post-nav,
-  .tag-chips,
-  .code-copy,
-  .code-lang,
-  .selection-link,
-  .skip-link,
+  .cap-skip,
   .cap-lightbox {
     display: none !important;
   }
@@ -37,46 +13,14 @@
     padding: 0;
   }
 
-  .post,
-  .further-reading {
+  .post {
     max-width: none;
-  }
-
-  .prose {
-    font-size: 11pt;
-    line-height: 1.5;
-  }
-
-  /* [data-lang] and [data-enhanced] are carried too, or they would outrank this by one attribute selector. */
-  .prose pre,
-  .prose pre[data-lang],
-  .prose pre[data-enhanced] {
-    padding-top: 0.75rem;
-    white-space: pre-wrap;
-    word-break: break-word;
-    border: 1px solid var(--print-rule);
-  }
-
-  .prose a[href^="http"]::after {
-    content: " (" attr(href) ")";
-    font-size: 9pt;
-    word-break: break-all;
-  }
-
-  .prose h2,
-  .prose h3 {
-    break-after: avoid;
-  }
-
-  .prose figure,
-  .prose pre,
-  .prose table {
-    break-inside: avoid;
   }
 }
 
-/* The duration kill at the top of this file does not reach ::view-transition-* pseudos, so reduced
-   motion opts out here rather than shortening a fade. Chrome's default root crossfade uses
+/* Still by default (Capsomer base.css): every motion below sits inside prefers-reduced-motion: no-preference,
+   with no global duration override, which would end some animations in a jump and break scroll-driven ones.
+   Page transitions are off unless motion is allowed. Chrome's default root crossfade uses
    plus-lighter and stacks both pages; type `site` keeps the outgoing page solid and fades the
    incoming one over it. The image viewer is a same-document transition with no type, so these
    rules do not restyle it. Where the at-rule is unsupported, the navigation is an ordinary load. */
@@ -88,8 +32,6 @@
   cursor: progress;
 }
 
-.code-copy[data-copied="true"],
-.selection-link[data-copied="true"],
 [data-copy-markdown][data-copied="true"] {
   font-weight: 650;
 }
@@ -151,8 +93,7 @@
   }
 
   .search-form[data-pending],
-  .ask-body[aria-busy="true"],
-  .btn-brand[aria-disabled="true"] {
+  .ask-body[aria-busy="true"] {
     background-image: linear-gradient(var(--brand), var(--brand));
     background-repeat: no-repeat;
     background-position: 0 100%;
@@ -160,23 +101,13 @@
     animation: motion-wait var(--motion-wait) var(--ease-out) infinite;
   }
 
-  .btn-brand[aria-disabled="true"] {
-    background-image: linear-gradient(var(--focus-ring-on-brand), var(--focus-ring-on-brand));
-  }
-
-  .heading-anchor[data-copied="true"]::after {
-    animation: motion-in var(--motion-instant) var(--ease-out) both;
-  }
-
   /* Opacity only, and only while the figure is entering. Already on screen, the range is over
      and the figure is fully painted. `entry`, not `cover`: a small figure never covers a fixed
      slice of the viewport, and a cover range would leave it at the from opacity. */
   @supports (animation-timeline: view()) {
     .home-plate,
-    .home-figure,
     .post-cover,
-    .prose figure,
-    .chart-figure {
+    .prose figure {
       animation-name: motion-in;
       animation-duration: auto;
       animation-timing-function: linear;
@@ -189,10 +120,8 @@
 
 @media print {
   .home-plate,
-  .home-figure,
   .post-cover,
-  .prose figure,
-  .chart-figure {
+  .prose figure {
     animation: none;
     opacity: 1;
   }

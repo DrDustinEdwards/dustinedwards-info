@@ -7,6 +7,7 @@
  */
 
 import { slugify } from "@drdustinedwards/site-helpers/slug";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 import { deriveIdentity } from "../identity.mjs";
 import { IDENTITY } from "../identity.generated.mjs";
@@ -314,7 +315,7 @@ function resolveOne(source, byDoi) {
         meta: [`${source.org}, ${source.term}`],
       };
     case "mentoring": {
-      const counted = `${source.count} ${source.unit === "awards" ? (source.count === 1 ? "award" : "awards") : source.count === 1 ? "student" : "students"}`;
+      const counted = plural(source.count, source.unit === "awards" ? "award" : "student");
       return {
         ...common,
         type: "mentoring",

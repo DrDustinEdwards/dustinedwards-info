@@ -49,7 +49,7 @@ export default adminMcpWorker<Env>({
   name: "Dustin Edwards Admin",
   server: SERVER,
   site: dustinedwardsMcp,
-  // The site's contact and expiry (app/routes/security-txt.ts); renew both together.
+  // The network's contact and expiry, which the site's gateway serves (site-runtime ./security-txt); renew both together.
   securityTxt: { contact: "security@dustinedwards.info", expires: "2027-09-28T00:00:00.000Z" },
   about: `<p>Dustin Edwards Admin runs dustinedwards.info: the Knowledge Base, citations
 and procedures. It cannot write posts, change the media library or moderate

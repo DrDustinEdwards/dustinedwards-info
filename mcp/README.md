@@ -55,7 +55,7 @@ guards are tested there (`test/admin-mcp.test.mjs`), and `check:wrapper` asserts
 A merge to main deploys this Worker, after the site: the `mcp` job of
 `.github/workflows/deploy.yml` calls devkit's worker-deploy from this folder. CI's
 admin MCP job has already run typecheck, check:wrapper, the tests and the build
-for that sha. `scripts/apply-mcp-config.mjs` writes `mcp/wrangler.jsonc`
+for that sha. `scripts/apply-config.mjs` writes `mcp/wrangler.jsonc`
 (gitignored: it carries the real `OAUTH_KV` and `PROBE_KV` ids) from the live
 Worker's bindings; the live gate waits for `/health` to report the commit, and
 `scripts/verify-mcp.mjs` checks discovery and a `server/discover` call on

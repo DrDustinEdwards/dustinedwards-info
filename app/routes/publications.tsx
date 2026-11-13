@@ -1,4 +1,6 @@
+import { AuthorList } from "capsomer/react/author-list";
 import { Catalog } from "capsomer/react/catalog";
+import { JsonLd } from "capsomer/react/json-ld";
 import { Link, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -7,8 +9,8 @@ import { SiteHeader } from "~/components/site-header";
 import { listPublishedPublications } from "~/db/publications";
 import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { getEnv } from "~/lib/context";
-import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
-import { coinsTitle } from "~/lib/publications/coins.mjs";
+import { coinsTitle } from "@drdustinedwards/site-helpers/scholar";
+import { CITATION_OPTIONS } from "~/lib/publications/exports.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import {
   PUBLICATIONS,
@@ -40,6 +42,7 @@ import "capsomer/chips.css";
 import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
+import "capsomer/author-list.css";
 import "~/styles/listing.css";
 import "~/styles/site-catalog.css";
 import "~/styles/publications.css";
@@ -132,58 +135,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   };
 }
 
-function AuthorName({ name }: { name: string }) {
-  return isSiteOwner(name) ? <strong className="pub-author-me">{name}</strong> : <>{name}</>;
-}
-
-function Names({ names }: { names: string[] }) {
-  return (
-    <>
-      {names.map((name, i) => (
-        <span key={name + i}>
-          {i > 0 ? ", " : ""}
-          <AuthorName name={name} />
-        </span>
-      ))}
-    </>
-  );
-}
-
-/** Author order varies, so when he falls outside the first three the summary shows two, an ellipsis, then his entry. */
-function AuthorList({ authors }: { authors: string[] }) {
-  if (authors.length === 0) return null;
-  if (authors.length <= 3) {
-    return (
-      <p className="pub-authors">
-        <Names names={authors} />
-      </p>
-    );
-  }
-
-  const ownerIndex = authors.findIndex(isSiteOwner);
-  const ownerName = ownerIndex >= 3 ? authors[ownerIndex] : undefined;
-  const lead = authors.slice(0, ownerName ? 2 : 3);
-  const shown = lead.length + (ownerName ? 1 : 0);
-
-  return (
-    <details className="pub-authors pub-authors-more">
-      <summary>
-        <Names names={lead} />
-        {ownerName ? (
-          <>
-            <span className="muted">, ... </span>
-            <AuthorName name={ownerName} />
-          </>
-        ) : null}
-        <span className="muted"> and {authors.length - shown} more</span>
-      </summary>
-      <p className="pub-authors-full">
-        <Names names={authors} />
-      </p>
-    </details>
-  );
-}
-
 function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
   const { slug } = p;
   return (
@@ -198,7 +149,7 @@ function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
         <h2 className="paper-row-title">
           <Link to={paperPath(slug)}>{italicizeOrganisms(decodeEntities(p.title))}</Link>
         </h2>
-        <AuthorList authors={p.authors} />
+        <AuthorList authors={p.authors} isOwner={isSiteOwner} collapse={3} />
         <p className="paper-row-links">
           {p.access === "self-hosted" && p.pdfPath ? <a href={p.pdfPath}>PDF</a> : null}
           {p.doi ? <a href={`https://doi.org/${p.doi}`}>DOI</a> : null}
@@ -220,7 +171,7 @@ function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
           ) : null}
         </p>
         {/* COinS on the index only: Highwire `citation_*` tags describe the one document they sit in. */}
-        <span className="Z3988" title={coinsTitle(p)} />
+        <span className="Z3988" title={coinsTitle(p, CITATION_OPTIONS)} />
         {p.abstract ? (
           <details className="paper-abstract-peek">
             <summary>Abstract</summary>
@@ -303,11 +254,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
           />
         </div>
 
-        {/* `jsonLdText`, not `JSON.stringify`: only `</script` ends a script element, and these strings come from third-party registries. */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLdText(publicationsJsonLd(origin, items)) }}
-        />
+        <JsonLd data={publicationsJsonLd(origin, items)} />
         <template data-island="catalog" />
       </main>
       <ShellFooter />

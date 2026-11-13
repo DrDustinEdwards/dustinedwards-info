@@ -27,8 +27,8 @@ export async function run({ page }) {
   const shape = await page.evaluate(() => ({
     folded: [...document.querySelectorAll("li.procedure-step details.phage-tool-step")].map(
       (d) => ({
-        tool: d.querySelector("form[data-tool]")?.getAttribute("data-tool") ?? "",
-        answered: (d.querySelector(".phage-tool-answer")?.textContent ?? "").trim().length > 0,
+        tool: d.querySelector(".cap-calculator")?.getAttribute("data-calculator") ?? "",
+        answered: (d.querySelector(".cap-calculator-answer")?.textContent ?? "").trim().length > 0,
         open: d.hasAttribute("open"),
       }),
     ),
@@ -46,9 +46,12 @@ export async function run({ page }) {
 
   /** One check on opening the webbed plate calculator, typing in it, and the page it leaves behind. */
   async function exercise(/** @type {string} */ when, /** @type {string} */ typed) {
-    const selector = 'details.phage-tool-step:has(form[data-tool="webbed-plate"])';
+    const selector = 'details.phage-tool-step:has(.cap-calculator[data-calculator="webbed-plate"])';
     await page.evaluate((sel) => document.querySelector(sel)?.setAttribute("open", ""), selector);
-    const before = await page.$eval(`${selector} .phage-tool-answer`, (n) => n.textContent ?? "");
+    const before = await page.$eval(
+      `${selector} .cap-calculator-answer`,
+      (n) => n.textContent ?? "",
+    );
     const search = await page.evaluate(() => location.search);
     await page.$eval(`${selector} input[name="pfu"]`, (n) => {
       n.focus();
@@ -59,7 +62,7 @@ export async function run({ page }) {
     const printed = Number(typed).toLocaleString("en-US");
     /** @type {string} */
     const after = await pollUntil(
-      () => page.$eval(`${selector} .phage-tool-answer`, (n) => n.textContent ?? ""),
+      () => page.$eval(`${selector} .cap-calculator-answer`, (n) => n.textContent ?? ""),
       (now) => now !== before && now.includes(`${printed} pfu`),
       { tries: 20, everyMs: 150 },
     );
@@ -83,7 +86,7 @@ export async function run({ page }) {
   // so typing the first number again changes nothing and no recompute could show (run 37231091128).
   await exercise("before a run is started", "22200");
 
-  await page.click(".run-start");
+  await page.click(".cap-run-start");
   const started = await page.evaluate(() => ({
     mode: document.querySelector(".procedure")?.getAttribute("data-run") ?? "",
     folded: document.querySelectorAll("li.procedure-step details.phage-tool-step").length,

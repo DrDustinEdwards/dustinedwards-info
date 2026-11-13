@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -139,10 +140,9 @@ if (samePath(OUT, PUBLIC)) {
   try {
     await buildAssetManifest();
   } catch (error) {
-    throw new Error(
-      `build:assets failed after icons changed. ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
-    );
+    throw new Error(`build:assets failed after icons changed. ${errorMessage(error)}`, {
+      cause: error,
+    });
   }
   console.log(
     "\n  NOTE: the icon assets were rewritten, so the media index is now stale and\n" +

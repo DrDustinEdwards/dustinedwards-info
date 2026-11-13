@@ -8,6 +8,10 @@ import { createHighlight } from "@drdustinedwards/site-helpers/render/highlight"
 import { editorialPack } from "@drdustinedwards/site-helpers/render/packs";
 import { isAllowedUrl } from "@drdustinedwards/site-helpers/render/url";
 import matter from "gray-matter";
+// Zod builds its parsers, and probes `new Function`, when a schema is created, so the flag goes first (site-runtime ./zod-jitless).
+import "@dustinedwards/site-runtime/zod-jitless";
+import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
+import { keyOfAddress } from "@dustinedwards/site-runtime/image";
 import { z } from "zod";
 
 // Mermaid drawings Prelum still emits as an <img> pair are sized from this file. The three hand-built
@@ -21,17 +25,14 @@ import {
   withoutInlinedDiagramRefs,
 } from "./blog-diagrams.mjs";
 import { makeChartData } from "./chart-data.mjs";
-import { gitBlobSha, renderHash } from "./hashes.mjs";
+import { gitBlobSha } from "./hashes.mjs";
 import { contentImage, images, mediaContentVersion } from "../media/images.mjs";
-import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
-
-import { SLUG_MAX_LENGTH, postPath } from "./slug.mjs";
+import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "./slug.mjs";
+import { SITE_ORIGIN } from "../site-origin.mjs";
 
 import { readingTimeMinutes } from "./reading-time.mjs";
 import { withBacklinks, withRelated } from "./corpus.mjs";
 import { internalLinkSlug, isFurtherReadingUrl } from "./url-policy.mjs";
-
-export { LANGUAGES, SHIKI_THEMES } from "@drdustinedwards/site-helpers/render/highlight";
 
 // Re-exported: build scripts, gates and tests import these from here, the renderer's one door.
 export { ContentError, internalLinkSlug, isAllowedUrl, withBacklinks, withRelated };
@@ -57,7 +58,7 @@ const isoDateTime = z.preprocess(
     .refine((v) => !Number.isNaN(Date.parse(v)), "must be a parseable date-time"),
 );
 
-export { SLUG_ATTRIBUTE_PATTERN, postPath } from "./slug.mjs";
+export { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN, postPath } from "./slug.mjs";
 
 export const frontmatterSchema = z.object({
   title: z.string().min(1, "must not be empty"),
@@ -175,26 +176,24 @@ function getHighlight() {
 export { ogImageKey } from "./og-card-text.mjs";
 
 /**
- * R2 objects are keyed after /media/, static assets by their public path. An unrecognized extension
- * returns null: a page link is not a media citation and would never join.
+ * R2 objects are keyed after /media/ (site-runtime keyOfAddress: this site's own /media/ address, a size's suffix cut,
+ * segments decoded and checked), static assets by their public path. Another host's /media/ address and an
+ * unrecognized extension return null: neither is this site's file, and a page link is not a media citation.
  *
  * @param {string} raw
  * @returns {string | null}
  */
 function mediaKeyOf(raw) {
   if (typeof raw !== "string" || raw.length === 0) return null;
+  const key = keyOfAddress(raw, { origins: [SITE_ORIGIN] });
+  if (key !== null) return key;
 
   let path = raw;
   const origin = path.match(/^(?:[a-z][a-z0-9+.-]*:)?\/\/[^/]+(\/.*)$/i);
   if (origin) path = origin[1] ?? path;
   // Query and fragment are not part of the key: ?w=320 is a transform request.
   path = path.split(/[?#]/)[0] ?? "";
-  if (!path.startsWith("/")) return null;
-
-  if (path.startsWith("/media/")) {
-    const key = path.slice("/media/".length);
-    return key.length > 0 ? key : null;
-  }
+  if (!path.startsWith("/") || path.startsWith("/media/")) return null;
 
   try {
     classify(path);
@@ -370,6 +369,6 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage, readCh
     sourcePath: postPath(fm.slug),
     // Over the whole raw file, frontmatter included, because that is the blob git stores.
     sourceBlobSha: await gitBlobSha(raw),
-    renderHash: await renderHash(html),
+    renderHash: await sha256Hex(html),
   };
 }

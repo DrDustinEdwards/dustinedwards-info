@@ -43,9 +43,8 @@ await test("a recipe is found by category, cuisine and diet; a how-to by type, m
   );
 });
 
-await test("search reads a record's knowledge base from its address, and base: is an operator like tag: and type:", async () => {
+await test("search reads a record's knowledge base from its address", async () => {
   const { SEARCH_BASES, baseOfUrl, baseLabel } = await import("../app/kb/search-bases.mjs");
-  const { hasFilters, parseQuery } = await import("../app/lib/search/query.mjs");
   assert.deepEqual(
     SEARCH_BASES.map((b) => b.id),
     ["protocols", "how-tos", "recipes", "lab"],
@@ -57,7 +56,4 @@ await test("search reads a record's knowledge base from its address, and base: i
   assert.equal(baseOfUrl("/research/protocols"), null);
   assert.equal(baseOfUrl("/writing/ten-years-on-cloudflare"), null);
   assert.equal(baseLabel("how-tos"), "Software how-tos");
-  const parsed = parseQuery("zinc base:Protocols tag:phage");
-  assert.deepEqual([parsed.terms, parsed.bases, parsed.tags], [["zinc"], ["protocols"], ["phage"]]);
-  assert.equal(hasFilters(parseQuery("base:recipes")), true);
 });

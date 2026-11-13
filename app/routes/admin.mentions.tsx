@@ -1,4 +1,5 @@
-import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { ADMIN_FORM_BYTES } from "~/lib/body.server";
+import { readForm } from "@dustinedwards/site-runtime/body";
 import { data } from "react-router";
 
 import { loadMentions, readMentionsQuery, type IntentResult } from "@dustinedwards/site-api/admin";
@@ -46,13 +47,13 @@ export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
     if (request.method !== "POST" || !prefersType(request, "application/json")) return next();
     return Response.json(
-      await runAdminMentionsIntent(context, request, await cappedForm(request, ADMIN_FORM_BYTES)),
+      await runAdminMentionsIntent(context, request, await readForm(request, ADMIN_FORM_BYTES)),
     );
   },
 ];
 
 export async function action({ request, context }: Route.ActionArgs): Promise<IntentResult> {
-  return runAdminMentionsIntent(context, request, await cappedForm(request, ADMIN_FORM_BYTES));
+  return runAdminMentionsIntent(context, request, await readForm(request, ADMIN_FORM_BYTES));
 }
 
 const BASE = "/admin/mentions";

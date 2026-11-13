@@ -10,6 +10,7 @@ import { Row, RowList } from "capsomer/react/row-list";
 import { PageHead } from "capsomer/react/page-head";
 import { crumbLink } from "~/components/admin/shell-parts";
 import type { KbFile, KbGap } from "~/kb/editor.server";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 /** What the action hands back: a check's verdict, or a save that did not land, with the text the reader sent. */
 export type KbEditorActionData =
@@ -21,10 +22,6 @@ export type KbEditorActionData =
 function documentCspNonce(): string {
   if (typeof document === "undefined") return "";
   return document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
-}
-
-export function plural(count: number, one: string, many: string) {
-  return `${count} ${count === 1 ? one : many}`;
 }
 
 /**

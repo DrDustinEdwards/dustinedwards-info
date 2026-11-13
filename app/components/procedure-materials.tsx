@@ -1,3 +1,7 @@
+import { plural } from "@drdustinedwards/site-helpers/text";
+import { ScaleControl } from "capsomer/react/scale-control";
+import { markup } from "capsomer/behavior/trusted-html";
+
 import { reagentSource, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { lineageText, type Lineage } from "~/kb/procedures/lineage.mjs";
 import { HOWTO_TYPES } from "~/kb/procedures/validate.mjs";
@@ -12,13 +16,17 @@ import {
 } from "~/kb/procedures/recipe-views.mjs";
 import { formatNumber, parseNumber } from "~/kb/procedures/marks.mjs";
 
+import "capsomer/field.css";
+import "capsomer/select.css";
+import "capsomer/scale-control.css";
+
 /* The procedure page's parts above the method (procedure.tsx): its facts, the scale form, and the materials, key resources, equipment and solutions tables. */
 
 type Section = ProcedureRecord["sections"][number];
 export type Block = Section["blocks"][number];
 export type Step = Extract<Block, { type: "steps" }>["steps"][number];
 
-export const html = (value: string | null | undefined) => ({ __html: value ?? "" });
+export const html = (value: string | null | undefined) => markup(value ?? "");
 
 /** The words for the materials section, by profile. */
 export function materialsHeading(record: ProcedureRecord) {
@@ -168,37 +176,35 @@ export function ScaleForm({
   units?: UnitSystem | null;
 }) {
   if (record.profile === "recipe" && record.servings) {
+    // Metric or imperial (recipe-views.mjs): the same GET, so each state is an address and works with no script.
     return (
-      <form className="procedure-scale" method="get" action={action}>
-        <label>
-          Servings{" "}
-          <input name="servings" type="number" min={1} max={1000} step="any" defaultValue={count} />
-        </label>
-        {/* Metric or imperial (recipe-views.mjs): the same GET, so each state is an address and works with no script. */}
-        <label>
-          Units{" "}
-          <select name="units" defaultValue={units ?? ""}>
-            <option value="">As written</option>
-            {Object.entries(UNIT_SYSTEMS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="submit">Show</button>
-      </form>
+      <ScaleControl
+        action={action}
+        label="Servings"
+        name="servings"
+        value={count}
+        step="any"
+        submitLabel="Show"
+        units={{
+          label: "Units",
+          name: "units",
+          value: units ?? "",
+          options: [
+            { value: "", label: "As written" },
+            ...Object.entries(UNIT_SYSTEMS).map(([value, label]) => ({ value, label })),
+          ],
+        }}
+      />
     );
   }
   if (record.profile === "protocol" && record.scale) {
     return (
-      <form className="procedure-scale" method="get" action={action}>
-        <label>
-          {record.scale.unit === "tube" ? "Tubes" : `Count (${record.scale.unit})`}{" "}
-          <input name="n" type="number" min={1} max={1000} step={1} defaultValue={count} />
-        </label>
-        <button type="submit">Scale</button>
-      </form>
+      <ScaleControl
+        action={action}
+        label={record.scale.unit === "tube" ? "Tubes" : `Count (${record.scale.unit})`}
+        name="n"
+        value={count}
+      />
     );
   }
   return null;
@@ -323,7 +329,7 @@ export function MaterialsTable({
   // Where each reagent of the lab registry comes from, in one column, drawn from the registry's record.
   const hasSource = record.materials.some((m) => m.reagent);
   const hasKind = record.profile === "computational";
-  const unitWord = record.scale ? `${count} ${record.scale.unit}${count === 1 ? "" : "s"}` : "";
+  const unitWord = record.scale ? plural(count, record.scale.unit) : "";
   return (
     <div className="table-scroll" data-run-swap="materials">
       <table className="procedure-materials">

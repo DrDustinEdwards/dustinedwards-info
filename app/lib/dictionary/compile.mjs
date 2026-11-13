@@ -3,8 +3,6 @@
 // compileDictionaryEntry, so a file CI passes is the file the save accepts and the page draws. The rules
 // below are the ones the CI tests used to read the entries for (docs/DICTIONARY.md).
 
-import { isSlug } from "@drdustinedwards/site-helpers/slug";
-
 import { contentIdFits } from "../carrel/content-id.mjs";
 import { gitBlobSha } from "../content/hashes.mjs";
 import { CONTENT_PAGE_PATHS } from "../content-pages.mjs";
@@ -14,6 +12,7 @@ import {
   definedTermJsonLd,
 } from "../dictionary-entries.mjs";
 import { dictionaryPath, parseDictionaryEntry } from "./parse.mjs";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
 const DICTIONARY_KIND = "dictionary";
 
@@ -180,7 +179,8 @@ export async function compileDictionaryEntry({ key, raw, pipeline, host, others 
   ];
   if (parsed.problems.length > 0) return { ok: false, errors };
 
-  if (!isSlug(key)) errors.push(`the file name "${key}" is not a lowercase kebab-case key`);
+  if (!SLUG_PATTERN.test(key))
+    errors.push(`the file name "${key}" is not a lowercase kebab-case key`);
   else if (!contentIdFits(DICTIONARY_KIND, key))
     errors.push(`the key "${key}" is too long for a Carrel id`);
   errors.push(...shapeProblems(parsed.data));

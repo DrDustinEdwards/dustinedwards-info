@@ -2,14 +2,16 @@
 // twin and the search input. check:protocols, sync:content and the operator API's save_procedure all
 // call compileProcedure, so a file CI passes is the file the save tool accepts and the page draws.
 
-import { isSlug } from "@drdustinedwards/site-helpers/slug";
-
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { gitBlobSha } from "../../lib/content/hashes.mjs";
 import { itemPath } from "../registry/catalog.mjs";
 import { NON_STRAIN_ORGANISMS } from "./taxonomy.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";
 import { procedureSearchInput, renderProcedure } from "./render.mjs";
 import { validateProcedure } from "./validate.mjs";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
+
+/** The file name a slug is written in; the same rule as a post's. */
 
 /**
  * @param {{
@@ -31,7 +33,7 @@ import { validateProcedure } from "./validate.mjs";
  * >}
  */
 export async function compileProcedure({ slug, raw, pipeline, resolveImage, registry }) {
-  if (!isSlug(slug)) {
+  if (!SLUG_PATTERN.test(slug)) {
     return { ok: false, errors: [`"${slug}" is not a lowercase kebab-case slug`], gaps: [] };
   }
   const file = procedurePath(slug);
@@ -154,7 +156,7 @@ export async function compileProcedure({ slug, raw, pipeline, resolveImage, regi
       ),
     });
   } catch (error) {
-    return { ok: false, errors: [error instanceof Error ? error.message : String(error)], gaps };
+    return { ok: false, errors: [errorMessage(error)], gaps };
   }
   const searchInput = procedureSearchInput(record, parsed);
   return {

@@ -7,7 +7,7 @@ import {
   ASK_POLL_WINDOW_MS,
   awaitAskConvergence,
 } from "../../app/lib/health/ask-converge.mjs";
-import { healthChecks } from "../../app/lib/health/rows.mjs";
+import { healthChecks } from "@dustinedwards/site-runtime/health-read";
 
 /** @typedef {{ origin: string, token: string }} OperatorTarget the site and its operator token */
 
@@ -17,8 +17,30 @@ import { healthChecks } from "../../app/lib/health/rows.mjs";
  */
 const OPERATOR_TIMEOUT_MS = 10 * 60_000;
 
+/** One retry, this long after a call that never got an answer. */
+const TRANSPORT_RETRY_MS = 5_000;
+
 /**
- * Returns a miss rather than throwing: every failure here happens after the deploy has landed.
+ * Node's fetch says only "fetch failed" and keeps the reason in `cause` (ECONNRESET, a closed socket, DNS), so the
+ * cause is named too: the 2026-11-11 sync_media miss said "fetch failed" and nothing more.
+ * @param {unknown} error
+ */
+function transportFailure(error) {
+  if (!(error instanceof Error)) return String(error);
+  const cause = /** @type {any} */ (error).cause;
+  const why =
+    cause instanceof Error
+      ? (/** @type {{ code?: string }} */ (cause).code ?? cause.message)
+      : cause
+        ? String(cause)
+        : "";
+  return why ? `${error.message} (${why})` : error.message;
+}
+
+/**
+ * Returns a miss rather than throwing: every failure here happens after the deploy has landed. A call that got no
+ * answer at all is tried once more, because every tool here is idempotent and the 2026-11-11 sync_media miss never
+ * reached the Worker; a timeout is not, since the Worker may still be working on the first call.
  * @param {string} tool
  * @param {OperatorTarget} target
  * @returns {Promise<{ report: any, miss: string }>}
@@ -30,27 +52,38 @@ async function operatorSync(tool, { origin, token }) {
   let body = null;
   let miss = "";
 
-  try {
-    response = await fetch(`${origin}/api/operator`, {
-      method: "POST",
-      headers: {
-        // The token goes in a header on a request this process builds. It is
-        // never an argv entry, which every process on the machine can read.
-        authorization: `Bearer ${token}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ tool, args: {} }),
-      // Bounded: a stalled POST after the deploy has landed would hang the converge job with the deploy unreported.
-      signal: AbortSignal.timeout(OPERATOR_TIMEOUT_MS),
-    });
-    body = await response.json().catch(() => null);
-  } catch (error) {
-    miss = `the ${tool} call did not complete: ${error instanceof Error ? error.message : String(error)}`;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    miss = "";
+    try {
+      response = await fetch(`${origin}/api/operator`, {
+        method: "POST",
+        headers: {
+          // The token goes in a header on a request this process builds. It is
+          // never an argv entry, which every process on the machine can read.
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ tool, args: {} }),
+        // Bounded: a stalled POST after the deploy has landed would hang the converge job with the deploy unreported.
+        signal: AbortSignal.timeout(OPERATOR_TIMEOUT_MS),
+      });
+      body = await response.json().catch(() => null);
+      break;
+    } catch (error) {
+      miss = `the ${tool} call did not complete: ${transportFailure(error)}`;
+      if (error instanceof Error && error.name === "TimeoutError") break;
+      if (attempt === 1) {
+        console.log(`  ${miss}; trying once more`);
+        await new Promise((resolve) => setTimeout(resolve, TRANSPORT_RETRY_MS));
+      }
+    }
   }
 
   if (!miss && response && !response.ok) {
-    // The token and the request are never echoed. A 401 here means the secret and the file disagree.
-    miss = `the operator API answered ${response.status} to ${tool}`;
+    // The token and the request are never echoed. A 401 here means the secret and the file disagree. The API's own
+    // error is: a bare status hid "AiSearchError: You are being rate limited" behind "500" (2026-11-11).
+    const said = body && typeof body.error === "string" ? `: ${body.error.slice(0, 300)}` : "";
+    miss = `the operator API answered ${response.status} to ${tool}${said}`;
   }
 
   const report = body && typeof body === "object" ? (body.data ?? body) : null;

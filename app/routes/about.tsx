@@ -1,14 +1,14 @@
-import { data } from "react-router";
-
+import { JsonLd } from "capsomer/react/json-ld";
+import { DraftNotice } from "capsomer/react/draft-notice";
 import { pictureProps } from "@dustinedwards/site-runtime/image";
 
 import { PageShell } from "~/components/page-shell";
-import { Picture } from "~/components/picture";
+import { Picture } from "capsomer/react/picture";
 import { getPageByPath } from "~/db/pages";
+import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
-import { mediaRecord } from "~/db/media";
+import { mediaStore } from "~/db/media";
 import { images, mediaContentVersion } from "~/lib/media/images.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import {
@@ -26,6 +26,8 @@ import type { Route } from "./+types/about";
 import "~/styles/prose.css";
 import "~/styles/about.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { PROSE } from "~/lib/prose-context";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * The portrait as the page draws it: its sizes carry the file's version, the bytes' hash from its library row (a replace
@@ -33,14 +35,17 @@ import { RENDERED } from "~/lib/content/render-version";
  * leaves the key's digest and no placeholder, rather than taking the page down.
  */
 async function portrait(env: Env) {
-  const row = await mediaRecord(env, OWNER_PHOTO.key).catch(() => null);
+  const row = await mediaStore(env)
+    .record(OWNER_PHOTO.key)
+    .catch(() => null);
   return pictureProps(
     images.attributes(
       {
         src: `/media/${OWNER_PHOTO.key}`,
         width: OWNER_PHOTO.width,
         height: OWNER_PHOTO.height,
-        version: mediaContentVersion(OWNER_PHOTO.key, row?.sha256 ?? null),
+        // A row with no hash yet stores "", which is no version.
+        version: mediaContentVersion(OWNER_PHOTO.key, row?.sha256 || null),
         placeholder: row?.placeholder ?? null,
       },
       "portrait",
@@ -63,13 +68,11 @@ export function headers() {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const [row, photo] = await Promise.all([getPageByPath(env, "/about"), portrait(env)]);
+  const [found, photo] = await Promise.all([getPageByPath(env, "/about"), portrait(env)]);
   // No row: the content sync has not written it yet. A draft is the signed-in admin's alone, like any page.
-  if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request)))
-    throw data(null, { status: 404 });
+  const { row, draft } = await draftGate(found, () => isAdminViewer(env, request));
   const { title, seoTitle, description, html } = row.record;
-  return { title, seoTitle, description, html, draft: row.status === "draft", photo };
+  return { title, seoTitle, description, html, draft, photo };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -82,7 +85,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       pageType: "ProfilePage",
       trail: [[loaderData.title, "/about"]],
     }),
-    ...(loaderData.draft ? [{ name: "robots", content: "noindex" }] : []),
+    ...draftRobots(loaderData.draft),
   ];
 }
 
@@ -91,27 +94,18 @@ export default function About({ loaderData }: Route.ComponentProps) {
   return (
     <PageShell
       rail={null}
-      trail={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(
-              profilePageJsonLd(SITE_ORIGIN, { path: "/about", description }),
-            ),
-          }}
-        />
-      }
+      trail={<JsonLd data={profilePageJsonLd(SITE_ORIGIN, { path: "/about", description })} />}
     >
       <header className="page-head">
         <h1 className="cap-layout-grid">{title}</h1>
       </header>
-      {draft ? <p>Draft: only you can see this page.</p> : null}
+      <DraftNotice show={draft} />
 
       {/* The same photo the Person record names, and the page's LCP. */}
       <Picture picture={photo} />
 
       {/* The row's HTML: the site's pipeline with the URL allowlist already applied, no third-party input. */}
-      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(html)} />
     </PageShell>
   );
 }
