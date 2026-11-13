@@ -51,8 +51,7 @@ export function rosterHandler(env: RosterEnv): ContentKindHandler {
   return {
     kind: "roster",
 
-    async list(query) {
-      const needle = query.q?.toLowerCase();
+    async list() {
       const summaries: ContentSummary[] = (await listRosterRows(env)).map((row) => ({
         id: row.slug,
         kind: "roster",
@@ -64,9 +63,7 @@ export function rosterHandler(env: RosterEnv): ContentKindHandler {
         publishedAt: null,
         updatedAt: row.syncedAt.toISOString(),
       }));
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return summaries;
     },
 
     async get(slug) {

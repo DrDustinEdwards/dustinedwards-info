@@ -48,8 +48,7 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
   return {
     kind: "phage",
 
-    async list(query) {
-      const needle = query.q?.toLowerCase();
+    async list() {
       const summaries: ContentSummary[] = (await listPhageRows(env)).map((row) => ({
         id: row.slug,
         kind: "phage",
@@ -61,9 +60,7 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
         publishedAt: null,
         updatedAt: row.syncedAt.toISOString(),
       }));
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return summaries;
     },
 
     async get(slug) {

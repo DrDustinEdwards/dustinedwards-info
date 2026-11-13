@@ -13,10 +13,9 @@ import { matter } from "@drdustinedwards/site-helpers/matter";
 import { listRegistry } from "~/db/registry";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRegistry, type PurgeOutcome } from "~/lib/cache-purge.server";
-import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, fileHistory, readFile } from "~/lib/source/store.server";
+import { fileHistory, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 
@@ -246,24 +245,29 @@ export async function saveRegistryItem(
     isDraft,
   });
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
-  // After the gate, so a file that fails validation is still refused even when it is unchanged.
-  const written = await commitUnlessUnchanged(env, {
+  const written = await commitAndConverge(env, {
+    actor,
+    file,
     existing,
     raw,
+    sourceBlobSha: compiled.sourceBlobSha,
+    expectedHeadSha: options.expectedHeadSha,
+    expectedBlobSha: options.expectedBlobSha,
+    message: `${options.isNew ? "Add" : "Update"} ${kinds[kind]?.singular ?? "registry item"}: ${compiled.item.name}`,
     rowIsCurrent: () => rowIsCurrent(env, kind, id, compiled.sourceBlobSha),
-    commit: () =>
-      commitFiles(env, {
-        expectedHeadSha: options.expectedHeadSha,
-        expectedBlobs: blobGuard(file, options.expectedBlobSha),
-        message: `${options.isNew ? "Add" : "Update"} ${kinds[kind]?.singular ?? "registry item"}: ${compiled.item.name}${tag}`,
-        changes: [{ path: file, content: raw }],
-      }),
+    write: async () => {
+      await writeRegistryRow(env, compiled);
+      // The protocols that print this primer carry its facts in their record, so they are recompiled from their files.
+      if (kind === "primer" || kind === "strain" || kind === "reagent" || kind === "equipment")
+        await refreshProceduresNaming(env, [id], [kind]);
+      return await purgeRegistry(`save registry item ${slug}`);
+    },
+    slug,
+    mismatch: {
+      subject: `The registry item "${slug}"`,
+      target: "its row",
+      repair: "Run sync_registry to rebuild the row from the stored source.",
+    },
   });
   if (written.action === "noop") {
     return {
@@ -276,31 +280,7 @@ export async function saveRegistryItem(
       note: UNCHANGED_NOTE,
     };
   }
-  const { commitSha } = written;
-  const blobSha = written.blobShas[file];
-  if (blobSha && blobSha !== compiled.sourceBlobSha) {
-    throw new Error(
-      `The registry item "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
-        `the bytes compiled (${compiled.sourceBlobSha}), so its row was not updated. Run sync_registry to ` +
-        `rebuild the row from the stored source.`,
-    );
-  }
-
-  let purged: PurgeOutcome = false;
-  await convergeWithRetry({
-    write: async () => {
-      await writeRegistryRow(env, compiled);
-      // The protocols that print this primer carry its facts in their record, so they are recompiled from their files.
-      if (kind === "primer" || kind === "strain" || kind === "reagent" || kind === "equipment")
-        await refreshProceduresNaming(env, [id], [kind]);
-      purged = await purgeRegistry(`save registry item ${slug}`);
-    },
-    // Nothing kept in KV for an item: the thrown error names the commit and the repair (sync_registry), and the
-    // next ship's sync converges the rows from the repository anyway.
-    recordDivergence: async () => undefined,
-    slug,
-    commitSha,
-  });
+  const { commitSha, purged } = written;
 
   return {
     slug,

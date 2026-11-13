@@ -83,8 +83,7 @@ export function cvHandler(
   return {
     kind: "cv",
 
-    async list(query) {
-      const needle = query.q?.toLowerCase();
+    async list() {
       const summaries: ContentSummary[] = (await listCvRows(env)).map((row) => ({
         id: row.slug,
         kind: "cv",
@@ -95,9 +94,7 @@ export function cvHandler(
         publishedAt: null,
         updatedAt: row.syncedAt.toISOString(),
       }));
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return summaries;
     },
 
     async get(slug) {
