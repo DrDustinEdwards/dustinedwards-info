@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
 import {
@@ -153,7 +153,7 @@ await test("no record stores what is computed: the phages isolated on a strain, 
   );
   assert.equal(names.length, 2);
   for (const name of names) {
-    const data = matter(await text(`content/registry/strain/${name}`), {}).data;
+    const data = matter(await text(`content/registry/strain/${name}`)).data;
     for (const field of [
       "phages",
       "protocols",
@@ -275,7 +275,7 @@ await test("STORED ONCE: no protocol types a strain's designation or collection 
         !raw.includes(value),
         `${name} types "${value}"; a strain is stored once, in content/registry/strain`,
       );
-    const data = matter(raw, {}).data;
+    const data = matter(raw).data;
     if (!Array.isArray(data.host_strain)) continue;
     for (const entry of data.host_strain) {
       assert.deepEqual(

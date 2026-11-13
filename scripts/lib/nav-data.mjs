@@ -13,7 +13,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { decodeEntities } from "../../app/lib/publications/entities.mjs";
 import { recordFromData } from "../../app/lib/publications/record.mjs";
@@ -78,7 +78,7 @@ export function readPosts(dir = POSTS_DIR, problems = []) {
   const posts = readdirSync(dir)
     .filter((name) => name.endsWith(".md"))
     .flatMap((name) => {
-      const { data, content } = matter(readFileSync(path.join(dir, name), "utf8"), {});
+      const { data, content } = matter(readFileSync(path.join(dir, name), "utf8"));
       const parsed = frontmatterSchema.safeParse(data);
       if (!parsed.success) {
         problems.push(
@@ -119,7 +119,7 @@ export function readLatestPaper(dir = PUBLICATIONS_DIR, problems = []) {
     .filter((name) => name.endsWith(".md"))
     .flatMap((name) => {
       try {
-        const { data } = matter(readFileSync(path.join(dir, name), "utf8"), {});
+        const { data } = matter(readFileSync(path.join(dir, name), "utf8"));
         if (data.draft === true) return [];
         const plain = JSON.parse(
           JSON.stringify(data, (_key, value) =>
@@ -157,7 +157,7 @@ export function readLatestPaper(dir = PUBLICATIONS_DIR, problems = []) {
  * @param {string} [dir]
  */
 export function readLabPlace(university, dir = CV_DIR) {
-  const { data } = matter(readFileSync(path.join(dir, "appointments.md"), "utf8"), {});
+  const { data } = matter(readFileSync(path.join(dir, "appointments.md"), "utf8"));
   const entries = Array.isArray(data.entries) ? data.entries : [];
   const mine = entries
     .filter((e) => typeof e.org === "string" && e.org.includes(university))
@@ -181,7 +181,7 @@ function readLibraryCounts(dir = PROCEDURES_DIR) {
   /** @type {Record<string, number>} */
   const counts = { protocol: 0, recipe: 0, computational: 0 };
   for (const name of readdirSync(dir).filter((n) => n.endsWith(".md"))) {
-    const { data } = matter(readFileSync(path.join(dir, name), "utf8"), {});
+    const { data } = matter(readFileSync(path.join(dir, name), "utf8"));
     if (data.draft === true || typeof data.profile !== "string") continue;
     counts[data.profile] = (counts[data.profile] ?? 0) + 1;
   }
@@ -203,7 +203,7 @@ function readTeachingDescriptions(dir = PAGES_DIR) {
   for (const name of readdirSync(dir)
     .filter((n) => n.endsWith(".md"))
     .sort()) {
-    const { data } = matter(readFileSync(path.join(dir, name), "utf8"), {});
+    const { data } = matter(readFileSync(path.join(dir, name), "utf8"));
     if (
       typeof data.path === "string" &&
       data.path.startsWith("/teaching/") &&

@@ -4,7 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { forceFirstPublished, readState } from "../app/lib/editor/publish-policy.mjs";
 
@@ -77,7 +77,7 @@ await test("removes the key when the value is null", () => {
 });
 
 await test("an unquoted YAML date survives as the same day", () => {
-  // gray-matter hands this back as a Date, not a string, which is why the
+  // The reader hands this back as a Date, not a string, which is why the
   // comparison in the implementation normalizes before comparing.
   const dated = PLAIN.replace("draft: false", "draft: false\ndate: 2026-07-30");
   const out = roundTrip(dated, "2026-08-28");
