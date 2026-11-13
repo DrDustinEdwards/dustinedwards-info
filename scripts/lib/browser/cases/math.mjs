@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { BASE, ok, pageOverflow, skip } from "../harness.mjs";
+import { BASE, ok, overflowScan, skip } from "../harness.mjs";
 import { MATHLESS_POST_PATH, MATH_POST_PATH } from "../seed.mjs";
 
 /* Page functions: each runs inside the page through `evaluate`, so each is self-contained. */
@@ -64,7 +64,7 @@ export async function run({ page }, mathPreviewSeeded) {
         `React "precedence" attribute on the math link puts it above the meta.`,
     );
 
-    const scan = await pageOverflow(page);
+    const scan = await overflowScan(page);
     const colors = await page.evaluate(readMathColors);
     const sheets = await page.evaluate(stylesheetHrefs);
     const rendered = await page.evaluate(() => {

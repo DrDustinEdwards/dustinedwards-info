@@ -204,12 +204,6 @@
 /* The network's faces (Inter, Martian Mono, Overpass, Jost, Capsomer Drafting, DSEG7) are Capsomer's
    (capsomer/fonts.css, imported in routes/legacy-public.tsx); each downloads only where a page uses it. */
 
-/* A plain :root, not @theme: an unknown at-rule is dropped whole, and every font fell back to Times. */
-/* Not in the color blocks: check:contrast requires every token there to be a hex. */
-:root {
-  --z-progress: 900; /* @kind other */
-}
-
 :root {
   --font-sans:
     "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
@@ -245,10 +239,6 @@
   /* 44px is the header hit target (WCAG 2.5.5, AAA). The AA floor is 24px, --control-min-dense. */
   --control-min: 2.75rem;
   --control-min-dense: 1.5rem;
-
-  --line-w: 0.0625rem;
-  --line-w-thick: 0.125rem;
-  --radius-control: 0;
 }
 
 :root {

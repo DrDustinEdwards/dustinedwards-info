@@ -1,5 +1,7 @@
+import { CheckChips } from "capsomer/react/chips";
 import { SearchField } from "capsomer/react/field";
 import { JsonLd } from "capsomer/react/json-ld";
+import { ButtonLink } from "capsomer/react/link";
 import { Fragment, useState, type ReactNode } from "react";
 
 import { PageShell } from "~/components/page-shell";
@@ -427,18 +429,18 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             {CV.person.title}, {CV.person.department}, {CV.person.org}.
           </p>
           <p className="cv-actions">
-            <a href={CV_PDF_PATH} className="cap-btn" data-variant="link">
+            <ButtonLink href={CV_PDF_PATH} variant="link">
               Download PDF
-            </a>
+            </ButtonLink>
             <button type="button" className="cap-btn" data-variant="link" data-cv-print="">
               Print
             </button>
-            <a href={contentPageMarkdownPath(PATH)} className="cap-btn" data-variant="link">
+            <ButtonLink href={contentPageMarkdownPath(PATH)} variant="link">
               Markdown
-            </a>
-            <a href="/research/publications" className="cap-btn" data-variant="link">
+            </ButtonLink>
+            <ButtonLink href="/research/publications" variant="link">
               All publications
-            </a>
+            </ButtonLink>
           </p>
         </header>
 
@@ -503,45 +505,25 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
               </span>
             </summary>
             <div className="cv-more-body">
-              <fieldset className="cv-facet cap-chips">
-                <legend className="cv-label">Type</legend>
-                {TYPES.map(([id, , plural]) => (
-                  <label key={id} className="cap-chip">
-                    <input
-                      className="cap-chip-input"
-                      type="checkbox"
-                      name="type"
-                      value={id}
-                      defaultChecked={state.types.includes(id)}
-                    />
-                    {plural}{" "}
-                    <span className="cap-chip-count" data-cv-facet={`type:${id}`}>
-                      {facets.types[id] ?? 0}
-                    </span>
-                  </label>
-                ))}
-              </fieldset>
+              <CheckChips
+                legend="Type"
+                name="type"
+                checked={state.types}
+                options={TYPES.map(([id, , plural]) => ({
+                  value: id,
+                  label: plural,
+                  count: facets.types[id] ?? 0,
+                }))}
+              />
               <div className="cv-filter-row">
-                <fieldset className="cv-facet cap-chips">
-                  <legend className="cv-label">Research area</legend>
-                  {AREAS.filter(([id]) => FACTS.some((f) => f.areas.includes(id))).map(
-                    ([id, label]) => (
-                      <label key={id} className="cap-chip">
-                        <input
-                          className="cap-chip-input"
-                          type="checkbox"
-                          name="area"
-                          value={id}
-                          defaultChecked={state.areas.includes(id)}
-                        />
-                        {label}{" "}
-                        <span className="cap-chip-count" data-cv-facet={`area:${id}`}>
-                          {facets.areas[id] ?? 0}
-                        </span>
-                      </label>
-                    ),
+                <CheckChips
+                  legend="Research area"
+                  name="area"
+                  checked={state.areas}
+                  options={AREAS.filter(([id]) => FACTS.some((f) => f.areas.includes(id))).map(
+                    ([id, label]) => ({ value: id, label, count: facets.areas[id] ?? 0 }),
                   )}
-                </fieldset>
+                />
                 <fieldset className="cv-facet cv-years">
                   <legend className="cv-label">Years</legend>
                   <div className="cv-years-row">
@@ -577,7 +559,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                   <select name="role" defaultValue={state.role ?? ""}>
                     <option value="">Any role</option>
                     {ROLES.filter(([id]) => FACTS.some((f) => f.role === id)).map(([id, label]) => (
-                      <option key={id} value={id} data-cv-facet={`role:${id}`} data-label={label}>
+                      <option key={id} value={id} data-cv-facet={id} data-label={label}>
                         {label} ({facets.roles[id] ?? 0})
                       </option>
                     ))}
