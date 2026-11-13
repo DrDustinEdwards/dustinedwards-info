@@ -1,4 +1,4 @@
-import matter from "gray-matter";
+import { matter, stringifyMatter } from "@drdustinedwards/site-helpers/matter";
 
 /**
  * @typedef {{ kind: "admin" } | { kind: "operator", id: string } | { kind: "smoke", id: string } | { kind: "carrel", changeId: string }} Actor
@@ -63,7 +63,7 @@ export function readState(raw) {
 }
 
 /**
- * gray-matter turns an unquoted 2026-07-30 into a Date while the stamp writes a string, so both sides
+ * YAML turns an unquoted 2026-07-30 into a Date while the stamp writes a string, so both sides
  * reduce a date to its ISO day before comparing.
  *
  * @param {Record<string, unknown>} data
@@ -119,7 +119,7 @@ export function forceFirstPublished(raw, value) {
     // YAML cannot read the edit. Fall through.
   }
 
-  return matter.stringify(before.content, want);
+  return stringifyMatter(before.content, want);
 }
 
 /**

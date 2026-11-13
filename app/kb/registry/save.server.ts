@@ -8,7 +8,7 @@
 // Nothing else is derived from a registry row yet, so a write is one statement: the item's own row, whose blob sha
 // is what the registry-drift check reads as current. The purge is the registry's tag.
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { listRegistry } from "~/db/registry";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
@@ -236,7 +236,7 @@ export async function saveRegistryItem(
 
   const compiled = await checkRegistryItem(env, slug, raw, kinds);
   if (!compiled.ok) throw new RegistryInvalid(slug, compiled.errors);
-  const isDraft = (text: string) => matter(text, {}).data.draft === true;
+  const isDraft = (text: string) => matter(text).data.draft === true;
   decideFileWrite({
     actor,
     noun: kinds[kind]?.singular ?? "registry item",

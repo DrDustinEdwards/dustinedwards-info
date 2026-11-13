@@ -7,7 +7,7 @@
 // in the media library (/media/<key>) with its measured size and its alt text, and the names. The validator REFUSES any
 // other field, so nothing a visitor cannot already see on the roster page can enter the repository or D1.
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { dimensionsFromKey } from "../media/classify.mjs";
 import { gitBlobSha } from "../content/hashes.mjs";
@@ -167,8 +167,7 @@ export async function compileCohort({ slug, raw, host, pipeline, sourcePath }) {
 
   let parsed;
   try {
-    // An options object, even an empty one: gray-matter caches by input when it is omitted.
-    parsed = matter(raw, {});
+    parsed = matter(raw);
   } catch (error) {
     return {
       ok: false,

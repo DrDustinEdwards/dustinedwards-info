@@ -10,7 +10,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PAGES_DIR = path.join(ROOT, "content", "pages");
@@ -28,7 +28,7 @@ export function readPublishedPages(dir = PAGES_DIR) {
   /** @type {string[]} */
   const found = [];
   for (const name of readdirSync(dir).filter((n) => n.endsWith(".md"))) {
-    const { data } = matter(readFileSync(path.join(dir, name), "utf8"), {});
+    const { data } = matter(readFileSync(path.join(dir, name), "utf8"));
     if (typeof data.path === "string" && data.draft !== true) found.push(data.path);
   }
   return found.sort();

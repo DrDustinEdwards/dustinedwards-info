@@ -7,7 +7,7 @@
 // the error says the commit landed and how to repair the row. A save cannot create a path: a page's
 // address is structure and lives in CONTENT_PAGE_PATHS, in code.
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { listBlogPosts } from "~/db";
 import { getPublishedEntryByPath } from "~/db/dictionary";

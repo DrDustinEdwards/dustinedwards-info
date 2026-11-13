@@ -6,7 +6,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { deriveIdentity } from "../../app/lib/identity.mjs";
 
@@ -22,7 +22,9 @@ export function readIdentity() {
   /** @type {Record<string, any> | undefined} */
   let person;
   for (const name of files) {
-    const data = matter(readFileSync(path.join(CV_DIR, name), "utf8"), {}).data;
+    const data = /** @type {Record<string, any>} */ (
+      matter(readFileSync(path.join(CV_DIR, name), "utf8")).data
+    );
     if (name === "profile.md") person = data.person;
     if (data.type === "appointment" && Array.isArray(data.entries))
       entries.push(...data.entries.map((e) => ({ ...e, type: "appointment" })));
