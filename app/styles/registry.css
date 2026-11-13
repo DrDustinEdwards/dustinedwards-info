@@ -1,6 +1,6 @@
 /*
  * The lab registry's pages (app/routes/lab.tsx, lab.kind.tsx): their layout only, on the site's tokens, so they follow the
- * light and dark themes with the rest of the site. The catalog's own colors are mapped in site-catalog.css.
+ * light and dark themes with the rest of the site. The catalog is Capsomer's, in its purple family.
  */
 .registry-lede {
   max-inline-size: 46rem;

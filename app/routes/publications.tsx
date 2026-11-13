@@ -33,7 +33,7 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/publications";
 
-// Route-scoped: the catalog's tokens and components are Capsomer's, mapped onto the site's palette in site-catalog.css.
+// Route-scoped: the catalog's tokens and components are Capsomer's, its look the manual's (capsomer/manual.css).
 import "capsomer/tokens.css";
 import "capsomer/field.css";
 import "capsomer/button.css";
@@ -44,7 +44,6 @@ import "capsomer/pagination.css";
 import "capsomer/catalog.css";
 import "capsomer/author-list.css";
 import "~/styles/listing.css";
-import "~/styles/site-catalog.css";
 import "~/styles/publications.css";
 
 const TOPIC_META: Record<TopicId, { title: string; description: string }> = {
@@ -235,7 +234,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
           />
         </header>
 
-        <div className="papers site-catalog">
+        <div className="papers">
           <Catalog
             definition={PUBLICATIONS}
             result={result}

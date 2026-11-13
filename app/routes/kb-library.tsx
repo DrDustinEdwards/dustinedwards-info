@@ -43,7 +43,6 @@ import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
 import "~/styles/prose.css";
-import "~/styles/site-catalog.css";
 import "~/styles/library.css";
 
 /**
@@ -141,7 +140,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
         </DraftNotice>
       ) : null}
       <p className="library-counts">{lead(base, items)}</p>
-      <div className="library site-catalog site-catalog-wide">
+      <div className="library page-wide">
         <Catalog
           definition={catalog}
           result={result}

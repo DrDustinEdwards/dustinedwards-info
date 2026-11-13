@@ -52,7 +52,6 @@ import "capsomer/catalog.css";
 import "capsomer/tabs.css";
 import "capsomer/step-indicator.css";
 import "~/styles/prose.css";
-import "~/styles/site-catalog.css";
 import "~/styles/library.css";
 import { RENDERED } from "~/lib/content/render-version";
 import { PROSE } from "~/lib/prose-context";
@@ -155,7 +154,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       <DraftNotice show={draft} />
       <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(intro)} />
       <LibraryOverview overview={libraryOverview(items)} />
-      <div className="library site-catalog site-catalog-wide">
+      <div className="library page-wide">
         <TabsNav aria-label="Protocols by kind of work" variant="line">
           {libraryTabs(items, result.state.filters.method ?? [], registry).map((tab) => (
             <TabLink key={tab.id} href={tab.href} current={tab.current} count={tab.count}>
