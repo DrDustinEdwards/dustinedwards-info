@@ -5,13 +5,14 @@ import { fileURLToPath } from "node:url";
 // Imported from the pipeline so the gate cannot check a theme the renderer does not use.
 import { LANGUAGES, SHIKI_THEMES } from "@drdustinedwards/site-helpers/render/highlight";
 
+import { resolveToken } from "capsomer/token-check";
+
 import { apca, channels, contrast } from "../app/lib/contrast.mjs";
 
 import {
   allSourceCss,
   CSS_PATH,
   normalizeHex,
-  resolveToken,
   stripCss,
   stylesheetPaths,
   THEME_SELECTORS,
@@ -673,7 +674,7 @@ function opacityExempt(selectorGroup) {
   }
 
   /* Scope floor: a regex that stopped matching reports what a clean sweep reports. */
-  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 7);
+  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 5);
 
   assert(
     unparsed.length === 0

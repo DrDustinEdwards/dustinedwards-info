@@ -1,4 +1,6 @@
+import { resultsText, snippetHtml } from "capsomer/behavior/search-results";
 import { Pagination, pageCountOf } from "capsomer/react/pagination";
+import { SearchResult, SearchResults } from "capsomer/react/search-results";
 import { Link, data, redirect } from "react-router";
 
 import { AskMount } from "~/components/ask-panel";
@@ -32,16 +34,16 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/search";
 
+import "capsomer/chips.css";
+import "capsomer/status.css";
+import "capsomer/pagination.css";
+import "capsomer/search-results.css";
 import "~/styles/search-page.css";
 import "~/styles/search-form.css";
-import "capsomer/pagination.css";
 import "capsomer/field.css";
 import "capsomer/button.css";
-import "capsomer/chips.css";
 import "~/styles/ask.css";
-import "~/styles/search-facets.css";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
-import { markup } from "capsomer/behavior/trusted-html";
 
 const PAGE_SIZE = 10;
 
@@ -94,7 +96,7 @@ export const middleware: Route.MiddlewareFunction[] = [
             anchor: hit.anchor,
             tags: hit.tags,
             publishedAt: hit.publishAt ? new Date(hit.publishAt * 1000).toISOString() : null,
-            snippet: hit.snippet,
+            snippet: snippetHtml(hit.snippet),
             matchedOn: hit.why,
           })),
         },
@@ -210,12 +212,10 @@ function ActiveFilterChip({
   label: string;
 }) {
   return (
-    <li>
-      <Link to={searchHref(params, { [facet]: null })} className="cap-chip" aria-current="true">
-        {label} <span aria-hidden="true">x</span>
-        <span className="sr-only">remove filter</span>
-      </Link>
-    </li>
+    <Link to={searchHref(params, { [facet]: null })} className="cap-chip" aria-current="true">
+      {label} <span aria-hidden="true">x</span>
+      <span className="cap-sr-only">remove filter</span>
+    </Link>
   );
 }
 
@@ -236,19 +236,21 @@ function FacetSection({
   return (
     <section>
       <h2>{heading}</h2>
-      <ul>
+      <nav className="cap-chips" aria-label={heading}>
         {values.map((entry) => (
-          <li key={entry.value}>
-            <Link to={searchHref(params, { [facet]: String(entry.value) })} className="cap-chip">
-              {entry.label ?? entry.value}{" "}
-              <span className="cap-chip-count">
-                {entry.count}
-                {floor}
-              </span>
-            </Link>
-          </li>
+          <Link
+            key={entry.value}
+            to={searchHref(params, { [facet]: String(entry.value) })}
+            className="cap-chip"
+          >
+            {entry.label ?? entry.value}{" "}
+            <span className="cap-chip-count">
+              {entry.count}
+              {floor}
+            </span>
+          </Link>
         ))}
-      </ul>
+      </nav>
     </section>
   );
 }
@@ -262,46 +264,32 @@ const WHY_LABEL: Record<MatchReason, string> = {
 };
 
 function Result({ hit }: { hit: SearchHit }) {
+  const published = hit.publishAt ? new Date(hit.publishAt * 1000) : null;
   return (
-    <li className="search-result">
-      <div className="search-result-head">
-        <span className="search-type" data-type={hit.type}>
-          {hit.type}
-        </span>
-        <h2 className="search-result-title">
-          <Link to={hit.url}>{hit.title}</Link>
-        </h2>
-      </div>
-
-      {hit.anchor ? (
-        <p className="search-result-context">
-          in <Link to={hit.docUrl}>{hit.docTitle}</Link>
-        </p>
-      ) : null}
-
-      {/* Safe as HTML: the snippet was escaped before its <mark> markers were
-          substituted in. See renderSnippet in search.server.ts. */}
-      <p className="search-snippet" dangerouslySetInnerHTML={markup(hit.snippet)} />
-
-      <p className="search-why">
-        matched on{" "}
-        {hit.why.map((reason, i) => (
-          <span key={reason}>
-            {i > 0 ? ", " : ""}
-            <span className="search-why-field">{WHY_LABEL[reason]}</span>
-          </span>
-        ))}
-        {hit.publishAt ? (
+    <SearchResult
+      href={hit.url}
+      title={hit.title}
+      kind={hit.type}
+      context={
+        hit.anchor ? (
           <>
-            {" "}
-            <span className="search-why-sep">/</span>{" "}
-            <time dateTime={new Date(hit.publishAt * 1000).toISOString()}>
-              {new Date(hit.publishAt * 1000).getUTCFullYear()}
-            </time>
+            in <Link to={hit.docUrl}>{hit.docTitle}</Link>
           </>
-        ) : null}
-      </p>
-    </li>
+        ) : undefined
+      }
+      snippet={hit.snippet}
+      why={
+        <>
+          matched on {hit.why.map((reason) => WHY_LABEL[reason]).join(", ")}
+          {published ? (
+            <>
+              {" "}
+              / <time dateTime={published.toISOString()}>{published.getUTCFullYear()}</time>
+            </>
+          ) : null}
+        </>
+      }
+    />
   );
 }
 
@@ -314,28 +302,26 @@ function ZeroState({
   suggestions: NonNullable<Route.ComponentProps["loaderData"]["suggestions"]>;
 }) {
   return (
-    <div className="search-zero">
+    <div className="cap-search-empty">
       <p>
         Nothing matched <strong>{raw}</strong>.
       </p>
       {suggestions.nearestTags.length > 0 ? (
-        <section>
-          <h2>Related tags</h2>
-          <ul className="search-chip-row">
+        <section aria-labelledby="search-related-tags">
+          <h2 id="search-related-tags">Related tags</h2>
+          <nav className="cap-chips" aria-label="Related tags">
             {suggestions.nearestTags.map((tag) => (
-              <li key={tag}>
-                <Link to={`/search?tag=${encodeURIComponent(tag)}`} className="cap-chip">
-                  {tag}
-                </Link>
-              </li>
+              <Link key={tag} to={`/search?tag=${encodeURIComponent(tag)}`} className="cap-chip">
+                {tag}
+              </Link>
             ))}
-          </ul>
+          </nav>
         </section>
       ) : null}
       {suggestions.recentPosts.length > 0 ? (
-        <section>
-          <h2>Recent writing</h2>
-          <ul className="search-recent">
+        <section aria-labelledby="search-recent-writing">
+          <h2 id="search-recent-writing">Recent writing</h2>
+          <ul>
             {suggestions.recentPosts.map((post) => (
               <li key={post.url}>
                 <Link to={post.url}>{post.title}</Link>
@@ -401,22 +387,8 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </p>
         </SearchForm>
 
-        {/* Rendered even empty: a live region must exist before its text changes, or the live
-            search's count is never announced. */}
-        <p className="search-count" aria-live="polite">
-          {hasQuery
-            ? `${
-                result.total === 0
-                  ? "No results"
-                  : `${result.total}${result.truncated ? "+" : ""} result${
-                      result.total === 1 ? "" : "s"
-                    }`
-              }${result.parsed.year !== null ? ` from ${result.parsed.year}` : ""}`
-            : null}
-        </p>
-
         {params.type || params.base || params.tag || params.year ? (
-          <ul className="search-active-filters">
+          <nav className="cap-chips search-active-filters" aria-label="Active filters">
             {params.type ? (
               <ActiveFilterChip params={params} facet="type" label={`type: ${params.type}`} />
             ) : null}
@@ -433,7 +405,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
             {params.year ? (
               <ActiveFilterChip params={params} facet="year" label={params.year} />
             ) : null}
-          </ul>
+          </nav>
         ) : null}
 
         <template data-island="search" />
@@ -442,14 +414,20 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           <AskMount question={params.q ?? ""} />
         ) : null}
 
-        {/* Only on the text path: the browse path is date-ordered in SQL, because a filter carries no relevance signal. */}
-        {hasQuery && result.total > 1 && !result.parsed.isEmpty ? (
-          <nav className="search-sort" aria-label="Sort results">
-            <span className="search-sort-label" id="search-sort-label">
-              Sort
-            </span>
-            <ul aria-labelledby="search-sort-label">
-              <li>
+        {/* The count is rendered even empty (a live region must exist before its text changes, or the live search's
+            count is never announced), and the list is always there as a place for the live search to write to. */}
+        <SearchResults
+          count={
+            hasQuery
+              ? `${resultsText(result.total, { more: result.truncated })}${
+                  result.parsed.year !== null ? ` from ${result.parsed.year}` : ""
+                }`
+              : ""
+          }
+          /* Only on the text path: the browse path is date-ordered in SQL, because a filter carries no relevance signal. */
+          sort={
+            hasQuery && result.total > 1 && !result.parsed.isEmpty ? (
+              <nav className="cap-chips" aria-label="Sort results">
                 <Link
                   to={searchHref(params, { sort: "relevance" })}
                   className="cap-chip"
@@ -457,8 +435,6 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
                 >
                   Relevance
                 </Link>
-              </li>
-              <li>
                 <Link
                   to={searchHref(params, { sort: "date" })}
                   className="cap-chip"
@@ -466,80 +442,73 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
                 >
                   Newest
                 </Link>
-              </li>
-            </ul>
-          </nav>
-        ) : null}
+              </nav>
+            ) : null
+          }
+          facets={
+            hasQuery && result.total > 0 ? (
+              <>
+                {facets.types.length > 1 ? (
+                  <FacetSection
+                    params={params}
+                    facet="type"
+                    heading="Type"
+                    values={facets.types}
+                    floor={floor}
+                  />
+                ) : null}
 
-        {/* The body is always there, empty without results, so the live search has a place to
-            write its results on a page that opened with none. */}
-        <div className="search-body">
-          {hasQuery && result.total > 0 ? (
-            <ol className="search-results">
-              {result.hits.map((hit) => (
-                <Result key={hit.uid} hit={hit} />
-              ))}
-            </ol>
-          ) : null}
+                {/* One search across the knowledge bases (docs/KNOWLEDGE-BASE.md, A2); each library keeps its own facets. */}
+                {facets.bases.length > 1 ? (
+                  <FacetSection
+                    params={params}
+                    facet="base"
+                    heading="Knowledge base"
+                    values={facets.bases}
+                    floor={floor}
+                  />
+                ) : null}
 
-          {hasQuery && result.total > 0 ? (
-            <aside className="search-facets" aria-label="Filter results">
-              {facets.types.length > 1 ? (
-                <FacetSection
-                  params={params}
-                  facet="type"
-                  heading="Type"
-                  values={facets.types}
-                  floor={floor}
-                />
-              ) : null}
+                {facets.tags.length > 0 ? (
+                  <FacetSection
+                    params={params}
+                    facet="tag"
+                    heading="Tag"
+                    values={facets.tags}
+                    floor={floor}
+                  />
+                ) : null}
 
-              {/* One search across the knowledge bases (docs/KNOWLEDGE-BASE.md, A2); each library keeps its own facets. */}
-              {facets.bases.length > 1 ? (
-                <FacetSection
-                  params={params}
-                  facet="base"
-                  heading="Knowledge base"
-                  values={facets.bases}
-                  floor={floor}
-                />
-              ) : null}
-
-              {facets.tags.length > 0 ? (
-                <FacetSection
-                  params={params}
-                  facet="tag"
-                  heading="Tag"
-                  values={facets.tags}
-                  floor={floor}
-                />
-              ) : null}
-
-              {facets.years.length > 0 ? (
-                <FacetSection
-                  params={params}
-                  facet="year"
-                  heading="Year"
-                  values={facets.years}
-                  floor={floor}
-                />
-              ) : null}
-            </aside>
-          ) : null}
-        </div>
-
-        {hasQuery && result.total === 0 && suggestions ? (
-          <ZeroState raw={result.parsed.raw} suggestions={suggestions} />
-        ) : null}
-
-        {pageCount > 1 ? (
-          <ResultsPagination
-            params={params}
-            page={result.page}
-            pageCount={pageCount}
-            truncated={result.truncated}
-          />
-        ) : null}
+                {facets.years.length > 0 ? (
+                  <FacetSection
+                    params={params}
+                    facet="year"
+                    heading="Year"
+                    values={facets.years}
+                    floor={floor}
+                  />
+                ) : null}
+              </>
+            ) : undefined
+          }
+          empty={
+            hasQuery && result.total === 0 && suggestions ? (
+              <ZeroState raw={result.parsed.raw} suggestions={suggestions} />
+            ) : undefined
+          }
+          pager={
+            <ResultsPagination
+              params={params}
+              page={result.page}
+              pageCount={pageCount}
+              truncated={result.truncated}
+            />
+          }
+        >
+          {hasQuery && result.total > 0
+            ? result.hits.map((hit) => <Result key={hit.uid} hit={hit} />)
+            : null}
+        </SearchResults>
       </main>
       <ShellFooter />
     </>

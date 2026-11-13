@@ -117,8 +117,8 @@ export async function run() {
       let searchCss = "";
       for (const href of searchHrefs) searchCss += (await get(href)).text;
       check(
-        "css: search mark uses --mark-bg, not brand",
-        /\.search-snippet mark\{[^}]*background:var\(--mark-bg\)/.test(searchCss),
+        "css: search mark uses --warn-soft, not brand",
+        /\.cap-search-snippet[^{]*mark\{[^}]*background:var\(--warn-soft\)/.test(searchCss),
         `searched ${searchHrefs.length} route stylesheet(s): ${searchHrefs.join(", ")}`,
       );
       check(

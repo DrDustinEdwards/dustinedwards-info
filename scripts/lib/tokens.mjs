@@ -176,30 +176,6 @@ export function tokenBlock(label, selector) {
 }
 
 /**
- * Follows a `var()` chain to its literal: a figure series slot is declared as a ramp step, and what
- * ships is the step's color. `value` is null on a missing name or a cycle.
- *
- * @param {Record<string, string>} block
- * @param {string} name
- * @returns {{ value: string | null, chain: string[] }}
- */
-export function resolveToken(block, name) {
-  /** @type {string[]} */
-  const chain = [];
-  let current = name;
-  for (let i = 0; i <= Object.keys(block).length; i += 1) {
-    const raw = block[current];
-    if (raw === undefined) return { value: null, chain };
-    const ref = /^var\(\s*(--[a-z0-9-]+)\s*\)$/.exec(raw.trim());
-    if (!ref) return { value: raw.trim(), chain };
-    if (chain.includes(ref[1])) return { value: null, chain };
-    chain.push(ref[1]);
-    current = ref[1];
-  }
-  return { value: null, chain };
-}
-
-/**
  * Plain hex only: a `var()` indirection resolves in a browser and means nothing at build time.
  *
  * @param {Record<string, string>} nameMap
