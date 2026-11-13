@@ -24,7 +24,7 @@
     ]
   },
   "baseline": {
-    "measured_at": "e19bc5c",
+    "measured_at": "8b8ace3",
     "knip": {},
     "jscpd": {
       "clones": 55,
@@ -41,9 +41,9 @@
       "cases": 1627
     },
     "comments": {
-      "lines": 17801,
-      "code": 105730,
-      "percentage": 14.41
+      "lines": 17792,
+      "code": 105725,
+      "percentage": 14.4
     }
   }
 }
