@@ -17,8 +17,9 @@ const { ok } = tally;
 console.log("\ncheck:fonts\n");
 
 // Capsomer's faces (capsomer/fonts.css, which routes/legacy-public.tsx imports) are the family's sans and mono.
+const CAPSOMER_FONTS = join(root, "node_modules", "capsomer", "css", "fonts.css");
 const SHEETS = [
-  join(root, "node_modules", "capsomer", "css", "fonts.css"),
+  CAPSOMER_FONTS,
   join(root, "app", "app.css"),
   ...readdirSync(join(root, "app", "styles"))
     .filter((f) => f.endsWith(".css"))
@@ -30,6 +31,16 @@ const SHEETS = [
  * @returns {string}
  */
 const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, "");
+
+// A Capsomer face is checked here only when the site's sheets or Capsomer's token sheets name its family. Another
+// site's face (Foxhound's DM Sans) is Capsomer's and that site's to check.
+const named = [
+  ...SHEETS.filter((f) => f !== CAPSOMER_FONTS),
+  join(root, "node_modules", "capsomer", "tokens", "color.css"),
+  join(root, "node_modules", "capsomer", "tokens", "scale.css"),
+]
+  .map((f) => stripComments(readFileSync(f, "utf8")))
+  .join("\n");
 
 /** @type {{sheet: string, family: string, weight: string|null, style: string|null, stretch: string|null, file: string|null, raw: string}[]} */
 const blocks = [];
@@ -48,6 +59,7 @@ for (const sheet of SHEETS) {
     // The FIRST url() is the file this block is about. A block with none is a
     // local()-only face and is skipped, counted, below.
     const url = body.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/)?.[1] ?? null;
+    if (sheet === CAPSOMER_FONTS && !named.includes(`"${family}"`)) continue;
     blocks.push({
       sheet,
       family,

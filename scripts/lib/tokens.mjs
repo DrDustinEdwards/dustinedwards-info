@@ -8,9 +8,11 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { walkFiles } from "@dustinedwards/devkit/node";
-import { normalizeHex, readDeclarations, resolveToken, stripCss } from "capsomer/token-check";
+import { normalizeHex } from "@drdustinedwards/site-helpers/text";
+import { readDeclarations, resolveToken, stripCss } from "capsomer/token-check";
 
-/* CSS reading and the var() walk are Capsomer's (capsomer/token-check), shared with every site's gate. */
+/* CSS reading and the var() walk are Capsomer's (capsomer/token-check), and the hex form is Prelum's (text), shared
+ * with every site's gate. */
 export { normalizeHex, resolveToken, stripCss };
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
