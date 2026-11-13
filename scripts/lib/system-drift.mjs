@@ -32,7 +32,7 @@ const ROOT_CONFIGS = ["wrangler.jsonc", "wrangler.jsonc.example", "wrangler.json
  * @param {any} config
  * @returns {[string, string][]} [kind, name]
  */
-const partsOf = (config) => [
+const configParts = (config) => [
   ["worker", config.name],
   ...(config.d1_databases ?? []).map((/** @type {any} */ d) => ["database", d.database_name]),
   ...(config.r2_buckets ?? []).map((/** @type {any} */ b) => ["bucket", b.bucket_name]),
@@ -81,7 +81,7 @@ export async function undeclaredParts(model, raw) {
     checked.push(system.id);
     /** @type {Map<string, Set<string>>} */
     const declared = new Map();
-    for (const [kind, name] of configs.flatMap(partsOf))
+    for (const [kind, name] of configs.flatMap(configParts))
       declared.set(kind, (declared.get(kind) ?? new Set()).add(name));
     for (const [kind, names] of declared) {
       const kinds = DRAWN_AS[kind] ?? [kind];

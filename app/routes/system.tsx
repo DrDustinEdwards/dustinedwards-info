@@ -4,9 +4,9 @@ import { data } from "react-router";
 import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
 import { pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
+import { explorerLabel } from "capsomer/behavior/system-model";
 import {
   SYSTEMS_PATH,
-  explorerLabel,
   explorerUrl,
   loadSystemModel,
   mapData,
