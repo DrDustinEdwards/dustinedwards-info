@@ -131,8 +131,8 @@ const MISSING: Missing[] = [
   {
     type: "SoftwareApplication",
     property: "applicationCategory",
-    page: /^\/software\/(capsid|carrel|capsomer|foxing-edu)$/,
-    reason: "the frontmatter states no category for Capsid, Carrel, Capsomer or Foxing Edu",
+    page: /^\/software\/(capsid|carrel|foxing-edu)$/,
+    reason: "the frontmatter states no category for Capsid, Carrel or Foxing Edu",
   },
   {
     type: "SoftwareSourceCode",
@@ -155,14 +155,14 @@ const MISSING: Missing[] = [
   {
     type: "SoftwareSourceCode",
     property: "description",
-    page: /^\/software\/capsid$/,
+    page: /^\/software\/(capsid|capsomer)$/,
     reason:
       "the source node describes the repository, and the page describes the application, not its code",
   },
   {
     type: "SoftwareSourceCode",
     property: "url",
-    page: /^\/software\/capsid$/,
+    page: /^\/software\/(capsid|capsomer)$/,
     reason: "its address is codeRepository",
   },
   {
