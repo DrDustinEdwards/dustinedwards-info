@@ -10,7 +10,7 @@ import capsidPage from "../../content/pages/software-capsid.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
 import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext, carrelRequest, recordPurges } from "./route-helpers";
+import { renderRoute, routeContext, recordPurges, carrelSend, carrelGet } from "./route-helpers";
 import { seedDictionary, seedPages } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -34,26 +34,6 @@ const SENSE =
   "A system that stores the instructions and decisions of AI agents and coordinates their work within and across projects.";
 const ADDED =
   "A system that stores the instructions and decisions of AI agents, and an edit saved through Carrel with no deploy.";
-
-const headersFor = (key: string) => ({
-  authorization: `Bearer ${key}`,
-  "content-type": "application/json",
-  "cf-connecting-ip": "203.0.113.9",
-});
-const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
-const get = (url: string) =>
-  carrelRequest(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
-function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return carrelRequest(
-    argsFor(
-      new Request(url, {
-        method,
-        headers: headersFor(testEnv.CARREL_SITE_KEY),
-        body: JSON.stringify(body),
-      }),
-    ),
-  );
-}
 
 async function pageData(path = PATH) {
   return pageLoader({
@@ -115,7 +95,7 @@ describe("an entry edit through the adapter is live at the next request", () => 
 
       const edited = capsidEntry.replace(SENSE, ADDED);
       expect(edited).not.toBe(capsidEntry);
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: edited,
         expectedVersion: await versionOf(FILE),
         changeId: "chg-dict",
@@ -155,14 +135,14 @@ describe("an entry edit through the adapter is live at the next request", () => 
       ).toBe(true);
 
       // And the file read back through Carrel is the edit, at the head, and the entry is listed as its own kind.
-      const read = (await (await get(`${PREFIX}/content/${ID}`)).json()) as {
+      const read = (await (await carrelGet(`${PREFIX}/content/${ID}`)).json()) as {
         source: string;
         kind: string;
         version: string;
       };
       expect(read.kind).toBe("dictionary");
       expect(read.source).toBe(edited);
-      const list = (await (await get(`${PREFIX}/content?limit=100&q=capsid`)).json()) as {
+      const list = (await (await carrelGet(`${PREFIX}/content?limit=100&q=capsid`)).json()) as {
         items: Array<{ id: string; kind: string; path: string | null }>;
       };
       expect(list.items.find((i) => i.id === ID)).toMatchObject({ kind: "dictionary", path: PATH });
@@ -170,7 +150,7 @@ describe("an entry edit through the adapter is live at the next request", () => 
   );
 
   it("an unchanged save commits nothing and says so", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: capsidEntry,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-same",
@@ -185,14 +165,14 @@ describe("an entry change purges the pages tag, because a page embeds its entry"
     "purges content-pages, the tag the page's HTML and its twin carry, and nothing is purged for an unchanged save",
     { timeout: 180_000 },
     async () => {
-      await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: capsidEntry,
         expectedVersion: await versionOf(FILE),
         changeId: "chg-none",
       });
       expect(purge).not.toHaveBeenCalled();
 
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: capsidEntry.replace(SENSE, ADDED),
         expectedVersion: await versionOf(FILE),
         changeId: "chg-purge",
@@ -213,7 +193,7 @@ describe("a save is held to what CI holds", () => {
     const bad = capsidEntry
       .replace(/^term: .*$/m, "term: ")
       .concat(`\nA sentence ${wide} with a dash.\n`);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: bad,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-bad",
@@ -229,7 +209,7 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a clip that is not in the repository", async () => {
     gh.assets.delete("public/audio/capsid.mp3");
     gh.assets.set("public/audio/other.mp3", "clip");
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: capsidEntry.replace(SENSE, ADDED),
       expectedVersion: await versionOf(FILE),
       changeId: "chg-clip",
@@ -242,7 +222,7 @@ describe("a save is held to what CI holds", () => {
   });
 
   it("REFUSES a path no registered Software page names", async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: capsidEntry.replace("path: /software/capsid", "path: /research/phages"),
       expectedVersion: await versionOf(FILE),
       changeId: "chg-path",
@@ -255,7 +235,7 @@ describe("a save is held to what CI holds", () => {
   });
 
   it("REFUSES a stale version, names the current one, and commits nothing", async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: capsidEntry.replace(SENSE, ADDED),
       expectedVersion: "b".repeat(40),
       changeId: "chg-stale",
@@ -276,7 +256,7 @@ describe("a draft entry is not shown", () => {
     async () => {
       expect((await pageData()).entry).not.toBeNull();
 
-      const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, {
+      const down = await carrelSend("POST", `${PREFIX}/content/${ID}/unpublish`, {
         expectedVersion: await versionOf(FILE),
         changeId: "chg-down",
       });
@@ -293,7 +273,7 @@ describe("a draft entry is not shown", () => {
       expect(await (await twin()).text()).not.toContain("Pronunciation audio");
       expect((await searchBodies()).some((body) => body.includes("KAP-sid"))).toBe(false);
 
-      const up = await send("POST", `${PREFIX}/content/${ID}/publish`, {
+      const up = await carrelSend("POST", `${PREFIX}/content/${ID}/publish`, {
         expectedVersion: downBody.version,
         changeId: "chg-up",
       });
@@ -349,7 +329,7 @@ versionCases({
   id: ID,
   file: FILE,
   edit: () => capsidEntry.replace(SENSE, ADDED),
-  get,
-  send,
+  get: carrelGet,
+  send: carrelSend,
   timeout: 240000,
 });

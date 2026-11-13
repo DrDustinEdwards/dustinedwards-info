@@ -36,7 +36,6 @@ import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
 import "~/styles/prose.css";
-import "~/styles/site-catalog.css";
 import "~/styles/phages.css";
 import { RENDERED } from "~/lib/content/render-version";
 import { PROSE } from "~/lib/prose-context";
@@ -135,7 +134,7 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
       </h1>
       <DraftNotice show={draft} />
       <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(before)} />
-      <div className="phage-catalog site-catalog site-catalog-wide">
+      <div className="phage-catalog page-wide">
         <Catalog
           definition={PHAGES}
           result={result}

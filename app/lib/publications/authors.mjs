@@ -2,7 +2,7 @@
 // person in the data, into the owner. Its own module so `seo.ts` can reach it without the exports'
 // organism table. Must stay loadable by node:test.
 
-import { decodeEntities } from "./entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 
 // Exact spellings seen in the corpus, never patterns.
 const AUTHOR_ALIASES = new Map([
@@ -12,6 +12,6 @@ const AUTHOR_ALIASES = new Map([
 
 /** @param {string} name */
 export function canonicalAuthor(name) {
-  const clean = decodeEntities(name).replace(/\s+/g, " ").trim();
+  const clean = unescapeHtml(name).replace(/\s+/g, " ").trim();
   return AUTHOR_ALIASES.get(clean) ?? clean;
 }

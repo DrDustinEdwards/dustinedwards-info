@@ -105,6 +105,7 @@
     // and sync-content.mjs compares D1 against them at ship, so both projects
     // reach the module; one statement, per the module's own header.
     "app/lib/content/hashes.mjs",
+    "app/lib/content/front-matter.mjs",
     "app/lib/content/diagram.mjs",
     // The three inline architecture diagrams. pipeline.mjs swaps them in, so this project reaches it.
     "app/lib/content/blog-diagrams.mjs",
