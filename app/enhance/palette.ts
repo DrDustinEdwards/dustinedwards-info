@@ -3,7 +3,8 @@ import { isImeEnter } from "capsomer/behavior/shortcuts";
 
 // An island (devkit ./islands): each <template data-island="palette"> on the page calls this, and the first one runs it.
 // The palette is Capsomer's command menu (components/command-menu): its dialog, combobox and listbox, with the site's
-// search as its live results (`search`), the reader's recent searches as its commands, and Ask AI under the list.
+// search as its live results (`search`), the reader's recent searches as its commands, and Ask AI under the list
+// (the menu's `answer`, filled by ./ask with Capsomer's AI answer).
 let started = false;
 
 export default function start(): void {
@@ -25,12 +26,6 @@ export default function start(): void {
 
   let menu: { dialog: HTMLDialogElement; attached: Attached } | null = null;
   let input: HTMLInputElement | null = null;
-  let askAvailable = false;
-  let askHandle: { cancel(): void } | null = null;
-  let askLoading = false;
-  let askTrigger: HTMLButtonElement | null = null;
-  let askContainer: HTMLDivElement | null = null;
-  let askStatus: HTMLParagraphElement | null = null;
 
   function readRecent(): string[] {
     try {
@@ -84,12 +79,11 @@ export default function start(): void {
       data = (await response.json()) as typeof data;
     } catch (error) {
       if (signal.aborted) throw error;
-      askAvailable = false;
+      menu?.attached.offerAnswer(false);
       return [allResults(query, "live results are unavailable")];
     }
-    askAvailable = data.askAvailable === true;
     // Offered even on zero results: a question the keyword index cannot match is where an answer helps.
-    if (askTrigger && !askHandle) askTrigger.hidden = !askAvailable;
+    menu?.attached.offerAnswer(data.askAvailable === true);
     const found = (data.results ?? []).map((hit, i): Command => ({
       id: `result-${i}`,
       group: hit.type,
@@ -100,71 +94,17 @@ export default function start(): void {
     return [...found, allResults(query)];
   }
 
-  /** A separate dynamic import, so the palette chunk does not carry Ask's weight for readers who only search. */
-  async function runAsk() {
-    if (!askContainer || !input) return;
-    const question = input.value.trim();
-    if (!question) return;
-    // The trigger stays visible while the chunk loads, so a second click must not start a second billed answer.
-    if (askLoading) return;
-    askHandle?.cancel();
-    let ask: typeof import("./ask").ask;
-    askLoading = true;
-    try {
-      ({ ask } = await import("./ask"));
-    } catch {
-      // The chunk failed to load: the trigger stays so the reader can retry, and the status says so.
-      if (askStatus) askStatus.textContent = "Ask AI could not load. Try again.";
-      return;
-    } finally {
-      askLoading = false;
-    }
-    if (askStatus) askStatus.textContent = "";
-    askHandle = ask(askContainer, question);
-    /*
-     * The trigger hides only once focus is on the answer panel: hiding it while focused drops focus to
-     * <body>, which inside a modal dialog leaves the reader nowhere (WCAG 2.4.3).
-     */
-    askContainer.querySelector<HTMLElement>(".ask-panel")?.focus();
-    if (askTrigger) askTrigger.hidden = true;
-  }
-
-  function resetAsk() {
-    askHandle?.cancel();
-    askHandle = null;
-    askAvailable = false;
-    if (askContainer) {
-      askContainer.textContent = "";
-      askContainer.hidden = true;
-    }
-    if (askTrigger) askTrigger.hidden = true;
-    if (askStatus) askStatus.textContent = "";
-  }
-
-  /** Ask AI under the list: a deliberate second action, since an answer on every keystroke would bill Workers AI for typing. */
-  function buildAsk(): HTMLDivElement {
-    const box = document.createElement("div");
-    box.className = "palette-ask";
-    askTrigger = document.createElement("button");
-    askTrigger.type = "button";
-    askTrigger.className = "cap-btn";
-    askTrigger.dataset.variant = "quiet";
-    askTrigger.dataset.size = "sm";
-    askTrigger.textContent = "Ask AI about this";
-    askTrigger.hidden = true;
-    askTrigger.addEventListener("click", () => void runAsk());
-    askStatus = document.createElement("p");
-    askStatus.className = "palette-ask-status";
-    askStatus.setAttribute("role", "status");
-    askContainer = document.createElement("div");
-    askContainer.className = "palette-ask-container";
-    askContainer.hidden = true;
-    // appendChild, never append(): with the Workers types in scope append() takes HTMLRewriter content (ask.ts).
-    box.appendChild(askTrigger);
-    box.appendChild(askStatus);
-    box.appendChild(askContainer);
-    return box;
-  }
+  /**
+   * Ask AI under the list: a deliberate second action, since an answer on every keystroke would bill Workers AI
+   * for typing. Hidden for each query until the live search says Ask is on. A separate dynamic import, so the
+   * palette chunk does not carry Ask's weight for readers who only search.
+   */
+  const answer = {
+    label: "Ask AI about this",
+    offer: false,
+    run: async (question: string, region: HTMLElement) =>
+      (await import("./ask")).ask(region, question),
+  };
 
   /**
    * Built afresh on each opening, so the recent searches are the current ones. A recent search reopens the
@@ -174,7 +114,6 @@ export default function start(): void {
     if (menu?.dialog.open) return;
     menu?.attached.detach();
     menu?.dialog.remove();
-    resetAsk();
 
     const commands: Command[] = readRecent().map((recent, i) => ({
       id: `recent-${i}`,
@@ -185,21 +124,19 @@ export default function start(): void {
     const dialog = buildMenu(commands, {
       label: "Search this site",
       placeholder: "Search, or try tag:cloudflare",
+      answer,
     });
     dialog.setAttribute("aria-label", "Search this site");
     dialog.querySelector("[role='listbox']")?.setAttribute("aria-label", "Search results");
-    const foot = dialog.querySelector(".cap-cmd-foot");
-    dialog.insertBefore(buildAsk(), foot);
     document.body.appendChild(dialog);
 
     const byId = new Map(commands.map((c) => [c.id, c]));
     const attached = attach(
       dialog,
       (option, found) => (found ?? byId.get(option.dataset.capCommand ?? ""))?.run(),
-      { search },
+      { search, answer },
     );
     input = dialog.querySelector<HTMLInputElement>("[role='combobox']");
-    input?.addEventListener("input", resetAsk);
     // Enter before the live results arrive (no active option yet) opens the full results page, so a typed query
     // is never thrown away.
     input?.addEventListener("keydown", (event) => {
@@ -210,7 +147,6 @@ export default function start(): void {
       event.preventDefault();
       go(`/search?q=${encodeURIComponent(typed)}`, typed);
     });
-    dialog.addEventListener("close", resetAsk);
     menu = { dialog, attached };
     attached.open(query);
   }

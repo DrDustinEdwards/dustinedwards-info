@@ -1,14 +1,9 @@
 import { labelForUrl, urlForKey } from "../lib/search/ask-keys.mjs";
 import { splitFollowUp } from "../lib/search/follow-up.mjs";
 import { CUT_EVENT, answerDelta, takeSseFrames } from "@dustinedwards/site-runtime/ai-ask";
+import { buildAnswer, type AnswerSource } from "capsomer/behavior/ai-answer";
 
 const CHUNKS_EVENT = "chunks";
-
-interface AskCitation {
-  url: string;
-  title: string;
-  isSection: boolean;
-}
 
 interface AskHandle {
   cancel(): void;
@@ -16,41 +11,22 @@ interface AskHandle {
   done: Promise<void>;
 }
 
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className?: string,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text) node.textContent = text;
-  return node;
-}
-
 /**
- * `appendChild`, never `.append()`: with the Workers types in scope the global `Element` is
- * HTMLRewriter's, whose `append` rejects DOM nodes at compile time.
- */
-function attach(parent: HTMLElement, ...children: HTMLElement[]): void {
-  for (const child of children) parent.appendChild(child);
-}
-
-/**
- * The `chunks` event's payload as citations, deduplicated by URL. Same key-to-URL mapping as the
+ * The `chunks` event's payload as sources, deduplicated by URL. Same key-to-URL mapping as the
  * upload path, so a citation cannot disagree with what was indexed.
  */
-function citationsFromChunks(parsed: unknown): AskCitation[] {
+function citationsFromChunks(parsed: unknown): AnswerSource[] {
   const chunks: Array<{ item?: { key?: string } }> = Array.isArray(parsed) ? parsed : [];
   const seen = new Set<string>();
-  const out: AskCitation[] = [];
+  const out: AnswerSource[] = [];
   for (const chunk of chunks) {
     const url = urlForKey(chunk?.item?.key ?? "");
     if (!url || seen.has(url)) continue;
     seen.add(url);
     out.push({
-      url,
+      href: url,
       title: labelForUrl(url),
-      isSection: url.includes("#"),
+      kind: url.includes("#") ? "section" : undefined,
     });
   }
   return out;
@@ -76,130 +52,27 @@ async function readFrames(
   }
 }
 
-/** Every DOM write goes through textContent: generated text is never rendered as HTML. */
+/** Streams the answer to `question` into Capsomer's AI answer panel, in `container`. */
 export function ask(container: HTMLElement, question: string): AskHandle {
   const controller = new AbortController();
   container.textContent = "";
   container.hidden = false;
 
-  const panel = el("div", "ask-panel");
-  panel.setAttribute("role", "region");
-  panel.setAttribute("aria-label", "AI answer");
-  // Focusable but not a Tab stop, so focus has somewhere to go when the trigger hides.
-  panel.tabIndex = -1;
-
-  const header = el("div", "ask-header");
-  const badge = el("span", "ask-badge", "AI generated");
-  const note = el("span", "ask-note", "May be wrong. Check the sources.");
-  attach(header, badge, note);
-
-  const body = el("p", "ask-body");
-  body.setAttribute("aria-busy", "true");
-
-  /*
-   * The body is not live: rewritten on every token, it would be announced over and over. This region
-   * exists before anything is written to it, and speaks twice: that the lookup started, then the whole
-   * answer or the failure.
-   */
-  const announcer = el("p", "sr-only");
-  announcer.setAttribute("aria-live", "polite");
-
-  // Not "Thinking...": the request is retrieval over this site's chunks, and an ellipsis reads as stalling.
-  const status = el("p", "ask-status", "Looking it up.");
-  const sources = el("ul", "ask-sources");
-  sources.hidden = true;
-
-  // Hidden until there is one: the model is asked for a follow-up, not required to give one.
-  const followUp = el("p", "ask-followup");
-  followUp.hidden = true;
-
-  // Shown only when the server says the model stopped before finishing (a `cut` event), so a cut answer never
-  // reads as a whole one.
-  const cutNote = el(
-    "p",
-    "ask-cut",
-    "This answer was cut off before it finished. The sources below say more.",
-  );
-  cutNote.hidden = true;
-
-  attach(panel, header, status, body, cutNote, sources, followUp, announcer);
-  attach(container, panel);
-  // A frame later, so the region is in the tree before its text changes and the change is heard.
-  requestAnimationFrame(() => {
-    if (!announcer.textContent) announcer.textContent = "Looking it up.";
-  });
+  const panel = buildAnswer();
+  // appendChild, never append(): with the Workers types in scope append() takes HTMLRewriter content.
+  container.appendChild(panel.el);
 
   let answer = "";
-  let citations: AskCitation[] = [];
-
-  function renderCitations() {
-    if (citations.length === 0) return;
-    sources.textContent = "";
-    const heading = el("li", "ask-sources-heading", "Sources");
-    attach(sources, heading);
-    /*
-     * Same-origin paths only: a URL that is not one did not come from the corpus, and is dropped
-     * rather than shown unlinked.
-     */
-    let index = 0;
-    for (const citation of citations) {
-      if (!citation.url.startsWith("/") || citation.url.startsWith("//")) continue;
-      index += 1;
-      const item = el("li");
-      const link = el("a");
-      link.href = citation.url;
-      attach(
-        link,
-        el("span", "ask-source-index", `${index}. `),
-        el("span", undefined, citation.title),
-      );
-      attach(item, link);
-      if (citation.isSection) {
-        attach(item, el("span", "ask-source-kind", " section"));
-      }
-      attach(sources, item);
-    }
-    if (index === 0) {
-      sources.hidden = true;
-      return;
-    }
-    sources.hidden = false;
-  }
-
-  function fail(message: string) {
-    status.textContent = message;
-    status.hidden = false;
-    body.removeAttribute("aria-busy");
-    announcer.textContent = message;
-  }
-
-  function onChunks(parsed: unknown) {
-    citations = citationsFromChunks(parsed);
-    renderCitations();
-  }
-
-  let firstToken = true;
 
   function onAnswer(parsed: unknown) {
     const delta = answerDelta(parsed);
     if (delta === undefined || delta.length === 0) return;
-    if (firstToken) {
-      status.hidden = true;
-      firstToken = false;
-    }
     answer += delta;
     // Split on every frame so the raw "NEXT:" marker never shows in the prose mid-stream.
     const parts = splitFollowUp(answer);
-    body.textContent = parts.answer;
-    // Rebuilt only when the text changed, not on every frame, so the link is not replaced under a reader.
-    if (parts.followUp && parts.followUp !== followUp.textContent) {
-      followUp.textContent = "";
-      const link = el("a");
-      link.href = `/search?q=${encodeURIComponent(parts.followUp)}`;
-      link.textContent = parts.followUp;
-      attach(followUp, link);
-      followUp.hidden = false;
-    }
+    panel.write(parts.answer);
+    if (parts.followUp)
+      panel.setFollowUp(parts.followUp, `/search?q=${encodeURIComponent(parts.followUp)}`);
   }
 
   const done = (async () => {
@@ -216,32 +89,28 @@ export function ask(container: HTMLElement, question: string): AskHandle {
         body: new URLSearchParams({ q: question }),
       });
     } catch {
-      if (!controller.signal.aborted) fail("Ask is unavailable.");
+      if (!controller.signal.aborted) panel.fail("Ask is unavailable.");
       return;
     }
 
     if (!response.ok || !response.body) {
-      fail("Ask is unavailable.");
+      panel.fail("Ask is unavailable.");
       return;
     }
 
     try {
       await readFrames(response.body, (eventName, parsed) => {
-        if (eventName === CHUNKS_EVENT) onChunks(parsed);
-        else if (eventName === CUT_EVENT) cutNote.hidden = false;
+        if (eventName === CHUNKS_EVENT) panel.setSources(citationsFromChunks(parsed));
+        else if (eventName === CUT_EVENT) panel.markCut();
         else onAnswer(parsed);
       });
     } catch {
-      if (!controller.signal.aborted) fail("Ask stopped early.");
+      if (!controller.signal.aborted) panel.fail("Ask stopped early.");
       return;
     }
 
-    body.removeAttribute("aria-busy");
-    if (answer.trim().length === 0) fail("No answer for that one.");
-    else {
-      const cut = cutNote.hidden ? "" : ` ${cutNote.textContent}`;
-      announcer.textContent = `AI answer: ${splitFollowUp(answer).answer}${cut}`;
-    }
+    if (answer.trim().length === 0) panel.fail("No answer for that one.");
+    else panel.finish();
   })();
 
   /*
@@ -254,7 +123,7 @@ export function ask(container: HTMLElement, question: string): AskHandle {
     held === document.body ||
     (held instanceof HTMLElement && held.closest("[hidden]"))
   ) {
-    panel.focus();
+    panel.el.focus();
   }
 
   return {

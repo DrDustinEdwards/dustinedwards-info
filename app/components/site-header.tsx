@@ -6,11 +6,11 @@ import { SiteNavPanel } from "~/components/site-nav-panel";
 import { buildNav, type NavItem } from "~/lib/nav";
 import { type RunningHeadHandle, runningHeadSection } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
-import askCss from "~/styles/ask.css?url";
 import listboxCss from "capsomer/listbox.css?url";
 import buttonCss from "capsomer/button.css?url";
 import commandMenuCss from "capsomer/command-menu.css?url";
-import paletteDialogCss from "~/styles/palette-dialog.css?url";
+import statusCss from "capsomer/status.css?url";
+import aiAnswerCss from "capsomer/ai-answer.css?url";
 
 const inside = (item: NavItem, pathname: string) =>
   pathname === item.to || pathname.startsWith(`${item.to}/`);
@@ -81,7 +81,7 @@ export function SiteHeader() {
         themePrefKey="cap-theme"
         attributes={{
           "data-palette": "",
-          "data-palette-css": `${listboxCss},${commandMenuCss},${buttonCss},${paletteDialogCss},${askCss}`,
+          "data-palette-css": `${listboxCss},${commandMenuCss},${buttonCss},${statusCss},${aiAnswerCss}`,
         }}
         toolsEnd={<template data-island="theme" />}
         // Absent, every link is still in the markup and every panel still opens; see app/enhance/header.ts.
