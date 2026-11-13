@@ -1,6 +1,5 @@
 // With AI_SEARCH unbound no Ask affordance renders and /search is pure D1: that off switch is a requirement.
 
-import { withTimeout } from "@dustinedwards/site-runtime/time";
 import { createContext } from "react-router";
 
 import {
@@ -67,6 +66,13 @@ export function askAvailable(env: Env): boolean {
  * `custom_metadata`, up to two entries on the gateway's log, so Ask's calls are told apart by app and feature.
  */
 export async function askStream(env: Env, question: string): Promise<ReadableStream> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`AI Search did not answer within ${ASK_TIMEOUT_MS} ms`)),
+      ASK_TIMEOUT_MS,
+    );
+  });
   const call = env.AI_SEARCH.chatCompletions({
     // The last message is the retrieval query; decorating it costs the whole search.
     messages: askMessages(question),
@@ -81,7 +87,11 @@ export async function askStream(env: Env, question: string): Promise<ReadableStr
       custom_metadata: ASK_GATEWAY_METADATA,
     },
   });
-  return withTimeout(call, ASK_TIMEOUT_MS, `AI Search did not answer within ${ASK_TIMEOUT_MS} ms`);
+  try {
+    return await Promise.race([call, late]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** The cache copy is parsed inside waitUntil, so caching costs time-to-first-token nothing. */
