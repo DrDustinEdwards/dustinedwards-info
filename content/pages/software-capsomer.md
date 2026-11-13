@@ -2,7 +2,7 @@
 path: /software/capsomer
 title: "Capsomer"
 seo_title: "Capsomer: an open-source design system in plain CSS"
-description: "Capsomer is an open-source design system in plain CSS, with optional React wrappers: components, design tokens, themes and page patterns, checked against WCAG 2.2 AA."
+description: "An open-source design system in plain CSS, with optional React wrappers: components, design tokens, themes and page patterns, checked against WCAG 2.2 AA."
 schema_type: SoftwareApplication
 product_url: https://capsomer.dustinedwards.info
 code_repository: https://github.com/DrDustinEdwards/capsomer
