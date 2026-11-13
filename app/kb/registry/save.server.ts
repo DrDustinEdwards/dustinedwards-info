@@ -13,15 +13,9 @@ import { matter } from "@drdustinedwards/site-helpers/matter";
 import { listRegistry } from "~/db/registry";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRegistry, type PurgeOutcome } from "~/lib/cache-purge.server";
-import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { fileHistory, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import {
-  actorTag,
-  assertStoredBytes,
-  commitUnlessUnchanged,
-  UNCHANGED_NOTE,
-} from "~/lib/editor/write-path.server";
+import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 
@@ -251,15 +245,29 @@ export async function saveRegistryItem(
     isDraft,
   });
 
-  // After the gate, so a file that fails validation is still refused even when it is unchanged.
-  const written = await commitUnlessUnchanged(env, {
+  const written = await commitAndConverge(env, {
+    actor,
+    file,
     existing,
     raw,
-    rowIsCurrent: () => rowIsCurrent(env, kind, id, compiled.sourceBlobSha),
-    path: file,
-    message: `${options.isNew ? "Add" : "Update"} ${kinds[kind]?.singular ?? "registry item"}: ${compiled.item.name}${actorTag(actor)}`,
+    sourceBlobSha: compiled.sourceBlobSha,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
+    message: `${options.isNew ? "Add" : "Update"} ${kinds[kind]?.singular ?? "registry item"}: ${compiled.item.name}`,
+    rowIsCurrent: () => rowIsCurrent(env, kind, id, compiled.sourceBlobSha),
+    write: async () => {
+      await writeRegistryRow(env, compiled);
+      // The protocols that print this primer carry its facts in their record, so they are recompiled from their files.
+      if (kind === "primer" || kind === "strain" || kind === "reagent" || kind === "equipment")
+        await refreshProceduresNaming(env, [id], [kind]);
+      return await purgeRegistry(`save registry item ${slug}`);
+    },
+    slug,
+    mismatch: {
+      subject: `The registry item "${slug}"`,
+      target: "its row",
+      repair: "Run sync_registry to rebuild the row from the stored source.",
+    },
   });
   if (written.action === "noop") {
     return {
@@ -272,30 +280,7 @@ export async function saveRegistryItem(
       note: UNCHANGED_NOTE,
     };
   }
-  assertStoredBytes(
-    written,
-    file,
-    compiled.sourceBlobSha,
-    `The registry item "${slug}"`,
-    "sync_registry",
-  );
-  const { commitSha } = written;
-
-  let purged: PurgeOutcome = false;
-  await convergeWithRetry({
-    write: async () => {
-      await writeRegistryRow(env, compiled);
-      // The protocols that print this primer carry its facts in their record, so they are recompiled from their files.
-      if (kind === "primer" || kind === "strain" || kind === "reagent" || kind === "equipment")
-        await refreshProceduresNaming(env, [id], [kind]);
-      purged = await purgeRegistry(`save registry item ${slug}`);
-    },
-    // Nothing kept in KV for an item: the thrown error names the commit and the repair (sync_registry), and the
-    // next ship's sync converges the rows from the repository anyway.
-    recordDivergence: async () => undefined,
-    slug,
-    commitSha,
-  });
+  const { commitSha, purged } = written;
 
   return {
     slug,

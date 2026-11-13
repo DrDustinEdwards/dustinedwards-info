@@ -9,8 +9,8 @@ import { RefusedError, VersionConflictError } from "@dustinedwards/site-api";
 import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import { listRosterRows } from "~/db/roster";
-import { matchingSummaries, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError, assertCreatesOrEdits } from "~/lib/carrel/errors.server";
+import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
+import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { ROSTER_PAGE_PATH, rosterPath } from "~/lib/roster/compile.mjs";
 import { COHORT_SLUG, saveRoster } from "~/lib/roster/save.server";
@@ -51,7 +51,7 @@ export function rosterHandler(env: RosterEnv): ContentKindHandler {
   return {
     kind: "roster",
 
-    async list(query) {
+    async list() {
       const summaries: ContentSummary[] = (await listRosterRows(env)).map((row) => ({
         id: row.slug,
         kind: "roster",
@@ -63,7 +63,7 @@ export function rosterHandler(env: RosterEnv): ContentKindHandler {
         publishedAt: null,
         updatedAt: row.syncedAt.toISOString(),
       }));
-      return matchingSummaries(summaries, query);
+      return summaries;
     },
 
     async get(slug) {
@@ -95,7 +95,8 @@ export function rosterHandler(env: RosterEnv): ContentKindHandler {
           `"${slug}" is not a cohort file key; a cohort is named for its year, such as 2025.`,
         );
       const file = await readFile(env, rosterPath(slug));
-      assertCreatesOrEdits(input.expectedVersion, file);
+      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
+      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
       return write(slug, input.changeId, input.source, input.expectedVersion);
     },
 

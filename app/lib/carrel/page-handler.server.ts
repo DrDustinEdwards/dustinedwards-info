@@ -10,8 +10,8 @@ import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/
 import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { listPageRows } from "~/db/pages";
-import { matchingSummaries, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError, assertCreatesOrEdits } from "~/lib/carrel/errors.server";
+import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
+import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { PAGES_DIR, pagePathForSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
@@ -85,7 +85,7 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
   return {
     kind: "page",
 
-    async list(query) {
+    async list() {
       const summaries: ContentSummary[] = (await listPageRows(env)).map((row) => {
         const status: ContentStatus = row.draft ? "draft" : "published";
         return {
@@ -99,7 +99,7 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
           updatedAt: row.syncedAt.toISOString(),
         };
       });
-      return matchingSummaries(summaries, query);
+      return summaries;
     },
 
     async get(slug) {
@@ -131,7 +131,8 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
     async saveDraft(slug, input) {
       const found = target(slug);
       const file = await readFile(env, found.file);
-      assertCreatesOrEdits(input.expectedVersion, file);
+      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
+      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
       if (!file)
         throw new RefusedError(
           `The file for ${found.path} is missing from the repository, so it cannot be saved.`,

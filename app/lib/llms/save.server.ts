@@ -16,15 +16,9 @@ import { purgeLlms, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { draftContentPagePaths, publishedContentPagePaths } from "~/lib/content-pages.mjs";
-import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import {
-  actorTag,
-  assertStoredBytes,
-  commitUnlessUnchanged,
-  UNCHANGED_NOTE,
-} from "~/lib/editor/write-path.server";
+import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { paperMarkdownPath } from "~/lib/publications/paths.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 
@@ -121,15 +115,27 @@ export async function saveLlms(
     isDraft: () => false,
   });
 
-  // After the gate, so a file that fails validation is still refused even when it is unchanged.
-  const written = await commitUnlessUnchanged(env, {
+  const written = await commitAndConverge(env, {
+    actor,
+    file: LLMS_PATH,
     existing,
     raw,
-    rowIsCurrent: () => rowIsCurrent(env, raw),
-    path: LLMS_PATH,
-    message: `Update llms.txt${actorTag(actor)}`,
+    sourceBlobSha: compiled.sourceBlobSha,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
+    message: "Update llms.txt",
+    rowIsCurrent: () => rowIsCurrent(env, raw),
+    write: async () => {
+      await writeLlmsRow(env, raw);
+      return await purgeLlms("save llms.txt");
+    },
+    slug: "llms.txt",
+    mismatch: {
+      subject: LLMS_PATH,
+      target: "the row",
+      checked: "judged",
+      repair: "Run sync_llms to rebuild it from the repository.",
+    },
   });
   if (written.action === "noop") {
     return {
@@ -140,21 +146,7 @@ export async function saveLlms(
       purged: null as PurgeOutcome,
     };
   }
-  assertStoredBytes(written, LLMS_PATH, compiled.sourceBlobSha, LLMS_PATH, "sync_llms");
-  const { commitSha } = written;
-
-  let purged: PurgeOutcome = false;
-  await convergeWithRetry({
-    write: async () => {
-      await writeLlmsRow(env, raw);
-      purged = await purgeLlms("save llms.txt");
-    },
-    // Nothing kept in KV for a document: the thrown error names the commit and the repair (sync_llms), and
-    // Capsid's watcher repairs the llms-drift check, rebuilding the row from the repository anyway.
-    recordDivergence: async () => undefined,
-    slug: "llms.txt",
-    commitSha,
-  });
+  const { commitSha, purged } = written;
 
   return {
     commitSha,

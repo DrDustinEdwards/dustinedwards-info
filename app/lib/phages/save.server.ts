@@ -16,15 +16,9 @@ import { listPhages } from "~/db/phages";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgePhages, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
-import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import {
-  actorTag,
-  assertStoredBytes,
-  commitUnlessUnchanged,
-  UNCHANGED_NOTE,
-} from "~/lib/editor/write-path.server";
+import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { compile as compilePageFile, writeRow as writePageRow } from "~/lib/pages/save.server";
@@ -210,15 +204,23 @@ export async function savePhage(
     isDraft: () => false,
   });
 
-  // After the gate, so a file that fails validation is still refused even when it is unchanged.
-  const written = await commitUnlessUnchanged(env, {
+  const written = await commitAndConverge(env, {
+    actor,
+    file,
     existing,
     raw,
-    rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
-    path: file,
-    message: `${options.isNew ? "Add" : "Update"} phage: ${compiled.phage.name}${actorTag(actor)}`,
+    sourceBlobSha: compiled.sourceBlobSha,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
+    message: `${options.isNew ? "Add" : "Update"} phage: ${compiled.phage.name}`,
+    rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
+    write: async () => {
+      await writeRow(env, compiled);
+      // The pages tag: the page's HTML embeds the table and its twin embeds the rows, and both carry it.
+      return await purgePhages(`save phage ${slug}`);
+    },
+    slug,
+    mismatch: { subject: `The phage "${slug}"`, target: "its page" },
   });
   if (written.action === "noop") {
     return {
@@ -231,22 +233,7 @@ export async function savePhage(
       note: UNCHANGED_NOTE,
     };
   }
-  assertStoredBytes(written, file, compiled.sourceBlobSha, `The phage "${slug}"`);
-  const { commitSha } = written;
-
-  let purged: PurgeOutcome = false;
-  await convergeWithRetry({
-    write: async () => {
-      await writeRow(env, compiled);
-      // The pages tag: the page's HTML embeds the table and its twin embeds the rows, and both carry it.
-      purged = await purgePhages(`save phage ${slug}`);
-    },
-    // Nothing kept in KV for a phage: the thrown error names the commit and the repair (the content sync),
-    // and the next ship's sync converges the rows from the repository anyway.
-    recordDivergence: async () => undefined,
-    slug,
-    commitSha,
-  });
+  const { commitSha, purged } = written;
 
   return {
     slug,

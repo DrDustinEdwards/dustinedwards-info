@@ -18,14 +18,8 @@ import { contentPageSearchUid } from "~/lib/content-pages.mjs";
 import { compileCv, compileCvFile, compileCvPage } from "~/lib/cv/compile.mjs";
 import { CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { regenerateCvPdfAfterSave, type CvPdfOutcome } from "~/lib/cv/pdf.server";
-import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { readFile } from "~/lib/source/store.server";
-import {
-  actorTag,
-  assertStoredBytes,
-  commitUnlessUnchanged,
-  UNCHANGED_NOTE,
-} from "~/lib/editor/write-path.server";
+import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
@@ -181,15 +175,23 @@ export async function saveCvFile(
   if (!compiled.ok) throw new CvInvalid(slug, compiled.errors);
   decide(actor);
 
-  // After the gate, so a file that fails validation is still refused even when it is unchanged.
-  const written = await commitUnlessUnchanged(env, {
+  const written = await commitAndConverge(env, {
+    actor,
+    file: path,
     existing,
     raw,
-    rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
-    path: path,
-    message: `Update CV: ${slug}${actorTag(actor)}`,
+    sourceBlobSha: compiled.sourceBlobSha,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
+    message: `Update CV: ${slug}`,
+    rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
+    write: async () => {
+      await writeCvRow(env, compiled);
+      await refreshCvSearch(env);
+      return await purgeCv(`save CV ${slug}`);
+    },
+    slug,
+    mismatch: { subject: `The CV file "${slug}"`, target: "its row" },
   });
   if (written.action === "noop") {
     return {
@@ -202,22 +204,7 @@ export async function saveCvFile(
       pdf: "not-needed" as CvPdfReport,
     };
   }
-  assertStoredBytes(written, path, compiled.sourceBlobSha, `The CV file "${slug}"`);
-  const { commitSha } = written;
-
-  let purged: PurgeOutcome = false;
-  await convergeWithRetry({
-    write: async () => {
-      await writeCvRow(env, compiled);
-      await refreshCvSearch(env);
-      purged = await purgeCv(`save CV ${slug}`);
-    },
-    // Nothing kept in KV for the CV: the thrown error names the commit and the repair (the content sync), and
-    // the next ship's sync converges the row from the repository anyway.
-    recordDivergence: async () => undefined,
-    slug,
-    commitSha,
-  });
+  const { commitSha, purged } = written;
 
   // After the row, so the render reads the data the save just wrote. Never inside convergeWithRetry: a render
   // failure must not retry or fail the D1 write, and the commit is not undone by it.

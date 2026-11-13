@@ -22,7 +22,7 @@ import {
 import { convergeWithRetry } from "./converge.mjs";
 import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
-import { actorTag, commitUnlessUnchanged } from "./write-path.server";
+import { commitUnlessUnchanged, taggedMessage } from "./write-path.server";
 import { listPostCorpusForRelated, listPostDerivedLists, listPostLinkCorpus } from "~/db";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import {
@@ -349,10 +349,13 @@ export async function savePost(
     existing,
     raw,
     rowIsCurrent: () => postRowIsCurrent(env, options.slug, gated.sourceBlobSha),
-    path: postPath(options.slug),
-    message: `${options.isNew ? "Add" : "Update"} post: ${gated.title}${actorTag(actor)}`,
-    expectedHeadSha: options.expectedHeadSha,
-    expectedBlobSha: options.expectedBlobSha,
+    commit: () =>
+      commitFiles(env, {
+        expectedHeadSha: options.expectedHeadSha,
+        expectedBlobs: blobGuard(postPath(options.slug), options.expectedBlobSha),
+        message: taggedMessage(actor, `${options.isNew ? "Add" : "Update"} post: ${gated.title}`),
+        changes: [{ path: postPath(options.slug), content: raw }],
+      }),
   });
   const unchanged = written.action !== "commit";
   if (written.action === "noop") {
@@ -464,7 +467,7 @@ export async function deletePost(
     expectedHeadSha: options.expectedHeadSha,
     // Carrel names a post by its blob sha: a file changed since it was loaded is refused at the head.
     expectedBlobs: blobGuard(postPath(options.slug), options.expectedBlobSha),
-    message: `Remove post: ${options.slug}${actorTag(actor)}`,
+    message: taggedMessage(actor, `Remove post: ${options.slug}`),
     changes: [{ path: postPath(options.slug), content: null }],
   });
 

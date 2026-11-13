@@ -78,8 +78,7 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
   return {
     kind: "document",
 
-    async list(query) {
-      const needle = query.q?.toLowerCase();
+    async list() {
       const summary: ContentSummary = {
         id: LLMS_SLUG,
         kind: "document",
@@ -91,10 +90,7 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
         // The settings row carries no timestamp, and the file's last change is the revision list.
         updatedAt: null,
       };
-      const matches =
-        (!query.status || query.status === "published") &&
-        (!needle || TITLE.includes(needle) || LLMS_SLUG.includes(needle));
-      return matches ? [summary] : [];
+      return [summary];
     },
 
     async get(slug) {

@@ -9,8 +9,8 @@ import { VersionConflictError } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import { listDictionaryRows } from "~/db/dictionary";
-import { matchingSummaries, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError, assertCreatesOrEdits } from "~/lib/carrel/errors.server";
+import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
+import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { dictionaryPath, parseDictionaryEntry } from "~/lib/dictionary/parse.mjs";
 import { fileIsDraft, saveDictionaryEntry } from "~/lib/dictionary/save.server";
@@ -62,7 +62,7 @@ export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
   return {
     kind: "dictionary",
 
-    async list(query) {
+    async list() {
       const summaries: ContentSummary[] = (await listDictionaryRows(env)).map((row) => {
         const status: ContentStatus = row.draft ? "draft" : "published";
         return {
@@ -76,7 +76,7 @@ export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
           updatedAt: row.syncedAt.toISOString(),
         };
       });
-      return matchingSummaries(summaries, query);
+      return summaries;
     },
 
     async get(key) {
@@ -106,7 +106,8 @@ export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
     // a draft. First publication is a separate call, which Carrel's key may make.
     async saveDraft(key, input) {
       const file = await readFile(env, dictionaryPath(key));
-      assertCreatesOrEdits(input.expectedVersion, file);
+      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
+      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
       const raw = withDraft(input.source, file ? fileIsDraft(file.content) : true);
       return write(key, input.changeId, raw, input.expectedVersion);
     },

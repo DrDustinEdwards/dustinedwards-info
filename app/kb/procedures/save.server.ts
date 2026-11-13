@@ -7,16 +7,10 @@
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeProcedures, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
-import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { fileHistory, readFile } from "~/lib/source/store.server";
 import { makeResolveImage } from "~/lib/editor/publish.server";
 import { readEquipment, readPrimers, readReagents, readStrains } from "~/kb/registry/host.server";
-import {
-  actorTag,
-  assertStoredBytes,
-  commitUnlessUnchanged,
-  UNCHANGED_NOTE,
-} from "~/lib/editor/write-path.server";
+import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
@@ -254,15 +248,22 @@ export async function saveProcedure(
     await fileHistory(env, path),
   );
 
-  // After the gate, so a file that fails validation is still refused even when it is unchanged.
-  const written = await commitUnlessUnchanged(env, {
+  const written = await commitAndConverge(env, {
+    actor,
+    file: path,
     existing,
     raw,
-    rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
-    path: path,
-    message: `${options.isNew ? "Add" : "Update"} procedure: ${compiled.record.title}${actorTag(actor)}`,
+    sourceBlobSha: compiled.sourceBlobSha,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
+    message: `${options.isNew ? "Add" : "Update"} procedure: ${compiled.record.title}`,
+    rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
+    write: async () => {
+      await writeRow(env, compiled);
+      return await purgeProcedures(`save_procedure ${slug}`);
+    },
+    slug,
+    mismatch: { subject: `The procedure "${slug}"`, target: "its page" },
   });
   const unchanged = written.action !== "commit";
   if (written.action === "noop") {
@@ -279,21 +280,7 @@ export async function saveProcedure(
       purged: null as PurgeOutcome,
     };
   }
-  assertStoredBytes(written, path, compiled.sourceBlobSha, `The procedure "${slug}"`);
-  const { commitSha } = written;
-
-  let purged: PurgeOutcome = false;
-  await convergeWithRetry({
-    write: async () => {
-      await writeRow(env, compiled);
-      purged = await purgeProcedures(`save_procedure ${slug}`);
-    },
-    // Nothing kept in KV for a procedure: the thrown error names the commit and the repair (the content
-    // sync), and the next ship's sync converges the row from the repository anyway.
-    recordDivergence: async () => undefined,
-    slug,
-    commitSha,
-  });
+  const { commitSha, purged } = written;
 
   return {
     slug,
