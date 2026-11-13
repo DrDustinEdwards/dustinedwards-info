@@ -15,7 +15,7 @@ import { PageShell } from "~/components/page-shell";
 import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { thing } from "@drdustinedwards/site-helpers/schema";
+import { itemList, thing } from "@drdustinedwards/site-helpers/schema";
 import { countOf } from "~/kb/procedures/library.mjs";
 import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
@@ -117,16 +117,11 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
     name: base.name,
     description: lead(base, items),
     url: `${SITE_ORIGIN}${base.library}`,
-    mainEntity: {
-      "@type": "ItemList",
-      numberOfItems: items.length,
-      itemListElement: items.map((item, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        name: item.title,
-        url: `${SITE_ORIGIN}${item.path}`,
-      })),
-    },
+    mainEntity: itemList(
+      SITE_ORIGIN,
+      base.name,
+      items.map((item) => ({ name: item.title, path: item.path })),
+    ),
   });
   return (
     <PageShell trail={<JsonLd data={collection} />}>
