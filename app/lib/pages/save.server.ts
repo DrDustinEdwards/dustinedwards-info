@@ -23,9 +23,8 @@ import {
   PAGE_FILE_PATHS,
   contentPageSearchUid,
 } from "~/lib/content-pages.mjs";
-import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { readFile } from "~/lib/source/store.server";
+import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
 import { PHAGES_PAGE_PATH, type Phage } from "~/lib/phages/compile.mjs";
@@ -244,24 +243,22 @@ export async function savePage(
   if (!compiled.ok) throw new PageInvalid(path, compiled.errors);
   decidePage(actor, compiled.draft, existing?.content ?? null);
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
-  // After the gate, so a file that fails validation is still refused even when it is unchanged.
-  const written = await commitUnlessUnchanged(env, {
+  const written = await commitAndConverge(env, {
+    actor,
+    file,
     existing,
     raw,
+    sourceBlobSha: compiled.sourceBlobSha,
+    expectedHeadSha: options.expectedHeadSha,
+    expectedBlobSha: options.expectedBlobSha,
+    message: `${options.isNew ? "Add" : "Update"} page: ${compiled.record.title}`,
     rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
-    commit: () =>
-      commitFiles(env, {
-        expectedHeadSha: options.expectedHeadSha,
-        expectedBlobs: blobGuard(file, options.expectedBlobSha),
-        message: `${options.isNew ? "Add" : "Update"} page: ${compiled.record.title}${tag}`,
-        changes: [{ path: file, content: raw }],
-      }),
+    write: async () => {
+      await writeRow(env, compiled);
+      return await purgePages(`save page ${path}`);
+    },
+    slug,
+    mismatch: { subject: `The page "${path}"`, target: "its page" },
   });
   const unchanged = written.action !== "commit";
   if (written.action === "noop") {
@@ -277,27 +274,7 @@ export async function savePage(
       purged: null as PurgeOutcome,
     };
   }
-  const { commitSha, blobShas } = written;
-  if (blobShas[file] && blobShas[file] !== compiled.sourceBlobSha) {
-    throw new Error(
-      `The page "${path}" WAS saved as revision ${commitSha}, but the stored bytes (${blobShas[file]}) are not ` +
-        `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the stored source.`,
-    );
-  }
-
-  let purged: PurgeOutcome = false;
-  await convergeWithRetry({
-    write: async () => {
-      await writeRow(env, compiled);
-      purged = await purgePages(`save page ${path}`);
-    },
-    // Nothing kept in KV for a page: the thrown error names the commit and the repair (the content sync),
-    // and the next ship's sync converges the row from the repository anyway.
-    recordDivergence: async () => undefined,
-    slug,
-    commitSha,
-  });
+  const { commitSha, purged } = written;
 
   return {
     slug,
