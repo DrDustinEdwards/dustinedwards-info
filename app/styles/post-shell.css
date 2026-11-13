@@ -22,7 +22,7 @@
   color: var(--text-secondary);
   font-family: var(--font-prose);
   font-size: 1.3125rem;
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 @media (max-width: 47.99rem) {
@@ -32,7 +32,7 @@
   }
 
   .post-dek {
-    font-size: 1.125rem;
+    font-size: var(--fs-h3);
   }
 }
 
@@ -57,14 +57,14 @@
   padding-block-start: 0.875rem;
   color: var(--text-secondary);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--fs-small);
   line-height: 1.8;
 }
 
 .post-history-label {
   display: block;
   color: var(--text);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .post-history-value {
@@ -82,7 +82,7 @@
   border-block-start: var(--line-w) solid var(--dust);
   padding-block-start: 0.875rem;
   font-family: var(--font-sans);
-  font-size: 0.9375rem;
+  font-size: var(--fs-lead);
 }
 
 .post-action {
@@ -111,8 +111,8 @@
   margin-block-start: var(--space-6);
   color: var(--text-secondary);
   font-family: var(--font-sans);
-  font-size: 0.875rem;
-  line-height: 1.5;
+  font-size: var(--fs-body);
+  line-height: var(--leading-normal);
 }
 
 /* Scoped to .post-body: prose.css is shared with about, colophon, privacy, phage-discovery and both
@@ -121,8 +121,8 @@
 /* The leading is a length, not a ratio, so 29px holds wherever the size is inherited. */
 .post-body .prose {
   font-family: var(--font-serif);
-  font-size: 1.0625rem;
-  font-weight: 400;
+  font-size: var(--fs-page);
+  font-weight: var(--weight-regular);
   line-height: 1.8125rem;
 }
 
@@ -132,13 +132,13 @@
 }
 
 .post-body .prose h3 {
-  margin: 2rem 0 0.625rem;
+  margin: var(--space-7) 0 var(--space-3-5);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 1.125rem;
+  font-size: var(--fs-h3);
   font-weight: var(--weight-heading);
   letter-spacing: normal;
-  line-height: 1.4;
+  line-height: var(--leading-compact);
 }
 
 /* Restated because .prose a would otherwise outrank the base hover. */

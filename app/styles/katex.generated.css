@@ -159,7 +159,7 @@
     normal 1.21em KaTeX_Main,
     Times New Roman,
     serif;
-  line-height: 1.2;
+  line-height: var(--leading-tight);
   position: relative;
   text-indent: 0;
   text-rendering: auto;
@@ -196,7 +196,7 @@
   display: inline-block;
 }
 .katex .textbf {
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 .katex .textit {
   font-style: italic;
@@ -223,12 +223,12 @@
 }
 .katex .mathbf {
   font-family: KaTeX_Main;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 .katex .boldsymbol {
   font-family: KaTeX_Math;
   font-style: italic;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 .katex .amsrm,
 .katex .mathbb,
@@ -245,7 +245,7 @@
 .katex .mathboldfrak,
 .katex .textboldfrak {
   font-family: KaTeX_Fraktur;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 .katex .mathtt {
   font-family: KaTeX_Typewriter;
@@ -261,7 +261,7 @@
 .katex .mathboldsf,
 .katex .textboldsf {
   font-family: KaTeX_SansSerif;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 .katex .mathitsf,
 .katex .mathsfit,
@@ -299,7 +299,7 @@
   width: 0;
 }
 .katex .vlist-t2 {
-  margin-right: -2px;
+  margin-right: calc(-1 * var(--space-1));
 }
 .katex .vlist-s {
   display: table-cell;
@@ -1124,8 +1124,8 @@ body {
 /* KaTeX sets nowrap, so display math scrolls inside itself; overflow-y: hidden avoids a second
  * scrollbar. Not focusable, like .prose pre; change both together or neither. */
 .prose .katex-display {
-  margin: 1.5rem 0;
+  margin: var(--space-6) 0;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0.25rem 0;
+  padding: var(--space-2) 0;
 }

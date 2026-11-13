@@ -20,10 +20,10 @@
 .cv-eyebrow {
   margin: 0 0 var(--space-4);
   padding-block-end: var(--space-3);
-  border-block-end: 4px solid var(--text);
+  border-block-end: var(--line-w-heavy) solid var(--text);
   color: var(--text);
-  --cap-eyebrow-tracking: 0.1em;
-  line-height: 1.7;
+  --cap-eyebrow-tracking: var(--tracking-sign);
+  line-height: var(--leading-loose);
 }
 
 .cv-name {
@@ -41,7 +41,7 @@
   max-width: 44rem;
   font-family: var(--font-sans);
   font-size: 1.1875rem;
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 .cv-actions {
@@ -80,8 +80,8 @@
 
 .cv-stat dt {
   color: var(--text);
-  font: 500 0.75rem / 1.6 var(--font-mono);
-  letter-spacing: 0.08em;
+  font: var(--weight-medium) var(--fs-small) / var(--leading-relaxed) var(--font-mono);
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -97,9 +97,9 @@
   color: var(--text-heading);
   font-family: var(--font-sans);
   font-size: clamp(2rem, 1.5rem + 1.6vw, 2.75rem);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   font-variant-numeric: var(--figures) lining-nums;
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 /* The sparkline joins the count's grid: the line beside the figure. Its table is visually hidden. */
@@ -153,8 +153,8 @@
   padding: 0;
   color: var(--text-secondary);
   font-size: var(--fs-detail);
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
 }
 
@@ -169,18 +169,18 @@
 .cv-filters select {
   box-sizing: border-box;
   min-height: var(--control-min);
-  padding: 0.5rem 0.75rem;
+  padding: var(--space-3) var(--space-4);
   border: var(--line-w) solid var(--line-strong);
   border-radius: 0;
   background: var(--paper);
   color: var(--text);
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--title-6);
 }
 
 .cv-filters select:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--brand);
+  outline-offset: var(--focus-offset);
 }
 
 .cv-facet {
@@ -232,7 +232,7 @@
 }
 
 .cv-clear {
-  font-size: 0.9375rem;
+  font-size: var(--fs-lead);
 }
 
 .cv-summary {
@@ -264,16 +264,16 @@
   padding-block: var(--space-4) var(--space-3);
   border-block-start: var(--line-w-thick) solid var(--text);
   font-family: var(--font-sans);
-  font-size: clamp(1.5rem, 1.3rem + 0.7vw, 1.875rem);
+  font-size: clamp(var(--title-3), 1.3rem + 0.7vw, var(--title-2));
   font-weight: var(--weight-heading);
-  line-height: 1.2;
+  line-height: var(--leading-tight);
 }
 
 .cv-group-count {
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-size: 0.875rem;
-  font-weight: 400;
+  font-size: var(--fs-body);
+  font-weight: var(--weight-regular);
   font-variant-numeric: tabular-nums;
 }
 
@@ -290,7 +290,7 @@
   padding-block-end: var(--space-2);
   border-block-end: var(--line-w) solid var(--text);
   color: var(--text);
-  line-height: 1.7;
+  line-height: var(--leading-loose);
 }
 
 .cv-list {
@@ -305,17 +305,17 @@
   column-gap: var(--cv-gap);
   padding-block: 0.875rem;
   border-block-end: var(--line-w) solid var(--dust);
-  scroll-margin-top: calc(var(--header-h) + 1rem);
+  scroll-margin-top: calc(var(--header-h) + var(--space-5));
 }
 
 .cv-when {
   padding-block-start: 0.2rem;
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: var(--fs-small);
+  font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
-  line-height: 1.6;
+  line-height: var(--leading-relaxed);
 }
 
 .cv-body {
@@ -330,9 +330,9 @@
   max-width: 62ch;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 1.0625rem;
-  font-weight: 600;
-  line-height: 1.4;
+  font-size: var(--fs-page);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-compact);
 }
 
 .cv-title a {
@@ -345,21 +345,21 @@
 }
 
 .cv-amount {
-  margin-inline-end: 0.5rem;
+  margin-inline-end: var(--space-3);
   color: var(--brand);
   font-family: var(--font-mono);
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: var(--fs-lead);
+  font-weight: var(--weight-medium);
   font-variant-numeric: tabular-nums;
 }
 
 .cv-authors,
 .cv-meta {
   max-width: 70ch;
-  margin-block-start: 0.25rem;
+  margin-block-start: var(--space-2);
   color: var(--text-secondary);
   font-size: var(--t-small-size);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 .cv-authors {
@@ -375,9 +375,9 @@
 }
 
 .cv-tags {
-  margin-block-start: 0.375rem;
+  margin-block-start: var(--space-2-5);
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--fs-small);
   font-weight: 560;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -385,7 +385,7 @@
 
 .cv-paper-more,
 .cv-duties {
-  margin-block-start: 0.5rem;
+  margin-block-start: var(--space-3);
   font-size: var(--t-small-size);
 }
 
@@ -400,8 +400,8 @@
 
 .cv-paper-more summary:focus-visible,
 .cv-duties summary:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--brand);
+  outline-offset: var(--focus-offset);
 }
 
 .cv-paper-panel,
@@ -423,9 +423,9 @@
 .cv-panel-label {
   margin: var(--space-4) 0 var(--space-2);
   color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: var(--fs-small);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
 }
 
@@ -502,7 +502,7 @@
 
   .cv-entry {
     grid-template-columns: minmax(0, 1fr);
-    row-gap: 0.125rem;
+    row-gap: var(--space-1);
   }
 
   .cv-when {
@@ -595,13 +595,13 @@
     gap: var(--space-3);
     min-height: var(--control-min);
     color: var(--brand);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     cursor: pointer;
   }
 
   .cv-more-summary:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 2px;
+    outline: var(--focus-width) solid var(--brand);
+    outline-offset: var(--focus-offset);
   }
 
   .cv-more[open] > .cv-more-summary {
@@ -639,7 +639,7 @@
 }
 
 .cv-compact .cv-when {
-  padding-block-start: 0.125rem;
+  padding-block-start: var(--space-1);
 }
 
 .cv-compact .cv-body > p {
@@ -648,14 +648,14 @@
 
 .cv-compact .cv-title {
   font-family: var(--font-sans);
-  font-size: 0.9375rem;
+  font-size: var(--fs-lead);
   font-weight: 580;
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 .cv-compact .cv-meta {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--fs-lead);
 }
 
 .cv-compact .cv-meta::before {
@@ -663,5 +663,5 @@
 }
 
 .cv-compact .cv-tags {
-  margin-inline-start: 0.625rem;
+  margin-inline-start: var(--space-3-5);
 }

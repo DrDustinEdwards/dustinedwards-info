@@ -4,12 +4,12 @@
  */
 .registry-lede {
   max-inline-size: 46rem;
-  margin-block: 0.5rem 1.5rem;
+  margin-block: var(--space-3) var(--space-6);
   color: var(--text-secondary);
 }
 
 .registry {
-  margin-block: 1.5rem;
+  margin-block: var(--space-6);
 }
 
 /* A sequence is read letter by letter, so it is monospace and breaks anywhere rather than scrolling. */
@@ -34,8 +34,8 @@
 .registry-facts {
   display: grid;
   grid-template-columns: minmax(9rem, 14rem) 1fr;
-  gap: 0.5rem 1.5rem;
-  margin-block: 1.5rem;
+  gap: var(--space-3) var(--space-6);
+  margin-block: var(--space-6);
   max-inline-size: 52rem;
 }
 .registry-facts dt {
@@ -50,10 +50,10 @@
 @media (max-width: 36rem) {
   .registry-facts {
     grid-template-columns: 1fr;
-    gap: 0.125rem;
+    gap: var(--space-1);
   }
   .registry-facts dd {
-    margin-block-end: 0.75rem;
+    margin-block-end: var(--space-4);
   }
 }
 .registry-used {
@@ -63,7 +63,7 @@
 
 .registry-note {
   max-inline-size: 46rem;
-  margin-block: 1rem 2rem;
+  margin-block: var(--space-5) var(--space-7);
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
@@ -72,8 +72,8 @@
    said so, in the page's secondary color, with its reason. A sequence that differs from the one a paper prints is never quiet. */
 .registry-facts + h2,
 .registry-note + h2 {
-  margin-block: 2rem 0.5rem;
-  font-size: 1.25rem;
+  margin-block: var(--space-7) var(--space-3);
+  font-size: var(--title-4);
 }
 .registry-missing {
   color: var(--text-secondary);
@@ -92,11 +92,11 @@
 /* The manual theme: an item's facts as a ruled spec sheet, mono labels over hairlines, and its sections under a
    rule in the ink. */
 .registry-facts {
-  gap: 0 1.5rem;
+  gap: 0 var(--space-6);
   border-block-start: var(--line-w-thick) solid var(--text);
 }
 .registry-facts :is(dt, dd) {
-  padding-block: 0.5rem;
+  padding-block: var(--space-3);
   border-block-end: var(--line-w) solid var(--dust);
 }
 .registry-facts dt {
