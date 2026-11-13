@@ -165,8 +165,8 @@ export const CAPSID_PAGE_PATH = "/software/capsid";
 export const CAPSOMER_NAME = "Capsomer";
 export const CAPSOMER_PAGE_PATH = "/software/capsomer";
 const CAPSOMER_SENTENCE =
-  "Capsomer is the shared design system: color tokens, header, footer and " +
-  "components, in plain CSS.";
+  "Capsomer is the open-source design system this site is built with: color " +
+  "tokens, header, footer and components, in plain CSS.";
 
 /** The sentence after its linked name, which is how the page renders it. */
 export const CAPSOMER_SENTENCE_REST = CAPSOMER_SENTENCE.slice(CAPSOMER_NAME.length);

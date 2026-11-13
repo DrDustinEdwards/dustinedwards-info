@@ -24,7 +24,7 @@ Dustin Edwards builds software as well as doing the virology. This page is the i
 - [Capsid](/software/capsid) is the namespaced document store this site's rulings live in.
 - [Enarratio](/software/enarratio) is an open-source library for accessible, server-rendered charts. It is in early alpha.
 - [Carrel](/software/carrel) is the private writing hub where this site's articles are written.
-- [Capsomer](/software/capsomer) is the shared design system of plain-CSS components, color tokens and page patterns that these apps and sites are built from.
+- [Capsomer](/software/capsomer) is an open-source design system: plain-CSS components, design tokens, themes and page patterns, with optional React wrappers. These apps and sites are built from it.
 - [Prelum](/software/prelum) is the publishing library: markdown to pages, feeds, sitemaps, search records and llms.txt.
 - [site-runtime](/software/site-runtime) is the shared runtime: security headers, rate limiting, health, images, sign-in and the edge cache.
 - [site-api](/software/site-api) is the contract Carrel uses to list, edit and publish a site's content.

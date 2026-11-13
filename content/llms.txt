@@ -63,7 +63,7 @@ A page is /software/{name}. /projects 301s to /software.
 - [Capsid](https://dustinedwards.info/software/capsid): infrastructure: versioned markdown in namespaces, with typed edges and search; this site's rulings live in it
 - [Enarratio](https://dustinedwards.info/software/enarratio): an open-source chart library in early alpha, at https://github.com/DrDustinEdwards/enarratio with a gallery at https://enarratio.dustinedwards.info
 - [Carrel](https://dustinedwards.info/software/carrel): the private writing hub this site's articles are written in; it has a page but no public app address
-- [Capsomer](https://dustinedwards.info/software/capsomer): the shared design system of plain-CSS components, color tokens and page patterns these apps are built from; its home is https://capsomer.dustinedwards.info
+- [Capsomer](https://dustinedwards.info/software/capsomer): an open-source (MIT) design system for any site or app: plain-CSS components, design tokens, themes and page patterns, with optional React wrappers, checked against WCAG 2.2 AA; it also runs these sites. Docs at https://capsomer.dustinedwards.info, code at https://github.com/DrDustinEdwards/capsomer
 - [Prelum](https://dustinedwards.info/software/prelum): the publishing library: markdown to pages, feeds, sitemaps, search records, llms.txt and structured data
 - [site-runtime](https://dustinedwards.info/software/site-runtime): the shared runtime: security headers, rate limiter, health, images, sign-in and edge cache
 - [site-api](https://dustinedwards.info/software/site-api): the contract Carrel uses to list, edit and publish a site's content
