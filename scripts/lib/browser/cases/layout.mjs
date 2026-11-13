@@ -94,7 +94,7 @@ export async function run({ page, browser }) {
        Writing hub included, is a link claiming a page the reader is not on. */
     const marked = await page.evaluate(
       (path) =>
-        [...document.querySelectorAll("[data-site-nav] a")]
+        [...document.querySelectorAll(".cap-site-header-sections a")]
           .filter((a) => a.getAttribute("aria-current") && a.getAttribute("href") !== path)
           .map((a) => `${(a.textContent || "").trim()} -> ${a.getAttribute("href")}`),
       firstPost,
