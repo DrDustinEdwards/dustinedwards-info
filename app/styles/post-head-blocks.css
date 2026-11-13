@@ -13,9 +13,7 @@
 
 .post-block dt {
   color: var(--text);
-  font: 500 0.6875rem / 1.7 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  line-height: 1.7;
 }
 
 .post-block dd {

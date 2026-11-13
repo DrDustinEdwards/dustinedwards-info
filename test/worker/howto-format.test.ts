@@ -31,7 +31,9 @@ const page = () =>
 describe("a software how-to's page", () => {
   it("says it is a tutorial, opens with its questions and objectives, and ends with its key points", () => {
     const html = page();
-    expect(html).toContain("<dt>Type</dt><dd>Tutorial</dd>");
+    expect(html).toContain(
+      '<dt class="cap-eyebrow" data-variant="mono">Type</dt><dd>Tutorial</dd>',
+    );
     const overview = html.indexOf('id="overview"');
     const method = html.indexOf('id="count-the-reads"');
     const keyPoints = html.indexOf('id="key-points"');

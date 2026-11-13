@@ -207,7 +207,6 @@ export function carrelSiteAdapter(options: {
 
     async list(query) {
       const now = Date.now();
-      const needle = query.q?.toLowerCase();
       const trash = await trashedAt(env);
       const rows = (await listAllPostsForAdmin(env)).filter(
         (row) => trash.has(row.slug) === (query.trashed === true),
@@ -235,9 +234,7 @@ export function carrelSiteAdapter(options: {
         for (const summary of summaries)
           summary.version = (await readFile(env, postPath(summary.id)))?.sha;
       }
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return summaries;
     },
 
     async get(id) {

@@ -29,10 +29,10 @@ import { DEFAULT_KIND, decodeContentId, encodeContentId } from "./content-id.mjs
 export interface ContentKindHandler {
   kind: string;
   /**
-   * Every item of the kind matching q and status; the registry merges kinds, applies the other filters and pages the
+   * Every item of the kind; the registry merges kinds, applies q, status and the other filters and pages the
    * result. A kind with a trash lists only its trashed items when `trashed` is true, and never them otherwise.
    */
-  list(query: Pick<ListQuery, "q" | "status" | "trashed">): Promise<ContentSummary[]>;
+  list(query: Pick<ListQuery, "trashed">): Promise<ContentSummary[]>;
   /** True when `publish` takes `publishedAt` (site-api v0.17.0); a kind without it refuses one. */
   publishedAtSettable?: boolean;
   get(slug: string): Promise<ContentDoc | null>;
@@ -120,11 +120,16 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
       const asked = handlers.filter(
         (h) => (!query.kind || h.kind === query.kind) && (!query.trashed || h.trash),
       );
+      const needle = query.q?.toLowerCase();
+      // q matches the kind's own slug, so the filters apply before the id is encoded.
       const lists = await Promise.all(
         asked.map(async (h) =>
-          (await h.list({ q: query.q, status: query.status, trashed: query.trashed })).map((s) =>
-            encoded(h.kind, s),
-          ),
+          (await h.list({ trashed: query.trashed }))
+            .filter((s) => !query.status || s.status === query.status)
+            .filter(
+              (s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle),
+            )
+            .map((s) => encoded(h.kind, s)),
         ),
       );
       const matching = lists

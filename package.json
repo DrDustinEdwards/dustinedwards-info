@@ -84,7 +84,7 @@
     "@observablehq/plot": "0.6.17",
     "@shikijs/rehype": "4.5.0",
     "@shikijs/transformers": "4.5.0",
-    "capsomer": "github:DrDustinEdwards/capsomer#v0.134.0",
+    "capsomer": "github:DrDustinEdwards/capsomer#v0.142.0",
     "drizzle-orm": "0.45.2",
     "enarratio": "0.13.1",
     "github-slugger": "2.0.0",
@@ -120,7 +120,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.67.0",
     "@cloudflare/vitest-plugin": "1.6.0",
-    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.43.0",
+    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.48.0",
     "@mermaid-js/mermaid-cli": "12.2.0",
     "@react-router/dev": "8.5.1",
     "@resvg/resvg-js": "2.6.2",
