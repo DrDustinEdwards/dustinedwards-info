@@ -14,7 +14,7 @@ import { BASE, DRIVES_PREVIEW, FETCH_TIMEOUT_MS, ok } from "../harness.mjs";
  */
 
 const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
-const BUTTON = 'button[aria-controls="site-nav-research"]';
+const BUTTON = '.cap-site-header-sections button[aria-controls$="-research"]';
 
 /**
  * Read a tick after the action: Capsomer writes aria-expanded from the popover's toggle event, which the
@@ -25,8 +25,8 @@ const BUTTON = 'button[aria-controls="site-nav-research"]';
 const menuState = async (page, id = "research") => {
   await sleep(50);
   return page.evaluate((id) => {
-    const p = document.getElementById(`site-nav-${id}`);
-    const b = document.querySelector(`button[aria-controls="site-nav-${id}"]`);
+    const p = document.querySelector(`.cap-site-header-panel[id$="-${id}"]`);
+    const b = document.querySelector(`.cap-site-header-sections button[aria-controls$="-${id}"]`);
     return {
       open: p instanceof HTMLElement && p.matches(":popover-open"),
       expanded: b?.getAttribute("aria-expanded") ?? null,
@@ -41,7 +41,7 @@ export async function run({ browser }) {
   /* The server HTML, read off the wire: what a crawler and a reader without script both get. */
   const response = await fetch(`${BASE}/`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   const html = await response.text();
-  const navHtml = html.match(/<nav[^>]*data-site-nav[^>]*>[^]*?<\/nav>/)?.[0] ?? "";
+  const navHtml = html.match(/<nav[^>]*cap-site-header-sections[^>]*>[^]*?<\/nav>/)?.[0] ?? "";
   const hrefs = [...new Set([...navHtml.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1]))];
   ok(
     "the header nav is in the server HTML with every panel's links as anchors",
@@ -72,7 +72,7 @@ export async function run({ browser }) {
     "the panels are disclosures of links; menu roles promise arrow-key menus they do not have",
   );
   {
-    const header = html.slice(html.indexOf("data-site-header"), html.indexOf("</header>"));
+    const header = html.slice(html.indexOf('data-cap="site-header"'), html.indexOf("</header>"));
     const footer = html.slice(html.indexOf('class="site-shell-footer"'));
     /* The Network strip is a nav of its own above the Workspace group, so the group ends at the first
        </nav> after its own heading, not the footer's first. */
@@ -142,7 +142,7 @@ export async function run({ browser }) {
     await page.goto(`${BASE}/research/phages`, { waitUntil: "networkidle0" });
 
     const frame = await page.evaluate(() => {
-      const header = document.querySelector("[data-site-header]");
+      const header = document.querySelector('[data-cap="site-header"]');
       const box = header?.getBoundingClientRect();
       return header && box
         ? {
@@ -179,7 +179,11 @@ export async function run({ browser }) {
     );
 
     const buttons = await page.evaluate(() =>
-      [...document.querySelectorAll("[data-nav-button]")].map((c) => {
+      [
+        ...document.querySelectorAll(
+          '.cap-site-header-sections button[data-cap-part="panel-trigger"]',
+        ),
+      ].map((c) => {
         const box = c.getBoundingClientRect();
         const target = document.getElementById(c.getAttribute("aria-controls") ?? "");
         return {
@@ -229,7 +233,7 @@ export async function run({ browser }) {
       const box = link?.getBoundingClientRect();
       return link && box
         ? {
-            onBar: Boolean(document.querySelector('[data-site-header] a[href="/lab-bench"]')),
+            onBar: Boolean(document.querySelector('[data-cap="site-header"] a[href="/lab-bench"]')),
             shown: box.width > 0 && box.right <= document.documentElement.clientWidth,
             text: (link.textContent ?? "").trim(),
             locked: Boolean(link.querySelector(".cap-family-footer-lock")),
@@ -244,7 +248,7 @@ export async function run({ browser }) {
 
     /* Search is Capsomer's icon: a link to /search, so it searches with no script, over a GET form with a q field. */
     const search = await page.evaluate(() => {
-      const box = document.querySelector('[data-site-header] [data-cap-part="search"]');
+      const box = document.querySelector('[data-cap="site-header"] [data-cap-part="search"]');
       const link = box?.querySelector('a[data-cap-part="search-trigger"]');
       const form = box?.querySelector("form");
       return link instanceof HTMLAnchorElement && form instanceof HTMLFormElement
@@ -270,11 +274,11 @@ export async function run({ browser }) {
        opens its panel inside the window, one column. */
     await page.setViewport({ width: 390, height: 844 });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
-    await page.click('button[aria-controls="site-nav-writing"]');
+    await page.click('.cap-site-header-sections button[aria-controls$="-writing"]');
     await sleep(100);
     const phone = await page.evaluate(() => {
-      const nav = /** @type {HTMLElement} */ (document.querySelector("[data-site-nav]"));
-      const panel = document.getElementById("site-nav-writing");
+      const nav = /** @type {HTMLElement} */ (document.querySelector(".cap-site-header-sections"));
+      const panel = document.querySelector('.cap-site-header-panel[id$="-writing"]');
       const box = panel?.getBoundingClientRect();
       return {
         row: getComputedStyle(nav).display,
@@ -298,7 +302,7 @@ export async function run({ browser }) {
       await page.setViewport({ width, height: 800 });
       await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
       const fit = await page.evaluate(() => {
-        const header = document.querySelector("[data-site-header]");
+        const header = document.querySelector('[data-cap="site-header"]');
         /* The top row: the mark and the tools; the links row is under them and swipes on its own. */
         const parts = [
           ...(header?.querySelectorAll(".cap-site-header-logo, .cap-site-header-tools") ?? []),

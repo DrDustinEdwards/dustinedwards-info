@@ -12,9 +12,3 @@
 .running-head-trail {
   font-weight: 400;
 }
-
-/* Capsomer orders the letterhead's tools by the theme button (order 2, after search's 1); the no-script
-   ThemeForm wraps that button in its own form, so the form takes the button's place. */
-.cap-site-header .cap-theme-form {
-  order: 2;
-}

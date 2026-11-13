@@ -86,7 +86,7 @@ type Spotlight = {
 };
 
 export type Menu = {
-  /** Names the panel and its button: `site-nav-research`. */
+  /** The section's id in Capsomer's header, which ends its panel's id: `research`. */
   id: string;
   icon: NavIcon;
   /** Initials in the band's well in place of the icon (About, which is the person). */

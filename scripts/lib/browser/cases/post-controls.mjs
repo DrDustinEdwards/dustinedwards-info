@@ -229,13 +229,17 @@ export async function run({ page, browser }, { codePost, probedPost }) {
 
         const opened = await clickOrFail(
           noScript,
-          'button[aria-controls="site-nav-writing"]',
+          '.cap-site-header-sections button[aria-controls$="-writing"]',
           "the scriptless Writing button is in the phone's links row to click",
         );
         const isOpen = await pollUntil(
           () =>
             noScript.evaluate(() =>
-              Boolean(document.getElementById("site-nav-writing")?.matches(":popover-open")),
+              Boolean(
+                document
+                  .querySelector('.cap-site-header-panel[id$="-writing"]')
+                  ?.matches(":popover-open"),
+              ),
             ),
           Boolean,
           { everyMs: 50, sleepFirst: false },
@@ -247,7 +251,9 @@ export async function run({ page, browser }, { codePost, probedPost }) {
             "9's fallback, it is the enhancement pretending to be one.",
         );
 
-        const link = await noScript.$("#site-nav-writing a[href^='/writing/']");
+        const link = await noScript.$(
+          ".cap-site-header-panel[id$='-writing'] a[href^='/writing/']",
+        );
         const target = link ? await link.evaluate((a) => a.getAttribute("href")) : null;
         ok(
           "the open Writing panel offers a link to follow",
