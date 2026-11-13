@@ -4,7 +4,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { SLUG_PATTERN, frontmatterSchema } from "../app/lib/content/pipeline.mjs";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
+
+import { frontmatterSchema } from "../app/lib/content/pipeline.mjs";
 
 /**
  * Built rather than typed: nobody checks the length of a hand-written 121-character string.

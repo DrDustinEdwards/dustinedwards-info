@@ -5,7 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { copySlugCandidates } from "../app/lib/editor/duplicate.mjs";
-import { SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
 await test("the first candidate is the plain -copy form", () => {
   assert.equal(copySlugCandidates("a-post")[0], "a-post-copy");

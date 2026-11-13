@@ -9,7 +9,8 @@ import {
   PolicyError,
   type Actor,
 } from "~/lib/editor/publish.server";
-import { SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
+import { isSlug } from "@drdustinedwards/site-helpers/slug";
+import { SLUG_MAX_LENGTH } from "~/lib/content/slug.mjs";
 import { readFile } from "~/lib/source/store.server";
 
 import { backupStatus } from "~/lib/backup/d1-backup.server";
@@ -56,7 +57,7 @@ export { syncStatus };
 function readSlug(args: Record<string, unknown>, tool: string) {
   const slug = String(args.slug ?? "").trim();
   if (!slug) return { slug: "", error: `${tool} requires a slug.` };
-  if (!SLUG_PATTERN.test(slug)) {
+  if (!isSlug(slug)) {
     return { slug: "", error: `${tool} requires a lowercase kebab-case slug.` };
   }
   // The length bound too: a read must not accept a slug the write schema refuses.

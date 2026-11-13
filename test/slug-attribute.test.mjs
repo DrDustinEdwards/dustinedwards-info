@@ -4,7 +4,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
+
+import { SLUG_ATTRIBUTE_PATTERN } from "../app/lib/content/pipeline.mjs";
 
 await test("re-anchored, it accepts and rejects exactly what SLUG_PATTERN does", () => {
   // What the browser does with the attribute: compile it as ^(?:...)$.

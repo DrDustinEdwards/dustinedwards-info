@@ -16,6 +16,9 @@
 
 @import "capsomer/button.css";
 @import "capsomer/field.css";
+/* The Knowledge Base form's fields from their specs and its lists of rows (kb-form-fields.tsx). */
+@import "capsomer/schema-form.css";
+@import "capsomer/repeater-field.css";
 @import "capsomer/select.css";
 @import "capsomer/segmented.css";
 @import "capsomer/switch.css";
@@ -109,49 +112,13 @@ main.app-page {
   gap: var(--space-4);
 }
 
-/* The Knowledge Base form (kb-form.tsx): fields in a grid that is one column on a phone, wide fields across it. */
-.kb-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
-  gap: var(--space-4);
-}
-
-.kb-field-wide {
-  grid-column: 1 / -1;
-}
-
-/* A value nobody has yet: marked by its border and its words, never by color alone. */
-.kb-field-gap .cap-input {
-  border-style: dashed;
-}
-
-.kb-gap-reason {
-  font-weight: 500;
-}
-
-.kb-checks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  border: 0;
-  margin: 0;
-  padding: 0;
-}
-
 .kb-check {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.kb-rows {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.kb-row,
-.kb-inserts,
-.kb-flag {
+.kb-inserts {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -177,13 +144,10 @@ main.app-page {
   flex: 1 1 14rem;
 }
 
-.kb-flag .cap-input:first-child {
+/* A note's kind is a word wide; its words take the rest of the row. */
+.kb-flag-kind {
   flex: 0 0 auto;
   width: auto;
-}
-
-.kb-flag .cap-input:nth-child(2) {
-  flex: 1 1 14rem;
 }
 
 .kb-yaml {

@@ -1,7 +1,7 @@
-import { SLUG_PATTERN } from "../content/slug.mjs";
+import { isSlug } from "@drdustinedwards/site-helpers/slug";
 
 // Pure so node:test can reach it (the route imports `~/lib/context`). Allowed origins are passed in, never
-// a constant: the site answers on two hosts across the cutover. The slug uses the imported `SLUG_PATTERN`;
+// a constant: the site answers on two hosts across the cutover. The slug is checked with Prelum's `isSlug`;
 // a local regex would fail silently in the permissive direction.
 
 const BLOG_PREFIX = "/writing/";
@@ -28,7 +28,7 @@ export function targetSlug(target, allowedOrigins) {
   const rest = url.pathname.slice(BLOG_PREFIX.length);
   // A trailing slash is the same post; anything with a further segment is not.
   const slug = rest.endsWith("/") ? rest.slice(0, -1) : rest;
-  if (!SLUG_PATTERN.test(slug)) return null;
+  if (!isSlug(slug)) return null;
   return slug;
 }
 
