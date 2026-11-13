@@ -34,44 +34,40 @@ import { SLUG_ATTRIBUTE_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
 type PreviewResult = { html: string; styles: string[] } | { errors: string[] } | { error: string };
 
-const PREVIEW_DELAY_MS = 900;
 /** The width at which the preview sits beside the form; below it, the preview is a tab. Matches app/admin.css. */
 const SIDE_BY_SIDE = "(min-width: 72rem)";
 
-/** Asks the server to draw the entry; a failure is an answer too, so it shows as a result. */
-async function readPreview(request: string, signal: AbortSignal): Promise<PreviewResult> {
-  const [slug, original, model] = JSON.parse(request) as [string, string, string];
-  const body = new FormData();
-  body.set("original", original);
-  body.set("model", model);
-  try {
-    const response = await fetch(`/admin/kb/preview/${slug}`, { method: "POST", body, signal });
-    const json = (await response.json().catch(() => null)) as PreviewResult | null;
-    return json ?? { error: `The preview request failed with HTTP ${response.status}.` };
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
-  }
-}
-
 /**
  * The entry the form describes, rendered as its public page by the server a beat after the form stops changing
- * (Capsomer's useDebouncedPreview). The frame's document is built from the newest drawable answer, so a failed one
- * keeps the last good page in view.
+ * (Capsomer's useDebouncedPreview, at its 900 ms default). A failed request shows as the answer. The frame's document
+ * is built when a drawable answer lands, so a failed one keeps the last good page in view.
  */
 function useEntryPreview(slug: string | null, original: string, model: string, active: boolean) {
+  const [doc, setDoc] = useState("");
   const request = slug && active ? JSON.stringify([slug, original, model]) : null;
-  const { result, busy } = useDebouncedPreview(request, readPreview, PREVIEW_DELAY_MS);
-  const [good, setGood] = useState<Extract<PreviewResult, { html: string }> | null>(null);
-  if (result && "html" in result && result !== good) setGood(result);
-  const doc = useMemo(() => {
-    if (!good) return "";
-    const styles = good.styles
-      .map((href) => `<link rel="stylesheet" href="${new URL(href, window.location.href).href}">`)
-      .join("");
-    const theme = document.documentElement.getAttribute("data-theme");
-    return `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}><head><meta charset="utf-8"><base target="_blank">${styles}</head><body>${good.html}</body></html>`;
-  }, [good]);
-  return { result, doc, busy };
+  const { result, error, busy } = useDebouncedPreview(
+    request,
+    async (_, signal): Promise<PreviewResult> => {
+      const body = new FormData();
+      body.set("original", original);
+      body.set("model", model);
+      const response = await fetch(`/admin/kb/preview/${slug}`, { method: "POST", body, signal });
+      const json = (await response.json().catch(() => null)) as PreviewResult | null;
+      if (json && "html" in json && !signal.aborted) {
+        const styles = json.styles
+          .map(
+            (href) => `<link rel="stylesheet" href="${new URL(href, window.location.href).href}">`,
+          )
+          .join("");
+        const theme = document.documentElement.getAttribute("data-theme");
+        setDoc(
+          `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}><head><meta charset="utf-8"><base target="_blank">${styles}</head><body>${json.html}</body></html>`,
+        );
+      }
+      return json ?? { error: `The preview request failed with HTTP ${response.status}.` };
+    },
+  );
+  return { result: error === null ? result : { error }, doc, busy };
 }
 
 /**
