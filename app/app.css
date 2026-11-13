@@ -2,7 +2,7 @@
    library) and every unlayered rule here win over it. Every reset selector is an element or universal one, so
    no site rule changes what it wins; only Capsomer's layered rules gain the ability to override it. */
 @layer cap.reset, cap.tokens, cap.base, cap.components, cap.utilities;
-@import "./styles/reset.css" layer(cap.reset);
+@import "capsomer/reset.css";
 
 /* The type plan's weights, as Capsomer's base.css sets them: a page title in Inter Light, a heading in
    Medium, where the reset leaves a heading at its parent's weight. Any rule of the site's own still wins. */
@@ -603,7 +603,6 @@
 
 /* A transparent outline keeps each control's edge once its fill is gone. */
 @media (forced-colors: active) {
-  .btn-danger,
   .cap-skip,
   .ask-badge {
     outline: 1px solid transparent;
@@ -689,10 +688,6 @@ a:hover:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) 
 
 a:active:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) {
   color: var(--brand-pressed);
-}
-
-.muted {
-  color: var(--text-secondary);
 }
 
 /* A dependency pinned to a git commit has a range with no break in it (the colophon lists them). */

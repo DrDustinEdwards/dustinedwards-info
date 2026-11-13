@@ -115,13 +115,6 @@
   color: var(--paper);
 }
 
-.list-empty {
-  margin-block-start: var(--space-7);
-  color: var(--text-secondary);
-  font-family: var(--font-serif);
-  font-size: 1.0625rem;
-}
-
 @media (max-width: 47.99rem) {
   .entry {
     display: block;

@@ -95,14 +95,6 @@ export async function run() {
       }
 
       check("css: base anchor rule underlines", /a\{[^}]*text-decoration:underline/.test(css));
-      check(
-        "css: .btn-danger uses --fill-danger, in the admin stylesheet",
-        /\.btn-danger\{[^}]*background:var\(--fill-danger\)/.test(adminCss),
-      );
-      check(
-        "css: .btn-danger is NOT in the public stylesheet",
-        !/\.btn-danger\{[^}]*background:var\(--fill-danger\)/.test(css),
-      );
       /* Search rules live on `/search`'s own sheets (its links minus `/`'s), proven non-empty. */
       const searchPage = await get("/search?q=cloudflare");
       const searchHrefs = [...searchPage.text.matchAll(/href="(\/assets\/[^"]+\.css)"/g)]

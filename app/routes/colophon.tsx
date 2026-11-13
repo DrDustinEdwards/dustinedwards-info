@@ -132,7 +132,7 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
       !anchor.path.includes(":") && !anchor.path.includes("*") && anchor.anonymousGet !== false;
     return (
       <li>
-        <span className="muted">route </span>
+        <span className="cap-muted">route </span>
         {followable ? (
           <Link to={anchor.path}>
             <code>{anchor.path}</code>
@@ -146,7 +146,7 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
   if (anchor.kind === "gate") {
     return (
       <li>
-        <span className="muted">gate </span>
+        <span className="cap-muted">gate </span>
         <code>{anchor.gate}</code>
       </li>
     );
@@ -154,16 +154,16 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
   if (anchor.kind === "assertion") {
     return (
       <li>
-        <span className="muted">assertion in </span>
+        <span className="cap-muted">assertion in </span>
         <code>{anchor.gate}</code>
-        <span className="muted">: </span>
+        <span className="cap-muted">: </span>
         <q>{anchor.text}</q>
       </li>
     );
   }
   return (
     <li>
-      <span className="muted">decision </span>
+      <span className="cap-muted">decision </span>
       <code>{anchor.id}</code>
     </li>
   );
@@ -410,7 +410,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
             </button>
           ))}
         </div>
-        <span className="colophon-status" role="status" />
+        <span className="cap-sr-only colophon-status" role="status" />
         <ul className="colophon-cards colophon-features">
           {features.features.map((feature) => (
             <li
@@ -504,7 +504,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
             {stack.bindings.map((binding) => (
               <tr key={binding.id} data-kind={binding.kind}>
                 <th scope="row" id={`binding-${binding.name}`}>
-                  <code>{binding.name}</code> <span className="muted">({binding.kind})</span>
+                  <code>{binding.name}</code> <span className="cap-muted">({binding.kind})</span>
                 </th>
                 <td>{binding.what}</td>
                 <td>{binding.whyLoadBearing}</td>
@@ -555,7 +555,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
               <ul data-list="dependencies">
                 {stack.dependencies.map((dep) => (
                   <li key={dep.name}>
-                    <code>{dep.name}</code> <span className="muted dep-range">{dep.range}</span>
+                    <code>{dep.name}</code> <span className="cap-muted dep-range">{dep.range}</span>
                   </li>
                 ))}
               </ul>
@@ -588,7 +588,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
             {stack.notAdopted.map((entry) => (
               <tr key={entry.name}>
                 <th scope="row">
-                  {entry.name} <span className="muted">({statusLabel(entry.status)})</span>
+                  {entry.name} <span className="cap-muted">({statusLabel(entry.status)})</span>
                 </th>
                 <td>{entry.reason}</td>
               </tr>
@@ -606,7 +606,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
 
       <template data-island="colophon" />
 
-      <p className="muted">
+      <p className="cap-muted">
         For what the site records about a visit, and where each of those facts lives in the code,
         see <Link to="/privacy">privacy</Link>.
       </p>

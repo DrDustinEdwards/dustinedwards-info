@@ -213,7 +213,7 @@ function ActiveFilterChip({
     <li>
       <Link to={searchHref(params, { [facet]: null })} className="cap-chip" aria-current="true">
         {label} <span aria-hidden="true">x</span>
-        <span className="sr-only">remove filter</span>
+        <span className="cap-sr-only">remove filter</span>
       </Link>
     </li>
   );

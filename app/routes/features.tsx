@@ -83,7 +83,7 @@ export default function FeaturesRoute() {
               <span className="cap-chip-count">{COUNTS[program.id] ?? 0}</span>
             </button>
           ))}
-          <span className="features-status" role="status" />
+          <span className="cap-sr-only features-status" role="status" />
         </div>
 
         {SECTIONS.map((section) => (

@@ -163,40 +163,24 @@
   gap: var(--space-5) var(--space-6);
 }
 
-.cv-label {
-  display: block;
-  margin: 0 0 var(--space-3);
-  padding: 0;
+/* Capsomer's field label in the manual's idiom: small mono-width capitals in the secondary ink. */
+.cv-filters .cap-field {
+  gap: var(--space-3);
+}
+
+.cv-filters legend.cap-field-label {
+  margin-block-end: var(--space-3);
+}
+
+.cv-filters .cap-field-label {
   color: var(--text-secondary);
   font-size: var(--fs-detail);
-  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.cv-field {
-  display: block;
-}
-
 .cv-search {
   flex: 1 1 18rem;
-}
-
-.cv-filters select {
-  box-sizing: border-box;
-  min-height: var(--control-min);
-  padding: 0.5rem 0.75rem;
-  border: var(--line-w) solid var(--line-strong);
-  border-radius: 0;
-  background: var(--paper);
-  color: var(--text);
-  font: inherit;
-  font-size: 1rem;
-}
-
-.cv-filters select:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
 }
 
 .cv-facet {
@@ -532,16 +516,12 @@
     gap: var(--space-5);
   }
 
-  .cv-filter-row > .cv-field,
+  .cv-filter-row > .cap-field,
   .cv-years {
     flex: 1 1 100%;
   }
 
-  .cv-filters select {
-    width: 100%;
-  }
-
-  .cv-years-row select {
+  .cv-years-row .cap-select-wrap {
     flex: 1 1 0;
   }
 }

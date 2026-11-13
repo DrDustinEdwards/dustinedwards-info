@@ -41,7 +41,7 @@ export function HomeIntro() {
         <span className="p-org">
           {orgLines(SITE.org).map((line, i) => (
             <Fragment key={line}>
-              {i > 0 ? <span className="sr-only">, </span> : null}
+              {i > 0 ? <span className="cap-sr-only">, </span> : null}
               <span className="org-line">{line}</span>
             </Fragment>
           ))}

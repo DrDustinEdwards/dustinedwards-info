@@ -20,7 +20,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
     await page.goto(`${BASE}${postForShape}`, { waitUntil: "networkidle0" });
     /* The sentinel proves no navigation happened: a fallback form post would still look right. */
     /* A dead bundle lets the form navigate; the destroyed-context throw is the finding. */
-    /* The hidden twin must be `display: none`, not `.sr-only`, measured via `offsetParent`. */
+    /* The hidden twin must be `display: none`, not `.cap-sr-only`, measured via `offsetParent`. */
     const control = await page.evaluate(() => {
       const buttons = [...document.querySelectorAll(".cap-theme-form button")];
       const shown = buttons.filter((b) => /** @type {HTMLElement} */ (b).offsetParent !== null);

@@ -255,7 +255,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           {/* The meta tag's string: `postSocial` falls back to the site description, so the raw column would differ from the head. */}
           <p className="post-dek">{dek}</p>
           <EvidenceRow facts={evidence} />
-          {/* `hidden`, not `.sr-only`, which is still announced. mf2 parsers read markup, not computed style. */}
+          {/* `hidden`, not `.cap-sr-only`, which is still announced. mf2 parsers read markup, not computed style. */}
           <p className="p-author h-card" hidden>
             <a className="p-name u-url" href="/">
               {SITE.name}

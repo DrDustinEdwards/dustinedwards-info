@@ -672,8 +672,9 @@ function opacityExempt(selectorGroup) {
     }
   }
 
-  /* Scope floor: a regex that stopped matching reports what a clean sweep reports. */
-  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 7);
+  /* Scope floor: a regex that stopped matching reports what a clean sweep reports. 5 since the reset
+     (and its two opacity: 1 lines) is capsomer/reset.css, outside app/. */
+  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 5);
 
   assert(
     unparsed.length === 0

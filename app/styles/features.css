@@ -13,16 +13,6 @@
   margin-block-end: 2rem;
 }
 
-/* The line a screen reader hears when the filter changes; it is not drawn. */
-.features-status {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .features {
   counter-reset: features-section;
 }

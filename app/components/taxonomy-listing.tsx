@@ -74,7 +74,9 @@ export function TaxonomyListing({
         </header>
 
         {posts.length === 0 ? (
-          <p className="list-empty">No posts here yet.</p>
+          <p className="cap-empty" data-kind="nothing-yet">
+            No posts here yet.
+          </p>
         ) : (
           <ul className="entry-list">
             {posts.map((post) => (

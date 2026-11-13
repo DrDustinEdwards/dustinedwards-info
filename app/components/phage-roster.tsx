@@ -31,7 +31,7 @@ export function PhageRoster({ cohorts }: { cohorts: Cohort[] }) {
               ))}
             </ul>
           ) : (
-            <p className="cap-split-text muted">Roster to be added.</p>
+            <p className="cap-split-text cap-muted">Roster to be added.</p>
           )}
           {entry.photo ? (
             <figure className="cap-split-media">

@@ -165,6 +165,9 @@ const NAMESPACED = new Map([
   ["Source Serif 4 Web", "Source Serif 4"],
   // The wght-only cut is Martian Mono's default width, which its name table calls SemiExpanded.
   ["Martian Mono", "Martian Mono SemiExpanded"],
+  // Capsomer's DM Sans (Foxhound's face, not drawn here) is the variable file whose name table names its
+  // default optical size, 9pt.
+  ["DM Sans", "DM Sans 9pt"],
 ]);
 
 for (const b of withFile) {

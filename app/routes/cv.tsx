@@ -53,6 +53,7 @@ import "capsomer/copy.css";
 import "capsomer/button.css";
 import "capsomer/chips.css";
 import "capsomer/field.css";
+import "capsomer/select.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/cv.css";
@@ -443,7 +444,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
         </header>
 
         <section className="cv-overview" aria-labelledby="cv-overview-title">
-          <h2 id="cv-overview-title" className="sr-only">
+          <h2 id="cv-overview-title" className="cap-sr-only">
             At a glance
           </h2>
           <dl className="cv-stats">
@@ -489,7 +490,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
           data-cv-form=""
         >
           <div className="cv-filter-row cv-filter-top">
-            <div className="cv-field cv-search">
+            <div className="cv-search">
               <CvSearch defaultValue={state.q} />
             </div>
           </div>
@@ -504,7 +505,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             </summary>
             <div className="cv-more-body">
               <fieldset className="cv-facet cap-chips">
-                <legend className="cv-label">Type</legend>
+                <legend className="cap-field-label">Type</legend>
                 {TYPES.map(([id, , plural]) => (
                   <label key={id} className="cap-chip">
                     <input
@@ -523,7 +524,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
               </fieldset>
               <div className="cv-filter-row">
                 <fieldset className="cv-facet cap-chips">
-                  <legend className="cv-label">Research area</legend>
+                  <legend className="cap-field-label">Research area</legend>
                   {AREAS.filter(([id]) => FACTS.some((f) => f.areas.includes(id))).map(
                     ([id, label]) => (
                       <label key={id} className="cap-chip">
@@ -543,55 +544,72 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                   )}
                 </fieldset>
                 <fieldset className="cv-facet cv-years">
-                  <legend className="cv-label">Years</legend>
+                  <legend className="cap-field-label">Years</legend>
                   <div className="cv-years-row">
-                    <select
-                      name="from"
-                      defaultValue={state.from === null ? "" : String(state.from)}
-                      aria-label="From year"
-                    >
-                      <option value="">Earliest</option>
-                      {YEARS.map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
+                    <span className="cap-select-wrap">
+                      <select
+                        className="cap-select"
+                        name="from"
+                        defaultValue={state.from === null ? "" : String(state.from)}
+                        aria-label="From year"
+                      >
+                        <option value="">Earliest</option>
+                        {YEARS.map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
                     <span aria-hidden="true">to</span>
-                    <select
-                      name="to"
-                      defaultValue={state.to === null ? "" : String(state.to)}
-                      aria-label="To year"
-                    >
-                      <option value="">Latest</option>
-                      {[...YEARS].reverse().map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
+                    <span className="cap-select-wrap">
+                      <select
+                        className="cap-select"
+                        name="to"
+                        defaultValue={state.to === null ? "" : String(state.to)}
+                        aria-label="To year"
+                      >
+                        <option value="">Latest</option>
+                        {[...YEARS].reverse().map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
                   </div>
                 </fieldset>
-                <label className="cv-field">
-                  <span className="cv-label">Role</span>
-                  <select name="role" defaultValue={state.role ?? ""}>
-                    <option value="">Any role</option>
-                    {ROLES.filter(([id]) => FACTS.some((f) => f.role === id)).map(([id, label]) => (
-                      <option key={id} value={id} data-cv-facet={`role:${id}`} data-label={label}>
-                        {label} ({facets.roles[id] ?? 0})
-                      </option>
-                    ))}
-                  </select>
+                <label className="cap-field">
+                  <span className="cap-field-label">Role</span>
+                  <span className="cap-select-wrap">
+                    <select className="cap-select" name="role" defaultValue={state.role ?? ""}>
+                      <option value="">Any role</option>
+                      {ROLES.filter(([id]) => FACTS.some((f) => f.role === id)).map(
+                        ([id, label]) => (
+                          <option
+                            key={id}
+                            value={id}
+                            data-cv-facet={`role:${id}`}
+                            data-label={label}
+                          >
+                            {label} ({facets.roles[id] ?? 0})
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </span>
                 </label>
-                <label className="cv-field">
-                  <span className="cv-label">Sort</span>
-                  <select name="sort" defaultValue={state.sort}>
-                    {SORTS.map(([id, label]) => (
-                      <option key={id} value={id}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
+                <label className="cap-field">
+                  <span className="cap-field-label">Sort</span>
+                  <span className="cap-select-wrap">
+                    <select className="cap-select" name="sort" defaultValue={state.sort}>
+                      {SORTS.map(([id, label]) => (
+                        <option key={id} value={id}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </span>
                 </label>
               </div>
             </div>

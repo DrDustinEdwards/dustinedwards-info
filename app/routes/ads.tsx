@@ -34,7 +34,7 @@ export default function AdGallery({ loaderData }: Route.ComponentProps) {
     <PageShell>
       <header className="page-head">
         <h1>{ad.title}</h1>
-        <p className="muted">
+        <p className="cap-muted">
           {ad.era}. {ad.credit}
         </p>
       </header>

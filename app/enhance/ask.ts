@@ -101,7 +101,7 @@ export function ask(container: HTMLElement, question: string): AskHandle {
    * exists before anything is written to it, and speaks twice: that the lookup started, then the whole
    * answer or the failure.
    */
-  const announcer = el("p", "sr-only");
+  const announcer = el("p", "cap-sr-only");
   announcer.setAttribute("aria-live", "polite");
 
   // Not "Thinking...": the request is retrieval over this site's chunks, and an ellipsis reads as stalling.

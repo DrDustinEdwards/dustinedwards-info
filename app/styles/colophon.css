@@ -22,15 +22,6 @@
   margin-block: 0.75rem 1rem;
 }
 
-.colophon-status {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 /* The network and the credits: one small card each, not a paragraph each. */
 .colophon-systems,
 .colophon-cards {
