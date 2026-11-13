@@ -4,13 +4,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import {
-  loadSystemModel,
-  mapData,
-  systemPath,
-  systemSectionMarkdown,
-  systemsMarkdown,
-} from "../app/lib/systems.mjs";
+import { modelMarkdown } from "capsomer/behavior/system-model";
+
+import { loadSystemModel, mapData, systemPath, twinOptions } from "../app/lib/systems.mjs";
 
 const fixture = () => ({
   version: 1,
@@ -74,19 +70,6 @@ const fixture = () => ({
   counts: { systems: 4, public: 3, private: 1, containers: 1, relationships: 3 },
 });
 
-const refused = (raw) => {
-  let message = "";
-  assert.throws(
-    () => loadSystemModel(raw),
-    (error) => {
-      message = /** @type {Error} */ (error).message;
-      return true;
-    },
-    "a model that should be refused was accepted",
-  );
-  return message;
-};
-
 await test("the committed model passes, and a private system names no repo", () => {
   const model = loadSystemModel(
     JSON.parse(readFileSync(new URL("../data/system-model.json", import.meta.url), "utf8")),
@@ -97,7 +80,10 @@ await test("the committed model passes, and a private system names no repo", () 
   );
   const linked = fixture();
   linked.systems[3].repos = ["https://github.com/example/hidden"];
-  assert.match(refused(linked), /systems\.3/);
+  assert.throws(
+    () => loadSystemModel(linked),
+    /data\/system-model\.json is refused[\s\S]*systems\.3/,
+  );
 });
 
 await test("the map draws every system once, each linking to its own page here", () => {
@@ -109,136 +95,16 @@ await test("the map draws every system once, each linking to its own page here",
   assert.equal(systemPath("a b"), "/systems/a%20b");
 });
 
-await test("the twin holds every system's facts, a private one without its source", () => {
+await test("the twin says this site's words: its title, intro and ring headings, and each system's page here", () => {
   const model = loadSystemModel(fixture());
-  const all = systemsMarkdown(model, "https://example.com");
-  for (const s of model.systems)
-    assert.ok(all.includes(`### ${s.name}`), `${s.id} missing from /systems.md`);
-  assert.match(all, /^### Hidden \(private\)\n\nKept private\. Its repo is private\.\n/m);
+  const all = modelMarkdown(model, twinOptions(model, "https://example.com"));
+  assert.match(
+    all,
+    /^# Systems\n\nThe systems Dustin Edwards runs\. Public model of 2026-10-11\.\n/,
+  );
+  assert.match(all, /^## Runs everything$/m);
   assert.match(all, /^- Its page: https:\/\/example\.com\/systems\/kit$/m);
-  const one = systemSectionMarkdown(model, "hidden", "https://example.com");
-  assert.match(one, /^### Hidden \(private\)\n\nKept private\. Its repo is private\.\n/);
-  assert.match(one, /- Address: https:\/\/hidden\.example\.org/);
-  assert.doesNotMatch(one, /Source:/);
-  assert.equal(systemSectionMarkdown(model, "nowhere", "https://example.com"), null);
-  const core = systemSectionMarkdown(model, "core", "https://example.com");
-  assert.match(core, /- Source: https:\/\/github\.com\/example\/core/);
-  assert.match(core, /#### Inside\n\n- Worker \(Cloudflare Worker\)\n/);
-  // A name that also appears in the verb is linked as the name, not inside the verb.
-  const named = fixture();
-  named.systems[1].name = "Installs";
-  assert.match(
-    systemSectionMarkdown(loadSystemModel(named), "core", "https://example.com"),
-    /^- Installs \[Installs\]\(https:\/\/example\.com\/systems\/kit\)$/m,
-  );
-  assert.doesNotMatch(systemSectionMarkdown(model, "kit", "https://example.com"), /#### Inside/);
-});
-
-await test("every system's section of the twin links to the same system in the Capsid explorer, and the twin to the explorer", () => {
-  const model = loadSystemModel(fixture());
-  for (const s of model.systems) {
-    assert.match(
-      systemSectionMarkdown(model, s.id, "https://example.com") ?? "",
-      new RegExp(
-        `^- In the Capsid explorer: https://capsid\\.dustinedwards\\.info/s/${s.id}/$`,
-        "m",
-      ),
-    );
-  }
-  assert.match(
-    systemsMarkdown(model, "https://example.com"),
-    /^Capsid explorer: https:\/\/capsid\.dustinedwards\.info\/$/m,
-  );
-});
-
-await test("the lines between a system's parts are facts on its page and in its twin", () => {
-  const raw = fixture();
-  raw.containers.push({
-    id: "core-db",
-    system: "core",
-    name: "Store",
-    kind: "database",
-    technology: "D1",
-  });
-  raw.relationships.push({
-    id: "core-worker--writes--core-db",
-    from: "core-worker",
-    to: "core-db",
-    kind: "writes",
-  });
-  raw.counts.containers = 2;
-  raw.counts.relationships = 4;
-  const model = loadSystemModel(raw);
-  assert.match(
-    systemSectionMarkdown(model, "core", "https://example.com"),
-    /How they connect:\n\n- Worker writes to Store\n/,
-  );
-});
-
-// Capsid's flows (design section 4). Fixture flows ride the fixture's edges.
-const withFlows = () => {
-  const raw = fixture();
-  raw.containers.push({
-    id: "core-agents",
-    system: "core",
-    name: "Agents",
-    kind: "external",
-    technology: "Sample sessions",
-  });
-  raw.relationships.push({
-    id: "core-worker--serves--core-agents",
-    from: "core-worker",
-    to: "core-agents",
-    kind: "serves",
-  });
-  raw.counts.containers = 2;
-  raw.counts.relationships = 4;
-  raw.flows = [
-    {
-      id: "sample-life",
-      name: "A sample's life",
-      steps: [
-        {
-          relationship: "core-worker--serves--core-agents",
-          toward: "core-worker",
-          text: "Posted.",
-          lights: ["core-worker"],
-        },
-        { relationship: "core--installs--kit", toward: "kit", text: "Installed." },
-      ],
-    },
-  ];
-  return raw;
-};
-
-await test("the twin lists an external container outside the system, with its lines", () => {
-  const model = loadSystemModel(withFlows());
-  assert.match(
-    systemSectionMarkdown(model, "core", "https://example.com") ?? "",
-    /#### Inside\n\n- Worker \(Cloudflare Worker\)\n\n#### Outside it\n\n- Agents \(Sample sessions\)\n\nHow they connect:\n\n- Worker serves Agents\n/,
-  );
-  // A system whose only containers are outside it still lists them and their lines.
-  const bare = withFlows();
-  bare.containers = bare.containers.filter((c) => c.kind === "external");
-  bare.containers.push({
-    id: "core-github",
-    system: "core",
-    name: "GitHub",
-    kind: "external",
-    technology: "Sample host",
-  });
-  bare.relationships = bare.relationships.filter((r) => !r.id.startsWith("core-worker"));
-  bare.relationships.push({
-    id: "core-agents--reads--core-github",
-    from: "core-agents",
-    to: "core-github",
-    kind: "reads",
-  });
-  bare.flows = [];
-  bare.counts.relationships = bare.relationships.length;
-  const twin = systemSectionMarkdown(loadSystemModel(bare), "core", "https://example.com") ?? "";
-  assert.match(twin, /#### Outside it\n\n- Agents \(Sample sessions\)\n- GitHub \(Sample host\)\n/);
-  assert.doesNotMatch(twin, /#### Inside|How they connect|Agents reads GitHub/);
+  assert.doesNotMatch(all, /Source: .*hidden/);
 });
 
 await test("the daily refresh writes only a checked model that says something new", async () => {

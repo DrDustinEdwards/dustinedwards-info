@@ -28,75 +28,7 @@
   font-family: var(--font-sans);
 }
 
-/* The workflow as a line of stations: a filled disc of the family's color where the lab has a protocol, a ring
-   where it has none yet, the rule running through them. */
-.library-pipeline {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-6) var(--space-5);
-  margin: var(--space-6) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.library-stage {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-inline-size: 0;
-}
-
-.library-stage::before {
-  content: "";
-  position: absolute;
-  inset-block-start: 0.75rem;
-  inset-inline: 0 calc(-1 * var(--space-5));
-  border-block-start: 3px solid var(--text);
-}
-
-.library-stage:last-child::before {
-  inset-inline-end: auto;
-  inline-size: 1.5rem;
-}
-
-.library-stage-dot {
-  position: relative;
-  display: grid;
-  place-items: center;
-  inline-size: 1.5rem;
-  block-size: 1.5rem;
-  margin-block-end: var(--space-4);
-  border: 2px solid var(--text);
-  border-radius: 50%;
-  background: var(--paper);
-  font: 700 0.6875rem / 1 var(--font-mono);
-}
-
-.library-stage:not([data-empty]) .library-stage-dot {
-  border-color: var(--brand);
-  background: var(--brand);
-  color: var(--on-brand);
-}
-
-.library-stage-name,
-.library-stage-name:visited {
-  color: var(--text);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-a.library-stage-name:hover {
-  color: var(--brand);
-  background: var(--link-hover-bg);
-  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
-}
-
-.library-stage-n {
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
+/* The calculators under a station of the workflow (a step indicator, data-variant="stations"). */
 .library-stage-tools {
   display: grid;
   gap: 0.25rem;

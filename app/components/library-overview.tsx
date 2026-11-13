@@ -1,4 +1,3 @@
-import "capsomer/eyebrow.css";
 import { countOf, overviewSentence, type libraryOverview } from "~/kb/procedures/library.mjs";
 
 /**
@@ -18,36 +17,45 @@ export function LibraryOverview({ overview }: { overview: ReturnType<typeof libr
         <p className="cap-part-lead">
           From soil sample to annotated genome. A filled station has a protocol here.
         </p>
-        <ol className="library-pipeline">
-          {overview.stages.map((stage, i) => (
-            <li key={stage.id} className="library-stage" data-empty={stage.href ? undefined : ""}>
-              <span className="library-stage-dot" aria-hidden="true">
-                {i + 1}
-              </span>
-              {stage.href ? (
-                <a className="library-stage-name" href={stage.href}>
-                  {stage.label}
-                </a>
-              ) : (
-                <span className="library-stage-name">{stage.label}</span>
-              )}
-              <span className="cap-eyebrow library-stage-n" data-variant="mono">
-                {stage.count > 0
-                  ? countOf(stage.count, ["protocol", "protocols"])
-                  : "No protocol yet"}
-              </span>
-              {stage.tools.length > 0 ? (
-                <ul className="library-stage-tools" aria-label={`Calculators for ${stage.label}`}>
-                  {stage.tools.map((tool) => (
-                    <li key={tool.id}>
-                      <a href={tool.href}>{tool.label}</a>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          ))}
-        </ol>
+        <div className="cap-steps" data-variant="stations">
+          <ol
+            className="cap-steps-list"
+            aria-label={`The phage workflow, ${overview.stages.length} stages`}
+          >
+            {overview.stages.map((stage, i) => (
+              <li
+                key={stage.id}
+                className="cap-step"
+                data-state={stage.href ? "complete" : undefined}
+              >
+                <span className="cap-step-dot" aria-hidden="true">
+                  {i + 1}
+                </span>
+                {stage.href ? (
+                  <a className="cap-step-name" href={stage.href}>
+                    {stage.label}
+                  </a>
+                ) : (
+                  <span className="cap-step-name">{stage.label}</span>
+                )}
+                <span className="cap-step-meta">
+                  {stage.count > 0
+                    ? countOf(stage.count, ["protocol", "protocols"])
+                    : "No protocol yet"}
+                </span>
+                {stage.tools.length > 0 ? (
+                  <ul className="library-stage-tools" aria-label={`Calculators for ${stage.label}`}>
+                    {stage.tools.map((tool) => (
+                      <li key={tool.id}>
+                        <a href={tool.href}>{tool.label}</a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </div>
       </section>
 
       <section className="cap-part library-part" aria-labelledby="library-overview-title">

@@ -107,18 +107,6 @@
   display: contents;
 }
 
-.cv-spark-line {
-  display: block;
-  min-width: 0;
-  max-width: 7.5rem;
-}
-
-.cv-spark-line > svg.enarratio {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
 .cv-stat-sub {
   grid-column: 1 / -1;
   margin-block-start: var(--space-2);
@@ -134,11 +122,6 @@
 /* Colors are capsomer/enarratio.css's series, in app/lib/cv/view.mjs CHART_SERIES order. */
 .cv-timeline-plot {
   min-height: 13.75rem;
-}
-
-/* Bars outside the selected year range, marked by app/lib/cv/charts.ts. */
-.cv-timeline-plot [data-cv-out] {
-  opacity: 0.28;
 }
 
 .cv-timeline-hint {
@@ -513,7 +496,7 @@
     font-size: 1.75rem;
   }
 
-  .cv-spark-line {
+  .cv-spark .cap-spark {
     max-width: 6rem;
   }
 

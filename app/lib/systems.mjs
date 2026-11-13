@@ -7,26 +7,12 @@
 // private repos", "fully wired just like the public ones"); a private system carries no repo
 // link. The file is refused unless every key is one the published shape allows and a private
 // system names no repo, so a mistake upstream stops the build rather than reaching the page.
+// The shape, its checks, the explorer's addresses and the Markdown twin are Capsomer's
+// (capsomer/behavior/system-model); what is here is this site's paths and words.
 import { modelMapData } from "capsomer/behavior/system-map";
-// Zod builds its parsers, and probes `new Function`, when a schema is created, so the flag goes first (site-runtime
-// ./zod-jitless), before Capsomer's model schema loads.
+// Zod builds its parsers, and probes `new Function`, when a schema is created, so the flag goes first (site-runtime ./zod-jitless).
 import "@dustinedwards/site-runtime/zod-jitless";
-// The model's schema and checks, the explorer's address and the model's reading (its lines, parts and wires) are
-// Capsomer's, the explorer's own.
-import {
-  EXPLORER_ORIGIN,
-  SYSTEM_RINGS,
-  connectionsOf,
-  explorerHref,
-  explorerLabel,
-  outsideOf,
-  parsePublicModel,
-  partsOf,
-  sameModel,
-  wiresOf,
-} from "capsomer/behavior/system-model";
-
-export { explorerHref, explorerLabel, sameModel };
+import { parsePublicModel } from "capsomer/behavior/system-model";
 
 export const SYSTEMS_PATH = "/systems";
 
@@ -36,6 +22,7 @@ export const SYSTEMS_PATH = "/systems";
 /**
  * The checked model, or a thrown error naming every problem: a bad file stops the build.
  * @param {unknown} raw
+ * @returns {SystemModel}
  */
 export function loadSystemModel(raw) {
   const result = parsePublicModel(raw);
@@ -54,79 +41,21 @@ export const systemPath = (id) => `${SYSTEMS_PATH}/${encodeURIComponent(id)}`;
  */
 export const mapData = (model) => modelMapData(model, systemPath);
 
-/** @type {Record<ModelSystem["ring"], string>} */
-const RING_HEADINGS = { core: "Runs everything", shared: "Shared parts", used: "What people use" };
-
 /**
- * One container as the twin and the page write it: name, what it runs on, what it does.
- * @param {SystemModel["containers"][number]} c
+ * The words of the /systems.md twin, for Capsomer's modelMarkdown and systemMarkdown.
+ * @param {SystemModel} model
+ * @param {string} origin
  */
-const containerLine = (c) =>
-  `${c.name} (${c.technology})${c.description ? `: ${c.description}` : ""}`;
-
-/**
- * What a system's page says about it: its sentence, and that its repo is private when it is.
- * @param {{ description?: string, private?: boolean }} s a system in the model or on the map
- */
-const summaryOf = (s) =>
-  [s.description, s.private ? "Its repo is private." : undefined].filter(Boolean).join(" ");
+export const twinOptions = (model, origin) => ({
+  origin,
+  pageHref: systemPath,
+  title: "Systems",
+  intro: `The systems Dustin Edwards runs. Public model of ${model.as_of}.`,
+  rings: { core: "Runs everything", shared: "Shared parts", used: "What people use" },
+});
 
 /**
  * The repo link a public system shows: its first repo, unless it has none.
  * @param {ModelSystem} s
  */
 export const repoOf = (s) => (s.private ? undefined : s.repos?.[0]);
-
-/**
- * The markdown twin of /systems: every system, grouped by ring, each with the facts the page shows
- * on its page, so an agent reads what a person does.
- * @param {SystemModel} model
- * @param {string} origin
- */
-export function systemsMarkdown(model, origin) {
-  const lines = [
-    "# Systems",
-    "",
-    `The systems Dustin Edwards runs. Public model of ${model.as_of}.`,
-    "",
-  ];
-  for (const ring of SYSTEM_RINGS) {
-    const inRing = model.systems.filter((s) => s.ring === ring);
-    if (inRing.length === 0) continue;
-    lines.push(`## ${RING_HEADINGS[ring]}`, "");
-    for (const s of inRing) lines.push(systemSectionMarkdown(model, s.id, origin) ?? "");
-  }
-  lines.push(`Capsid explorer: ${EXPLORER_ORIGIN}/`, "");
-  return lines.join("\n");
-}
-
-/**
- * One system's section of /systems.md: what its page shows.
- * @param {SystemModel} model
- * @param {string} id
- * @param {string} origin
- */
-export function systemSectionMarkdown(model, id, origin) {
-  const s = model.systems.find((x) => x.id === id);
-  if (!s) return null;
-  const lines = [`### ${s.name}${s.private ? " (private)" : ""}`, ""];
-  lines.push(summaryOf(s), "");
-  lines.push(`- Its page: ${origin}${systemPath(s.id)}`);
-  if (s.domain) lines.push(`- Address: https://${s.domain}`);
-  const repo = repoOf(s);
-  if (repo) lines.push(`- Source: ${repo}`);
-  lines.push(`- In the Capsid explorer: ${explorerHref(s.id)}`);
-  const parts = partsOf(model, id);
-  const outside = outsideOf(model, id);
-  if (parts.length) lines.push("", "#### Inside", "", ...parts.map((c) => `- ${containerLine(c)}`));
-  if (outside.length)
-    lines.push("", "#### Outside it", "", ...outside.map((c) => `- ${containerLine(c)}`));
-  const wires = wiresOf(model, id);
-  if (wires.length) lines.push("", "How they connect:", "", ...wires.map((w) => `- ${w}`));
-  const links = connectionsOf(model, id);
-  lines.push("", "#### Connections", "");
-  if (links.length === 0) lines.push("No connections.");
-  for (const c of links) lines.push(`- ${c.verb} [${c.name}](${origin}${systemPath(c.other)})`);
-  lines.push("");
-  return lines.join("\n");
-}

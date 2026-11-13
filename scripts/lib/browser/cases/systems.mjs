@@ -12,7 +12,9 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
-import { explorerHref, loadSystemModel, systemPath } from "../../../../app/lib/systems.mjs";
+import { explorerHref } from "capsomer/behavior/system-model";
+
+import { loadSystemModel, systemPath } from "../../../../app/lib/systems.mjs";
 import { BASE, FETCH_TIMEOUT_MS, ok, report, root } from "../harness.mjs";
 
 const require = createRequire(import.meta.url);

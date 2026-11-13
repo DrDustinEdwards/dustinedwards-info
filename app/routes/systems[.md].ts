@@ -1,14 +1,9 @@
+import { modelMarkdown, systemMarkdown } from "capsomer/behavior/system-model";
 import { data } from "react-router";
 
 import { canonicalLink } from "~/lib/markdown-twin";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN, publicHtmlHeaders } from "~/lib/seo";
-import {
-  SYSTEMS_PATH,
-  loadSystemModel,
-  systemPath,
-  systemSectionMarkdown,
-  systemsMarkdown,
-} from "~/lib/systems.mjs";
+import { SYSTEMS_PATH, loadSystemModel, systemPath, twinOptions } from "~/lib/systems.mjs";
 
 import type { Route } from "./+types/systems[.md]";
 
@@ -22,12 +17,11 @@ const MODEL = loadSystemModel(rawModel);
  */
 export function loader({ params }: Route.LoaderArgs) {
   const id = (params as { id?: string }).id;
+  const options = twinOptions(MODEL, SITE_ORIGIN);
   const body =
-    id === undefined
-      ? systemsMarkdown(MODEL, SITE_ORIGIN)
-      : systemSectionMarkdown(MODEL, id, SITE_ORIGIN);
+    id === undefined ? modelMarkdown(MODEL, options) : systemMarkdown(MODEL, id, options);
   if (body === null) throw data(null, { status: 404 });
-  return new Response(body, {
+  return new Response(`${body}\n`, {
     headers: {
       "content-type": "text/markdown; charset=utf-8",
       "cache-control": SHARED_CACHE_CONTROL,

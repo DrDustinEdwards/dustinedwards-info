@@ -22,7 +22,7 @@ import {
 import { convergeWithRetry } from "./converge.mjs";
 import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
-import { commitUnlessUnchanged } from "./write-path.server";
+import { commitUnlessUnchanged, taggedMessage } from "./write-path.server";
 import { listPostCorpusForRelated, listPostDerivedLists, listPostLinkCorpus } from "~/db";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import {
@@ -353,7 +353,7 @@ export async function savePost(
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
         expectedBlobs: blobGuard(postPath(options.slug), options.expectedBlobSha),
-        message: commitMessage(actor, options.isNew ? "Add" : "Update", gated.title),
+        message: taggedMessage(actor, `${options.isNew ? "Add" : "Update"} post: ${gated.title}`),
         changes: [{ path: postPath(options.slug), content: raw }],
       }),
   });
@@ -422,14 +422,6 @@ export async function savePost(
   };
 }
 
-function commitMessage(actor: Actor, verb: string, title: string) {
-  const base = `${verb} post: ${title}`;
-  if (actor.kind === "operator") return `${base} [operator:${actor.id}]`;
-  // The change id joins this commit to Carrel's authorship record, and records who published.
-  if (actor.kind === "carrel") return `${base} [carrel:${actor.changeId}]`;
-  return base;
-}
-
 async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
   if (!askAvailable(env)) return null;
   try {
@@ -475,7 +467,7 @@ export async function deletePost(
     expectedHeadSha: options.expectedHeadSha,
     // Carrel names a post by its blob sha: a file changed since it was loaded is refused at the head.
     expectedBlobs: blobGuard(postPath(options.slug), options.expectedBlobSha),
-    message: commitMessage(actor, "Remove", options.slug),
+    message: taggedMessage(actor, `Remove post: ${options.slug}`),
     changes: [{ path: postPath(options.slug), content: null }],
   });
 
