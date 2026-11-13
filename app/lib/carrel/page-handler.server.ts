@@ -7,7 +7,7 @@
 
 import { RefusedError, VersionConflictError } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { listPageRows } from "~/db/pages";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
 import { reagentSource } from "../app/kb/procedures/render.mjs";
@@ -198,7 +198,7 @@ await test("no record stores what is computed: the protocols that use a reagent,
   );
   assert.equal(names.length, 16);
   for (const name of names) {
-    const data = matter(await text(`content/registry/reagent/${name}`), {}).data;
+    const data = matter(await text(`content/registry/reagent/${name}`)).data;
     for (const field of ["protocols", "used_in", "stock", "final", "amount", "per"])
       assert.equal(Object.hasOwn(data, field), false, `${name} stores ${field}`);
   }
@@ -306,7 +306,7 @@ await test("STORED ONCE: no protocol types a reagent's catalog number or product
         !raw.includes(value),
         `${name} types "${value}"; it is stored once, in content/registry/reagent`,
       );
-    for (const material of matter(raw, {}).data.materials ?? []) {
+    for (const material of matter(raw).data.materials ?? []) {
       if (material.reagent === undefined) continue;
       assert.ok(byId.has(material.reagent), `${name}: ${material.reagent} is not in the registry`);
       used.add(material.reagent);

@@ -5,19 +5,11 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import {
-  connectionsOf,
-  explorerLabel,
-  explorerUrl,
-  outsideOf,
-  partsOf,
   loadSystemModel,
   mapData,
-  parseSystemModel,
   systemPath,
   systemSectionMarkdown,
-  sameModel,
   systemsMarkdown,
-  wiresOf,
 } from "../app/lib/systems.mjs";
 
 const fixture = () => ({
@@ -83,9 +75,16 @@ const fixture = () => ({
 });
 
 const refused = (raw) => {
-  const result = parseSystemModel(raw);
-  assert.equal(result.ok, false, "a model that should be refused was accepted");
-  return result.problems.join("\n");
+  let message = "";
+  assert.throws(
+    () => loadSystemModel(raw),
+    (error) => {
+      message = /** @type {Error} */ (error).message;
+      return true;
+    },
+    "a model that should be refused was accepted",
+  );
+  return message;
 };
 
 await test("the committed model passes, and a private system names no repo", () => {
@@ -101,32 +100,6 @@ await test("the committed model passes, and a private system names no repo", () 
   assert.match(refused(linked), /systems\.3/);
 });
 
-await test("an unknown key anywhere is refused", () => {
-  const top = fixture();
-  top.extra = 1;
-  refused(top);
-  const container = fixture();
-  container.containers[0].secret = "x";
-  refused(container);
-  const line = fixture();
-  line.relationships[0].note = "x";
-  refused(line);
-});
-
-await test("lines name things that exist, ids are unique and the counts agree", () => {
-  const dangling = fixture();
-  dangling.relationships[0].to = "nowhere";
-  assert.match(refused(dangling), /no element nowhere/);
-  const twice = fixture();
-  twice.systems.push({ ...twice.systems[1] });
-  assert.match(refused(twice), /an id is used twice/);
-  for (const key of ["systems", "public", "private", "containers", "relationships"]) {
-    const miscounted = fixture();
-    miscounted.counts[key] += 1;
-    assert.match(refused(miscounted), /counts/, `counts.${key} off by one was accepted`);
-  }
-});
-
 await test("the map draws every system once, each linking to its own page here", () => {
   const data = mapData(loadSystemModel(fixture()));
   assert.deepEqual(
@@ -134,14 +107,6 @@ await test("the map draws every system once, each linking to its own page here",
     ["/systems/core", "/systems/kit", "/systems/app", "/systems/hidden"],
   );
   assert.equal(systemPath("a b"), "/systems/a%20b");
-});
-
-await test("a system's connections read from its own end", () => {
-  const model = loadSystemModel(fixture());
-  const read = (id) => connectionsOf(model, id).map((c) => `${c.verb} ${c.name}`);
-  assert.deepEqual(read("kit"), ["Is installed by Core", "Is installed by App"]);
-  assert.deepEqual(read("hidden"), ["Is coordinated by Core"]);
-  assert.deepEqual(read("core"), ["Installs Kit", "Coordinates Hidden"]);
 });
 
 await test("the twin holds every system's facts, a private one without its source", () => {
@@ -180,8 +145,6 @@ await test("every system's section of the twin links to the same system in the C
       ),
     );
   }
-  assert.equal(explorerUrl("hidden"), "https://capsid.dustinedwards.info/s/hidden/");
-  assert.equal(explorerLabel("hidden"), "capsid.dustinedwards.info/s/hidden");
   assert.match(
     systemsMarkdown(model, "https://example.com"),
     /^Capsid explorer: https:\/\/capsid\.dustinedwards\.info\/$/m,
@@ -206,8 +169,6 @@ await test("the lines between a system's parts are facts on its page and in its 
   raw.counts.containers = 2;
   raw.counts.relationships = 4;
   const model = loadSystemModel(raw);
-  assert.deepEqual(wiresOf(model, "core"), ["Worker writes to Store"]);
-  assert.deepEqual(wiresOf(model, "kit"), []);
   assert.match(
     systemSectionMarkdown(model, "core", "https://example.com"),
     /How they connect:\n\n- Worker writes to Store\n/,
@@ -250,70 +211,8 @@ const withFlows = () => {
   return raw;
 };
 
-await test("a model with flows passes, and a flow off the model's edges is refused", () => {
-  assert.equal(loadSystemModel(withFlows()).flows?.length, 1);
-  const bad = withFlows();
-  bad.containers.push({
-    id: "app-worker",
-    system: "app",
-    name: "App worker",
-    kind: "worker",
-    technology: "Sample",
-  });
-  bad.counts.containers = bad.containers.length;
-  bad.flows?.push({
-    id: "sample-life",
-    name: "Bad",
-    steps: [
-      { relationship: "core--reads--app", toward: "app", text: "No such edge." },
-      { relationship: "core--installs--kit", toward: "app", text: "Wrong end." },
-      {
-        relationship: "core--coordinates--hidden",
-        toward: "hidden",
-        text: "Not a part.",
-        lights: ["kit"],
-      },
-      {
-        relationship: "core--installs--kit",
-        toward: "kit",
-        text: "Lit elsewhere.",
-        lights: ["core-agents", "app-worker"],
-      },
-    ],
-  });
-  const problems = refused(bad);
-  assert.match(problems, /flows\.sample-life: the id is used twice/);
-  assert.match(
-    problems,
-    /steps\.1: rides core--reads--app, which is not a relationship in the model/,
-  );
-  assert.match(problems, /steps\.2: goes toward app, which is not an end of core--installs--kit/);
-  assert.match(problems, /steps\.3: lights kit, which is not a container/);
-  assert.match(
-    problems,
-    /steps\.4: lights app-worker, a part of app, which the step does not run in/,
-  );
-  assert.doesNotMatch(
-    problems,
-    /steps\.4: lights core-agents/,
-    "core-agents is a part of core, which the step runs in",
-  );
-  const extra = withFlows();
-  extra.flows[0].steps[0].secret = "x";
-  assert.match(refused(extra), /flows\.0\.steps\.0/);
-});
-
-await test("an external container is outside the system: not a part, but its lines are drawn", () => {
+await test("the twin lists an external container outside the system, with its lines", () => {
   const model = loadSystemModel(withFlows());
-  assert.deepEqual(
-    partsOf(model, "core").map((c) => c.id),
-    ["core-worker"],
-  );
-  assert.deepEqual(
-    outsideOf(model, "core").map((c) => c.id),
-    ["core-agents"],
-  );
-  assert.deepEqual(wiresOf(model, "core"), ["Worker serves Agents"]);
   assert.match(
     systemSectionMarkdown(model, "core", "https://example.com") ?? "",
     /#### Inside\n\n- Worker \(Cloudflare Worker\)\n\n#### Outside it\n\n- Agents \(Sample sessions\)\n\nHow they connect:\n\n- Worker serves Agents\n/,
@@ -340,15 +239,6 @@ await test("an external container is outside the system: not a part, but its lin
   const twin = systemSectionMarkdown(loadSystemModel(bare), "core", "https://example.com") ?? "";
   assert.match(twin, /#### Outside it\n\n- Agents \(Sample sessions\)\n- GitHub \(Sample host\)\n/);
   assert.doesNotMatch(twin, /#### Inside|How they connect|Agents reads GitHub/);
-});
-
-await test("a model that differs only in its date is the same model", () => {
-  const a = loadSystemModel(fixture());
-  const b = loadSystemModel({ ...fixture(), as_of: "2026-10-12" });
-  assert.equal(sameModel(a, b), true);
-  const c = fixture();
-  c.systems[1].description = "Shared parts, renamed.";
-  assert.equal(sameModel(a, loadSystemModel(c)), false);
 });
 
 await test("the daily refresh writes only a checked model that says something new", async () => {

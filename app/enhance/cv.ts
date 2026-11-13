@@ -265,13 +265,15 @@ export default function start(): void {
     setText('[data-cv-count="dollars"]', `${formatDollars(counts.dollars)} awarded`);
 
     const facets = facetCounts(facts, state);
-    for (const node of root.querySelectorAll<HTMLElement>("[data-cv-facet]")) {
-      const [kind, id] = (node.dataset.cvFacet ?? "").split(":");
-      const table = kind === "type" ? facets.types : kind === "area" ? facets.areas : facets.roles;
-      const n = table[id ?? ""] ?? 0;
-      if (node instanceof HTMLOptionElement)
-        node.textContent = `${node.dataset.label ?? id} (${n})`;
-      else node.textContent = String(n);
+    /* A chip's count sits in its label beside the checkbox (capsomer CheckChips); a role's in its option. */
+    for (const input of root.querySelectorAll<HTMLInputElement>("input.cap-chip-input")) {
+      const table = input.name === "type" ? facets.types : facets.areas;
+      const count = input.parentElement?.querySelector(".cap-chip-count");
+      if (count) count.textContent = String(table[input.value] ?? 0);
+    }
+    for (const node of root.querySelectorAll<HTMLOptionElement>("option[data-cv-facet]")) {
+      const id = node.dataset.cvFacet ?? "";
+      node.textContent = `${node.dataset.label ?? id} (${facets.roles[id] ?? 0})`;
     }
 
     drawCharts(state);

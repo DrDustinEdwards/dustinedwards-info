@@ -6,7 +6,7 @@ import { markup } from "capsomer/behavior/trusted-html";
 /**
  * The family footer every dustinedwards.info site closes with (capsomer/family-footer, Dustin, 2026-10-26),
  * here with this site's own paths, and the Accessibility link only while its page is published. Its links
- * are data in Capsomer; app/lib/footer.ts hands them to test/footer.test.mjs, which holds every internal
+ * are data in Capsomer; test/footer.test.mjs holds every internal
  * href against the routes and the rel="me" set against OWNER_PROFILES. The end year is computed at render:
  * an edge-cached page can show last year's for a few days after January 1, which Dustin accepted
  * (2026-09-27) over a year that is edited by hand.

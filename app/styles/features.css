@@ -102,8 +102,3 @@
   color: var(--text-secondary);
   font-size: 0.9em;
 }
-
-/* A pressed chip fills with the primary color, so its count takes the chip's own text color to stay readable. */
-.features-chips .cap-chip[aria-pressed="true"] .cap-chip-count {
-  color: inherit;
-}
