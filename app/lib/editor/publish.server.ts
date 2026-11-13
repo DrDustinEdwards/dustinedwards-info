@@ -10,6 +10,7 @@ import { postPath } from "~/lib/content/slug.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { dimensionsFromKey } from "~/lib/media/classify.mjs";
 import {
+  actorTag,
   commitFiles,
   getHead,
   listPostFiles,
@@ -423,11 +424,7 @@ export async function savePost(
 }
 
 function commitMessage(actor: Actor, verb: string, title: string) {
-  const base = `${verb} post: ${title}`;
-  if (actor.kind === "operator") return `${base} [operator:${actor.id}]`;
-  // The change id joins this commit to Carrel's authorship record, and records who published.
-  if (actor.kind === "carrel") return `${base} [carrel:${actor.changeId}]`;
-  return base;
+  return `${verb} post: ${title}${actorTag(actor)}`;
 }
 
 async function syncAskForPost(env: PublishEnv, record: { slug: string }) {

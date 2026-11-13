@@ -10,6 +10,25 @@ export const UNCHANGED_NOTE =
 
 type Committed = Awaited<ReturnType<typeof commitFiles>>;
 
+/**
+ * After a commit, refuses to update a kind's row from bytes that are not the ones stored: the save happened, its
+ * row did not, and `repair` (the content sync, or the kind's own sync tool) rebuilds the row from the stored source.
+ */
+export function assertStoredBytes(
+  what: string,
+  commitSha: string,
+  stored: string | null | undefined,
+  compiled: string,
+  { target = "row", repair = "the content sync" } = {},
+) {
+  if (stored && stored !== compiled) {
+    throw new Error(
+      `${what} WAS saved as revision ${commitSha}, but the stored bytes (${stored}) are not the bytes compiled ` +
+        `(${compiled}), so its ${target} was not updated. Run ${repair} to rebuild the row from the stored source.`,
+    );
+  }
+}
+
 export type WriteDecision =
   /** Identical file and D1 already holds its row: nothing to do. */
   | { action: "noop"; commitSha: string }

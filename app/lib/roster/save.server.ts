@@ -10,9 +10,13 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRoster, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
+import { actorTag, blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import {
+  assertStoredBytes,
+  commitUnlessUnchanged,
+  UNCHANGED_NOTE,
+} from "~/lib/editor/write-path.server";
 
 import { compileCohort, rosterPath, type Cohort, type RosterHost } from "./compile.mjs";
 
@@ -133,12 +137,7 @@ export async function saveRoster(
     isDraft: () => false,
   });
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
+  const tag = actorTag(actor);
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
@@ -165,13 +164,7 @@ export async function saveRoster(
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[file];
-  if (blobSha && blobSha !== compiled.sourceBlobSha) {
-    throw new Error(
-      `The ${slug} cohort WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
-        `the bytes compiled (${compiled.sourceBlobSha}), so its row was not updated. Run the content sync to ` +
-        `rebuild the row from the stored source.`,
-    );
-  }
+  assertStoredBytes(`The ${slug} cohort`, commitSha, blobSha, compiled.sourceBlobSha);
 
   let purged: PurgeOutcome = false;
   await convergeWithRetry({

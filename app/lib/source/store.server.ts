@@ -4,6 +4,7 @@
 // with the deploy, so they are read from the assets binding, never from D1.
 
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
+import type { Actor } from "~/lib/editor/publish-policy.mjs";
 import assetManifest from "../../../content/generated/assets.json";
 
 export class SourceError extends Error {
@@ -128,6 +129,16 @@ type FileChange = { path: string; content: string } | { path: string; content: n
  */
 export function blobGuard(path: string, expectedBlobSha: string | null | undefined) {
   return expectedBlobSha === undefined ? undefined : { [path]: expectedBlobSha };
+}
+
+/**
+ * The tag a commit message carries for who made the write, read back by authorOf. Carrel's change id joins the
+ * commit to Carrel's authorship record. An admin's write carries none.
+ */
+export function actorTag(actor: Actor) {
+  if (actor.kind === "operator") return ` [operator:${actor.id}]`;
+  if (actor.kind === "carrel") return ` [carrel:${actor.changeId}]`;
+  return "";
 }
 
 /** Who made a write, from the tag every writer's message carries. */

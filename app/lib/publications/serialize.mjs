@@ -5,8 +5,8 @@
 
 import { FULL_TEXT_HEADING } from "./parse.mjs";
 
-/** Canonical order. A key not listed here is a key the validator refuses. */
-const FRONT_MATTER_KEYS = [
+/** Canonical order. The validator refuses a key not listed here. */
+export const FRONT_MATTER_KEYS = [
   "doi",
   "slug",
   "id",

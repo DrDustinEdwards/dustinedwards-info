@@ -17,14 +17,19 @@ import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import {
+  actorTag,
   blobGuard,
   commitFiles,
-  publicFileEntry,
   fileHistory,
+  publicFileEntry,
   readFile,
 } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import {
+  assertStoredBytes,
+  commitUnlessUnchanged,
+  UNCHANGED_NOTE,
+} from "~/lib/editor/write-path.server";
 import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
 import { compile as compilePageFile, writeRow as writePageRow } from "~/lib/pages/save.server";
 
@@ -184,12 +189,7 @@ export async function saveDictionaryEntry(
     isDraft: fileIsDraft,
   });
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
+  const tag = actorTag(actor);
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
@@ -217,13 +217,9 @@ export async function saveDictionaryEntry(
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[path];
-  if (blobSha && blobSha !== compiled.sourceBlobSha) {
-    throw new Error(
-      `The dictionary entry "${key}" WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
-        `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the stored source.`,
-    );
-  }
+  assertStoredBytes(`The dictionary entry "${key}"`, commitSha, blobSha, compiled.sourceBlobSha, {
+    target: "page",
+  });
 
   let purged: PurgeOutcome = false;
   await convergeWithRetry({

@@ -19,14 +19,19 @@ import {
 import { refreshCvSearch } from "~/lib/cv/save.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import {
+  actorTag,
   blobGuard,
   commitFiles,
-  publicFileEntry,
   fileHistory,
+  publicFileEntry,
   readFile,
 } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import {
+  assertStoredBytes,
+  commitUnlessUnchanged,
+  UNCHANGED_NOTE,
+} from "~/lib/editor/write-path.server";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
@@ -289,12 +294,7 @@ export async function savePublication(
   const cv = await cvCitation(env, slug, compiled);
   if (cv.refusal) throw new PublicationInvalid(slug, [cv.refusal]);
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
+  const tag = actorTag(actor);
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
@@ -323,13 +323,9 @@ export async function savePublication(
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[path];
-  if (blobSha && blobSha !== compiled.sourceBlobSha) {
-    throw new Error(
-      `The publication "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
-        `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the stored source.`,
-    );
-  }
+  assertStoredBytes(`The publication "${slug}"`, commitSha, blobSha, compiled.sourceBlobSha, {
+    target: "page",
+  });
 
   let purged: PurgeOutcome = false;
   await convergeWithRetry({

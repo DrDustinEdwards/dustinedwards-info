@@ -14,9 +14,13 @@ import { listRegistry } from "~/db/registry";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRegistry, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, fileHistory, readFile } from "~/lib/source/store.server";
+import { actorTag, blobGuard, commitFiles, fileHistory, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import {
+  assertStoredBytes,
+  commitUnlessUnchanged,
+  UNCHANGED_NOTE,
+} from "~/lib/editor/write-path.server";
 import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 
@@ -246,12 +250,7 @@ export async function saveRegistryItem(
     isDraft,
   });
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
+  const tag = actorTag(actor);
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
@@ -278,13 +277,9 @@ export async function saveRegistryItem(
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[file];
-  if (blobSha && blobSha !== compiled.sourceBlobSha) {
-    throw new Error(
-      `The registry item "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
-        `the bytes compiled (${compiled.sourceBlobSha}), so its row was not updated. Run sync_registry to ` +
-        `rebuild the row from the stored source.`,
-    );
-  }
+  assertStoredBytes(`The registry item "${slug}"`, commitSha, blobSha, compiled.sourceBlobSha, {
+    repair: "sync_registry",
+  });
 
   let purged: PurgeOutcome = false;
   await convergeWithRetry({

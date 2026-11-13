@@ -17,7 +17,7 @@ import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { draftContentPagePaths, publishedContentPagePaths } from "~/lib/content-pages.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
+import { actorTag, blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { paperMarkdownPath } from "~/lib/publications/paths.mjs";
@@ -116,12 +116,7 @@ export async function saveLlms(
     isDraft: () => false,
   });
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
+  const tag = actorTag(actor);
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,

@@ -14,6 +14,7 @@ import { DOI_PATTERN, doiSlug } from "@drdustinedwards/site-helpers/scholar";
 import { paperPdfPath } from "./paths.mjs";
 import { updateNoticeProblem } from "./update-notice.mjs";
 import { TOPIC_IDS } from "./topics.mjs";
+import { FRONT_MATTER_KEYS } from "./serialize.mjs";
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 import { hasWideDash } from "@drdustinedwards/site-helpers/text";
 
@@ -28,41 +29,8 @@ const TYPES = /** @type {const} */ ([
 const ACCESS = /** @type {const} */ (["self-hosted", "external"]);
 const STATUSES = /** @type {const} */ (["published", "submitted"]);
 
-/** Every key a file may carry. Anything else is a typo that would be silently ignored. */
-const FRONT_MATTER_FIELDS = new Set([
-  "doi",
-  "slug",
-  "id",
-  "status",
-  "draft",
-  "type",
-  "title",
-  "authors",
-  "journal",
-  "publishedDate",
-  "year",
-  "volume",
-  "issue",
-  "pages",
-  "topics",
-  "access",
-  "pdfPath",
-  "pdfSha256",
-  "externalUrl",
-  "pmid",
-  "pmcid",
-  "pmcUrl",
-  "preprintDoi",
-  "isOpenAccess",
-  "license",
-  "licenseSource",
-  "summary",
-  "selected",
-  "accessions",
-  "updateNotice",
-  "abstract",
-  "csl",
-]);
+/** Every key a file may carry, from the serializer's canonical order. Anything else is a typo that would be silently ignored. */
+const FRONT_MATTER_FIELDS = new Set(FRONT_MATTER_KEYS);
 
 const PMC_URL = /^https:\/\/pmc\.ncbi\.nlm\.nih\.gov\/articles\/PMC\d+\/$/;
 const DATE_PATTERN = /^\d{4}(-\d{2}){0,2}$/;
