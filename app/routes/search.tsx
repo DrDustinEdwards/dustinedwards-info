@@ -38,7 +38,7 @@ import "capsomer/pagination.css";
 import "capsomer/field.css";
 import "capsomer/button.css";
 import "capsomer/chips.css";
-import "~/styles/ask.css";
+import "capsomer/ask-panel.css";
 import "~/styles/search-facets.css";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { markup } from "capsomer/behavior/trusted-html";

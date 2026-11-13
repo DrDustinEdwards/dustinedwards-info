@@ -110,3 +110,8 @@
 .search-why-sep {
   opacity: 0.5;
 }
+
+/* Ask under the results: the trigger, then Capsomer's Ask panel (app/components/ask-panel.tsx). */
+.ask-mount {
+  margin: 1rem 0;
+}
