@@ -156,11 +156,6 @@ main.app-page {
   font-family: var(--mono);
 }
 
-.kb-readonly {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
 /* The steps are Capsomer's sortable list (capsomer/sortable-list.css, layout="stack"); a step's body is its words, what
    can be put into them, then its notes. */
 .kb-step {

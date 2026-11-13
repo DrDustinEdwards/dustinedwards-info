@@ -480,7 +480,7 @@ for (const file of appFiles) {
       candidate = literalText(n.initializer);
     }
     if (candidate !== null && candidate.startsWith("/") && !candidate.startsWith("//")) {
-      // A footer link marked `page: true` renders only while its page is published (app/lib/footer.ts,
+      // A footer link marked `page: true` renders only while its page is published (capsomer/family-footer,
       // siteLinks), so it may name a draft; every other link to a draft fails below.
       const whilePublished =
         ts.isPropertyAssignment(n) &&
