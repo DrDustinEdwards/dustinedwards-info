@@ -1,7 +1,7 @@
 // Reads a dictionary entry file (docs/DICTIONARY.md) into its front matter as written and its body, the
 // editors' notes. Nothing here judges: compile.mjs does, so the gate, the build and the save read one parse.
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 export const DICTIONARY_DIR = "content/dictionary";
 
@@ -25,9 +25,7 @@ export function parseDictionaryEntry({ file, raw }) {
     problems.push(`${file}: the file must start with a --- front matter block`);
   }
   try {
-    // An options object, even an empty one: gray-matter caches by input when it is omitted, and a cached
-    // parse is one object shared by every caller.
-    const parsed = matter(raw, {});
+    const parsed = matter(raw);
     return {
       data: /** @type {Record<string, unknown>} */ (parsed.data),
       body: parsed.content,

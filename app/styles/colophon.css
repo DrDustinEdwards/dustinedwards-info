@@ -188,11 +188,6 @@
   overflow-wrap: anywhere;
 }
 
-/* A pressed chip fills with the primary color, so its count takes the chip's own text color to stay readable. */
-.colophon-chips .cap-chip[aria-pressed="true"] .cap-chip-count {
-  color: inherit;
-}
-
 /* The two statements: a panel each, the first sentence as the lead and the rest small, so neither is a wall of text. */
 .colophon-note {
   margin: 0.75rem 0 1.5rem;
@@ -240,10 +235,6 @@
 
 .colophon-kinds {
   margin-block: 0 0.75rem;
-}
-
-.colophon-kinds .cap-chip[aria-pressed="true"] .cap-chip-count {
-  color: inherit;
 }
 
 tr[hidden],

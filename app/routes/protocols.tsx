@@ -2,7 +2,12 @@ import { JsonLd } from "capsomer/react/json-ld";
 import { DraftNotice } from "capsomer/react/draft-notice";
 import { Catalog } from "capsomer/react/catalog";
 import { TabLink, TabsNav } from "capsomer/react/tabs";
-import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
+import {
+  catalogDownloads,
+  catalogRedirect,
+  parseCatalogParams,
+  queryCatalog,
+} from "capsomer/behavior/catalog";
 import { redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -22,10 +27,8 @@ import {
   LIBRARY,
   LIBRARY_PATH,
   libraryCitation,
-  libraryDownloads,
   libraryItems,
   libraryOverview,
-  libraryRedirect,
   libraryTabs,
   type LibraryItem,
 } from "~/kb/procedures/library.mjs";
@@ -47,6 +50,7 @@ import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
 import "capsomer/tabs.css";
+import "capsomer/step-indicator.css";
 import "~/styles/prose.css";
 import "~/styles/site-catalog.css";
 import "~/styles/library.css";
@@ -73,7 +77,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     isAdminViewer(env, request),
   );
   // A state written in another order, or with a default spelled out, goes to its one address.
-  const canonical = libraryRedirect(url);
+  const canonical = catalogRedirect(LIBRARY, url, { keepUnknown: true });
   if (canonical) throw redirect(canonical, 301);
   const items = libraryItems(await listPublishedRecordsOfProfile(env, "protocol"));
   // The registry's kinds are tabs beside the calculators, counted from its rows (docs/REGISTRY.md).
@@ -173,7 +177,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       </div>
       <LibraryCite
         count={result.count}
-        downloads={libraryDownloads(result)}
+        downloads={catalogDownloads(LIBRARY, result)}
         citation={libraryCitation({
           name: SITE.name,
           affiliation: SITE.affiliation,

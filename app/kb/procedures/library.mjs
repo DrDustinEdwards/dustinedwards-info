@@ -5,12 +5,7 @@
 
 import { mdCell } from "@drdustinedwards/site-helpers/text";
 import { recordsCsv } from "@dustinedwards/site-runtime/csv";
-import {
-  catalogRedirect,
-  defineCatalog,
-  parseCatalogParams,
-  queryCatalog,
-} from "capsomer/behavior/catalog";
+import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
 import { TOOLS } from "../../lib/phage-tools.mjs";
 import {
@@ -466,31 +461,6 @@ function calculatorCount() {
 }
 
 /**
- * The address a request should have, or null. The catalog's own redirect sends an address with defaults spelled out,
- * or in another order, to its one clean address; and it drops every parameter it does not know. The library keeps
- * the first and leaves the second alone: a tracking parameter or a cache-buster on a library address is served, not
- * redirected, so a link carrying one still lands on the page it names.
- *
- * The knowledge bases' libraries (libraries.mjs) use it with their own catalog.
- *
- * @param {URL} url
- * @param {import("capsomer/behavior/catalog").CatalogDefinition<any>} [catalog]
- */
-export function libraryRedirect(url, catalog = LIBRARY) {
-  const known = new Set([
-    "q",
-    "sort",
-    "page",
-    ...catalog.fields.filter((f) => f.facet).map((f) => f.key),
-  ]);
-  const kept = new URLSearchParams();
-  for (const [key, value] of url.searchParams) if (known.has(key)) kept.append(key, value);
-  const only = new URL(url);
-  only.search = kept.toString();
-  return catalogRedirect(catalog, only);
-}
-
-/**
  * How to cite the library, from the site's own identity and the library's address: nothing typed here but the shape
  * of a citation. The date of access is the reader's to add.
  *
@@ -504,23 +474,6 @@ export function libraryCitation({ name, affiliation, origin }) {
     protocol:
       "To cite one protocol, cite its own page: its title, the lab, the institution, its address and the date you accessed it. " +
       "A protocol's page names the papers it follows, so cite those for the method itself.",
-  };
-}
-
-/**
- * The downloads of a view: the CSV and the JSON carry the filter state the address does, so what is downloaded is what is
- * shown; the markdown twin is always the whole library.
- *
- * @param {{ href: () => string }} result the catalog's result, whose `href()` is the clean address of this view
- * @param {string} [path] the library's address; a knowledge base's library passes its own
- */
-export function libraryDownloads(result, path = LIBRARY_PATH) {
-  const href = result.href();
-  const query = href.includes("?") ? href.slice(href.indexOf("?")) : "";
-  return {
-    csv: `${path}.csv${query}`,
-    json: `${path}.json${query}`,
-    markdown: `${path}.md`,
   };
 }
 

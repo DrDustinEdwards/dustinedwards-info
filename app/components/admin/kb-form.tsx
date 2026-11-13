@@ -4,6 +4,7 @@ import { Form, Link, useNavigation } from "react-router";
 
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
+import { ButtonLink } from "capsomer/react/link";
 import { Panel } from "capsomer/react/panel";
 import { useDebouncedPreview } from "capsomer/react/form-hooks";
 import { Tabs, TabsList, TabsTrigger } from "capsomer/react/tabs";
@@ -370,9 +371,9 @@ export function KbFormEditor({
                 Duplicate
               </Button>
             ) : null}
-            <Link to="?view=file" className="cap-btn" data-variant="quiet">
+            <ButtonLink to="?view=file" variant="quiet">
               Advanced: edit the file
-            </Link>
+            </ButtonLink>
           </>
         }
       />
@@ -497,9 +498,7 @@ export function KbFormEditor({
             />
           ) : null}
 
-          <div className="kb-savebar">
-            <KbCheckSave busy={busy} actionData={actionData} errors={errors} />
-          </div>
+          <KbCheckSave busy={busy} actionData={actionData} errors={errors} sticky />
         </Form>
         {isEntry ? (
           <aside

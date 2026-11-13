@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
 import {
@@ -114,7 +114,7 @@ await test("no record stores what is computed: the protocols that use an item, o
   );
   assert.equal(names.length, 11);
   for (const name of names) {
-    const data = matter(await text(`content/registry/equipment/${name}`), {}).data;
+    const data = matter(await text(`content/registry/equipment/${name}`)).data;
     for (const field of ["protocols", "used_in", "temperature", "speed", "setting", "volume"])
       assert.equal(Object.hasOwn(data, field), false, `${name} stores ${field}`);
   }

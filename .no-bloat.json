@@ -24,26 +24,26 @@
     ]
   },
   "baseline": {
-    "measured_at": "d529f7b",
+    "measured_at": "0978b29",
     "knip": {},
     "jscpd": {
       "clones": 55,
-      "lines": 789,
-      "percentage": 0.55,
+      "lines": 787,
+      "percentage": 0.56,
       "unread": 0
     },
     "shared copies": {
-      "clones": 1,
-      "lines": 23
+      "clones": 0,
+      "lines": 0
     },
     "tests": {
-      "files": 206,
-      "cases": 1642
+      "files": 205,
+      "cases": 1621
     },
     "comments": {
-      "lines": 17875,
-      "code": 106399,
-      "percentage": 14.38
+      "lines": 17694,
+      "code": 105126,
+      "percentage": 14.41
     }
   }
 }

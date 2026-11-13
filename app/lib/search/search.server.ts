@@ -12,7 +12,7 @@ import {
   toMatchExpression,
 } from "@drdustinedwards/site-helpers/search";
 import { clampTitle } from "@dustinedwards/site-runtime/share-card";
-import { escapeXml } from "@drdustinedwards/site-helpers";
+import { MARK_CLOSE, MARK_OPEN } from "capsomer/behavior/search-results";
 import { SEARCH_BASES, baseOfUrl, basePrefix } from "~/kb/search-bases.mjs";
 
 /** The operators a search accepts: tag:, type: and base: (app/kb/search-bases.mjs). */
@@ -32,14 +32,12 @@ const CANDIDATE_LIMIT = 100;
 const IDENTITY_WEIGHTS = { title: 10.0, tags: 4.0 };
 
 /**
- * snippet() does not escape, so it splices control-character markers that the corpus cannot contain;
- * the snippet is escaped first and the markers become <mark> after. Built at runtime so no control
- * byte is ever written into this file.
+ * snippet() does not escape, so it splices Capsomer's control-character markers (MARK_OPEN, MARK_CLOSE, which the corpus
+ * cannot contain) around each match. A hit's snippet stays that text: the page marks it with Capsomer's Snippet and the
+ * JSON answer with snippetHtml, which escapes every run, so nothing a document says becomes markup.
  */
-const MARK_START = String.fromCharCode(1);
-const MARK_END = String.fromCharCode(2);
-const MARK_START_SQL = "char(1)";
-const MARK_END_SQL = "char(2)";
+const MARK_START_SQL = `char(${MARK_OPEN.charCodeAt(0)})`;
+const MARK_END_SQL = `char(${MARK_CLOSE.charCodeAt(0)})`;
 
 /** "filter" is not an index match: it labels a browse-path record, where there was no text to match. */
 export type MatchReason = "title" | "tag" | "body" | "filter";
@@ -54,7 +52,7 @@ export interface SearchHit {
   anchor: string | null;
   tags: string[];
   publishAt: number | null;
-  /** Escaped HTML with <mark> around matched terms. Safe to render. */
+  /** Text with Capsomer's MARK_OPEN and MARK_CLOSE around each matched term; never markup (Snippet or snippetHtml draws it). */
   snippet: string;
   why: MatchReason[];
   score: number;
@@ -114,10 +112,6 @@ interface RawRow {
   doc_tags: string;
   publish_at: number | null;
   snippet: string;
-}
-
-function renderSnippet(raw: string): string {
-  return escapeXml(raw).split(MARK_START).join("<mark>").split(MARK_END).join("</mark>");
 }
 
 /** The pipe-delimited `doc_tags` column as a list. */
@@ -347,11 +341,9 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
     toHit(
       item,
       // The prose snippet has sentences; the identity one is just the title, already shown.
-      renderSnippet(
-        (proseUids.has(item.uid)
-          ? proseRows.find((r) => r.uid === item.uid)?.snippet
-          : item.snippet) ?? item.snippet,
-      ),
+      (proseUids.has(item.uid)
+        ? proseRows.find((r) => r.uid === item.uid)?.snippet
+        : item.snippet) ?? item.snippet,
       whyMatched(item, parsed, proseUids.has(item.uid)),
       score,
     ),
@@ -385,7 +377,7 @@ async function browse(
   const browseTook = Date.now() - started;
   const browseHits: SearchHit[] = rows.map((item, index) =>
     // Rank is the date order this came back in, not a relevance score.
-    toHit(item, renderSnippet(clampTitle(item.snippet, 200)), ["filter"], rows.length - index),
+    toHit(item, clampTitle(item.snippet, 200), ["filter"], rows.length - index),
   );
   return {
     parsed,

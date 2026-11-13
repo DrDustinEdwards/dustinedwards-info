@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
-import matter from "gray-matter";
+import { catalogMarkdown } from "capsomer/behavior/catalog";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
 import {
@@ -13,7 +14,6 @@ import {
   strainMarkdown,
   strainRow,
   strainRows,
-  strainsMarkdown,
 } from "../app/kb/registry/catalog.mjs";
 import { compileRegistryItem, registrySetErrors } from "../app/kb/registry/compile.mjs";
 import { KINDS } from "../app/kb/registry/kinds.mjs";
@@ -153,7 +153,7 @@ await test("no record stores what is computed: the phages isolated on a strain, 
   );
   assert.equal(names.length, 2);
   for (const name of names) {
-    const data = matter(await text(`content/registry/strain/${name}`), {}).data;
+    const data = matter(await text(`content/registry/strain/${name}`)).data;
     for (const field of [
       "phages",
       "protocols",
@@ -241,7 +241,10 @@ await test("the twin states what the page states, and a biosafety level nobody h
   ])
     assert.ok(md.includes(line), line);
   assert.ok(
-    strainsMarkdown([row], "https://example.com").includes(
+    catalogMarkdown(STRAINS, [row], "", {
+      origin: "https://example.com",
+      href: (s) => s.path,
+    }).includes(
       "| [Mycobacterium smegmatis mc²155](https://example.com/research/lab/strains/smegmatis) |",
     ),
   );
@@ -275,7 +278,7 @@ await test("STORED ONCE: no protocol types a strain's designation or collection 
         !raw.includes(value),
         `${name} types "${value}"; a strain is stored once, in content/registry/strain`,
       );
-    const data = matter(raw, {}).data;
+    const data = matter(raw).data;
     if (!Array.isArray(data.host_strain)) continue;
     for (const entry of data.host_strain) {
       assert.deepEqual(
