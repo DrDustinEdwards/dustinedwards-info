@@ -1,5 +1,5 @@
-/* The structured panels as the server renders them: real HTML, crawlable links, the disclosure pattern
- * and nothing from the menu roles. The interactions (hover, click, Escape, the viewport) are the browser
+/* The structured panels as the server renders them in Capsomer's header: real HTML and crawlable links
+ * (the disclosure pattern itself is tested in Capsomer). The interactions (hover, click, Escape, the viewport) are the browser
  * cases in scripts/lib/browser/cases/header-menus.mjs. */
 
 import test from "node:test";
@@ -21,37 +21,14 @@ const { render } = await bundleRenderer(`
 const SECTIONS = ["research", "teaching", "software", "writing", "about"];
 const html = render("/");
 
-/** The markup of one panel: from its opening tag to the next list item of the bar. */
+/** The markup of one panel: Capsomer names its id after the section's, and the panel ends at its list item. */
 function panelHtml(id) {
-  const start = html.indexOf(`id="site-nav-${id}"`);
+  const start = html.search(new RegExp(`id="[^"]*-${id}"[^>]*popover`));
   assert.ok(start > 0, `no panel for ${id} in the server HTML`);
-  const end = html.indexOf('data-nav-menu=""', start);
-  return html.slice(start, end === -1 ? html.indexOf("</nav>", start) : end);
+  return html.slice(start, html.indexOf("</li>", html.indexOf("site-nav-foot", start)));
 }
 
 const hrefsIn = (markup) => [...markup.matchAll(/<a\b[^>]*?\shref="([^"]*)"/g)].map((m) => m[1]);
-
-await test("the bar has five section buttons, each a disclosure of its own panel", () => {
-  const buttons = [...html.matchAll(/<button\b[^>]*data-nav-button[^>]*>/g)].map((m) => m[0]);
-  assert.equal(buttons.length, 5);
-  for (const [i, id] of SECTIONS.entries()) {
-    const button = buttons[i];
-    assert.match(button, new RegExp(`aria-controls="site-nav-${id}"`));
-    assert.match(button, new RegExp(`popovertarget="site-nav-${id}"`, "i"));
-    assert.match(button, /type="button"/);
-    assert.ok(html.includes(`id="site-nav-${id}"`), `${id}: aria-controls names nothing`);
-  }
-  // The names, in the bar's order; the old word-and-chevron pair is gone.
-  const labels = [...html.matchAll(/<span class="site-nav-button-label">([^<]*)<\/span>/g)].map(
-    (m) => m[1],
-  );
-  assert.deepEqual(labels, ["Research", "Teaching", "Software", "Writing", "About"]);
-  assert.ok(!html.includes("site-nav-word"));
-});
-
-await test("no menu, menubar or menuitem role anywhere in the header", () => {
-  assert.doesNotMatch(html, /role="(menu|menubar|menuitem)"/);
-});
 
 await test("the panels' links are real anchors in the HTML, so a crawler and a reader without script can follow them", () => {
   const all = hrefsIn(html);
@@ -94,11 +71,11 @@ await test("a panel names no heading, so the page outline is not opened by the m
 
 await test("inside a section its button is marked as the section, and no other is", () => {
   const onWriting = render("/writing/ten-years-on-cloudflare");
-  const marked = [...onWriting.matchAll(/<button\b[^>]*data-nav-button[^>]*>/g)]
+  const marked = [...onWriting.matchAll(/<button\b[^>]*data-cap-part="panel-trigger"[^>]*>/g)]
     .map((m) => m[0])
-    .filter((b) => b.includes("data-section"));
+    .filter((b) => b.includes("data-current"));
   assert.equal(marked.length, 1);
-  assert.match(marked[0], /aria-controls="site-nav-writing"/);
+  assert.match(marked[0], /aria-controls="[^"]*-writing"/);
   // A panel link to the page the reader is on says so; a link to the section hub does not claim to be the page.
   assert.doesNotMatch(onWriting, /href="\/writing"[^>]*aria-current/);
 });

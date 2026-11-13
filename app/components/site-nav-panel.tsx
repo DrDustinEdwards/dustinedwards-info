@@ -6,9 +6,8 @@ import type { Menu, MenuLink, MenuRow, NavIcon } from "~/lib/nav";
  * The structured panel (app/lib/nav.ts): one shape for all five sections, top to bottom a header band, a
  * row of three tiles, a band with grouped rows on the left and one spotlight on the right, and three quick
  * links. It is the site's own contents of a Capsomer site-header panel (site-header.md, "the site's own
- * panel"): a manual popover its button opens with no script (popovertarget), in the top layer above the
- * sticky header. app/enhance/header.ts hands it to Capsomer's behavior, which adds hover, light dismiss,
- * Escape, arrow keys and focus return. On a phone the section links are in the header's sheet instead.
+ * panel"): Capsomer's SiteHeader wraps it in the manual popover its button opens with no script
+ * (popovertarget), and its behavior adds hover, light dismiss, Escape, arrow keys and focus return.
  *
  * Everything in it is a plain list of links: no menu roles, which would promise arrow-key menus it does
  * not have (W3C disclosure navigation). The lists are named with aria-label, not headings: the panel is
@@ -266,27 +265,10 @@ function MapDrawing() {
   );
 }
 
-export function SiteNavPanel({
-  id,
-  label,
-  menu,
-  pathname,
-}: {
-  id: string;
-  label: string;
-  menu: Menu;
-  pathname: string;
-}) {
+export function SiteNavPanel({ menu, pathname }: { menu: Menu; pathname: string }) {
   const { spotlight } = menu;
   return (
-    <div
-      className="cap-site-header-panel site-nav-panel"
-      id={id}
-      popover="manual"
-      role="group"
-      aria-label={label}
-      data-nav-panel=""
-    >
+    <>
       <div className="site-nav-band">
         <span className="site-nav-badge" aria-hidden="true">
           {menu.badge ? <b>{menu.badge}</b> : <Icon name={menu.icon} />}
@@ -341,6 +323,6 @@ export function SiteNavPanel({
           </li>
         ))}
       </ul>
-    </div>
+    </>
   );
 }
