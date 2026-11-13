@@ -2,7 +2,7 @@
 // app/routes/publications.$slug[.md].ts, so a paper edited through Carrel changes its twin with no build.
 // It was a static asset until publications moved to files (an asset wins over a route for a .md path, measured).
 
-import { decodeEntities } from "./entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 
 /**
  * JSON.stringify is correct here: YAML's double-quoted style is a superset of JSON strings.
@@ -75,15 +75,15 @@ function stripControls(value) {
  * @returns {string}
  */
 export function paperTwin(paper, { pages, citedBy, citedByFetchedAt, pagePath, pdfPath }) {
-  // Decoded here: the stored corpus keeps character references escaped on purpose (see entities.mjs).
-  const title = decodeEntities(paper.title);
+  // Decoded here: the stored corpus keeps character references escaped on purpose (check:machine-readable keeps "<" out of stored abstracts).
+  const title = unescapeHtml(paper.title);
   const frontmatter = [
     "---",
     ...line("id", paper.id),
     ...line("title", title),
     "authors:",
-    ...paper.authors.map((name) => `  - ${yamlString(decodeEntities(name))}`),
-    ...line("venue", paper.journal ? decodeEntities(paper.journal) : null),
+    ...paper.authors.map((name) => `  - ${yamlString(unescapeHtml(name))}`),
+    ...line("venue", paper.journal ? unescapeHtml(paper.journal) : null),
     ...line("year", paper.year),
     ...line("date", paper.publishedDate),
     ...line("doi", paper.doi),
@@ -116,7 +116,7 @@ export function paperTwin(paper, { pages, citedBy, citedByFetchedAt, pagePath, p
   }
 
   if (paper.abstract) {
-    body.push("## Abstract", "", decodeEntities(paper.abstract), "");
+    body.push("## Abstract", "", unescapeHtml(paper.abstract), "");
   }
 
   // The provenance sentence decides whether a quotation from machine-extracted text can be trusted.

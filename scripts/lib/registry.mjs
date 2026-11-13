@@ -18,7 +18,7 @@ import { storedPrimer } from "../../app/kb/registry/primer.mjs";
 import { storedEquipment } from "../../app/kb/registry/equipment.mjs";
 import { storedReagent } from "../../app/kb/registry/reagent.mjs";
 import { storedStrain } from "../../app/kb/registry/strain.mjs";
-import { paperExists } from "./content-source.mjs";
+import { paperExists, throwOnCompileErrors } from "./content-source.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The D1 rows sync:content writes. */
@@ -111,14 +111,7 @@ export async function buildRegistry(options = {}) {
       `${strays.join(", ")} is not a registry kind directory; the kinds are ${Object.keys(kinds).join(", ") || "none yet"}`,
     );
   }
-  const failed = compiled.filter((c) => !c.compiled.ok);
-  if (failed.length > 0) {
-    throw new Error(
-      failed
-        .map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`)
-        .join("\n"),
-    );
-  }
+  throwOnCompileErrors(compiled);
   const ok = compiled.flatMap((c) => (c.compiled.ok ? [c.compiled] : []));
   const setErrors = registrySetErrors(
     ok.map((c) => c.item),

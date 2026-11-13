@@ -11,6 +11,7 @@ import { findWideDashes } from "@drdustinedwards/site-helpers/text";
 import { canonicalAuthor } from "../publications/authors.mjs";
 import { AREAS, ROLES } from "./view.mjs";
 import { DOI_PATTERN } from "@drdustinedwards/site-helpers/scholar";
+import { wideDashError } from "../content/front-matter.mjs";
 
 const AREA_IDS = new Set(AREAS.map(([id]) => /** @type {string} */ (id)));
 const ROLE_IDS = new Set(ROLES.map(([id]) => /** @type {string} */ (id)));
@@ -347,11 +348,7 @@ function checkProfile(data, errors) {
 export function parseCvFile(file, raw) {
   /** @type {string[]} */
   const errors = [];
-  for (const hit of findWideDashes(raw)) {
-    errors.push(
-      `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
-    );
-  }
+  errors.push(...findWideDashes(raw).map(wideDashError));
   let parsed;
   try {
     parsed = matter(raw);

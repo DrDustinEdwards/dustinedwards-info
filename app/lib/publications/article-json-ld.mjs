@@ -3,7 +3,7 @@
 
 import { thing } from "@drdustinedwards/site-helpers/schema";
 
-import { decodeEntities } from "./entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 
 // abstract is still a ScholarlyArticle: hiding abstracts on the site is editorial, not a claim about them.
 const SCHEMA_TYPE = {
@@ -57,13 +57,13 @@ export function paperJsonLd(paper, context) {
   const authors = (paper.authors ?? []).map((/** @type {string} */ name) =>
     context.isOwner(name)
       ? { "@id": context.personId }
-      : { "@type": "Person", name: decodeEntities(name) },
+      : { "@type": "Person", name: unescapeHtml(name) },
   );
 
   const article = thing(schemaTypeFor(paper.type), {
     "@id": context.pageUrl,
-    headline: decodeEntities(paper.title),
-    name: decodeEntities(paper.title),
+    headline: unescapeHtml(paper.title),
+    name: unescapeHtml(paper.title),
     author: authors,
     // Deposited precision: a partial ISO date, so a record that only said 2011 says 2011.
     datePublished: paper.publishedDate ?? (paper.year ? String(paper.year) : undefined),
@@ -79,7 +79,7 @@ export function paperJsonLd(paper, context) {
       ? {
           isPartOf: {
             "@type": "Periodical",
-            name: decodeEntities(paper.journal),
+            name: unescapeHtml(paper.journal),
             ...(paper.volume
               ? {
                   hasPart: {
@@ -101,7 +101,7 @@ export function paperJsonLd(paper, context) {
       : {}),
     ...(paper.firstPage ? { pageStart: paper.firstPage } : {}),
     ...(paper.lastPage ? { pageEnd: paper.lastPage } : {}),
-    ...(paper.abstract ? { abstract: decodeEntities(paper.abstract) } : {}),
+    ...(paper.abstract ? { abstract: unescapeHtml(paper.abstract) } : {}),
     // The Unpaywall OA answer, not whether a PDF is hosted here: some hosted copies are not open access.
     isAccessibleForFree: Boolean(paper.isOpenAccess),
     ...(paper.license ? { license: paper.license } : {}),

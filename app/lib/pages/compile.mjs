@@ -22,6 +22,7 @@ import { IDENTITY } from "../identity.generated.mjs";
 import { expandPhagePage, expandPhageTokens, withPhageRowIds } from "../phages/compile.mjs";
 import { pageInvariantErrors } from "./invariants.mjs";
 import { protectedPageReason } from "./protected.mjs";
+import { wideDashError } from "../content/front-matter.mjs";
 
 export const PAGES_DIR = "content/pages";
 
@@ -243,10 +244,7 @@ export async function compilePage({
   }
   const file = sourcePath ?? pageSourcePath(slug);
   /** @type {string[]} */
-  const errors = (generated ? [] : pipeline.findWideDashes(raw)).map(
-    (hit) =>
-      `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
-  );
+  const errors = (generated ? [] : pipeline.findWideDashes(raw)).map(wideDashError);
 
   let parsed;
   try {

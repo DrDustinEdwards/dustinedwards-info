@@ -15,7 +15,7 @@ import scienceEducationPage from "../../content/pages/research-science-education
 
 import { versionCases } from "./carrel-version-cases";
 import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext, carrelRequest, recordPurges } from "./route-helpers";
+import { renderRoute, routeContext, recordPurges, carrelSend, carrelGet } from "./route-helpers";
 import { seedPages, seedPhages } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -42,26 +42,6 @@ const EDITED_ROW = ROW.replace("Hood County", "Parker County");
 const PAPER_FILE = "content/publications/10-1128-mra-01242-18.md";
 const NEW_PHAGE =
   "---\nname: Zeta\nyear: 2026\nhost: foliorum\ncounty: Erath County\nphagesdb: null\n---\n";
-
-const headersFor = (key: string) => ({
-  authorization: `Bearer ${key}`,
-  "content-type": "application/json",
-  "cf-connecting-ip": "203.0.113.9",
-});
-const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
-const get = (url: string) =>
-  carrelRequest(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
-function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return carrelRequest(
-    argsFor(
-      new Request(url, {
-        method,
-        headers: headersFor(testEnv.CARREL_SITE_KEY),
-        body: JSON.stringify(body),
-      }),
-    ),
-  );
-}
 
 async function pageData() {
   return pageLoader({
@@ -141,7 +121,7 @@ describe("a phage edit through the adapter is live at the next request", () => {
 
       const edited = acornPhage.replace("county: Hood County", "county: Parker County");
       expect(edited).not.toBe(acornPhage);
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: edited,
         expectedVersion: await versionOf(FILE),
         changeId: "chg-phage",
@@ -177,13 +157,13 @@ describe("a phage edit through the adapter is live at the next request", () => {
       expect((await searchBodies()).some((body) => body.includes("Parker County"))).toBe(true);
 
       // The file read back through Carrel is the edit, and the phage is listed as its own kind.
-      const read = (await (await get(`${PREFIX}/content/${ID}`)).json()) as {
+      const read = (await (await carrelGet(`${PREFIX}/content/${ID}`)).json()) as {
         source: string;
         kind: string;
       };
       expect(read.kind).toBe("phage");
       expect(read.source).toBe(edited);
-      const list = (await (await get(`${PREFIX}/content?limit=100&q=acorn`)).json()) as {
+      const list = (await (await carrelGet(`${PREFIX}/content?limit=100&q=acorn`)).json()) as {
         items: Array<{ id: string; kind: string; path: string | null }>;
       };
       expect(list.items.find((i) => i.id === ID)).toMatchObject({
@@ -197,7 +177,7 @@ describe("a phage edit through the adapter is live at the next request", () => {
     "a new phage is drawn into the table, the twin and the dataset facts",
     { timeout: 240_000 },
     async () => {
-      const response = await send("PUT", `${PREFIX}/content/phage.zeta/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/phage.zeta/draft`, {
         source: NEW_PHAGE,
         expectedVersion: null,
         changeId: "chg-new",
@@ -220,7 +200,7 @@ describe("a phage edit through the adapter is live at the next request", () => {
     "a phage that names a genome paper the repository holds saves, and its paper link is in the table and the twin",
     { timeout: 240_000 },
     async () => {
-      const response = await send("PUT", `${PREFIX}/content/phage.arlo/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/phage.arlo/draft`, {
         source: arloPhage.replace("county: Erath County", "county: Parker County"),
         expectedVersion: await versionOf("content/phages/arlo.md"),
         changeId: "chg-arlo",
@@ -236,7 +216,7 @@ describe("a phage edit through the adapter is live at the next request", () => {
   );
 
   it("an unchanged save commits nothing and says so", { timeout: 240_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: acornPhage,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-same",
@@ -252,7 +232,7 @@ describe("a phage change purges the pages tag, because the page embeds the table
     "purges content-pages, the tag the page's HTML and its twin carry, and only that",
     { timeout: 240_000 },
     async () => {
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: acornPhage.replace("county: Hood County", "county: Parker County"),
         expectedVersion: await versionOf(FILE),
         changeId: "chg-purge",
@@ -277,7 +257,7 @@ describe("a save is held to what CI holds", () => {
       .replace("year: 2017", "year: soon")
       .replace("---\n", "---\nsample: soil\n")
       .concat(`\nA sentence ${wide} with a dash.\n`);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: bad,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-bad",
@@ -292,7 +272,7 @@ describe("a save is held to what CI holds", () => {
   });
 
   it("REFUSES a genome paper this site does not hold, a record that is not the phage's own, and a stale version", async () => {
-    const paper = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const paper = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: acornPhage.replace(/\n---\n$/, "\npaper: not-a-paper-here\n---\n"),
       expectedVersion: await versionOf(FILE),
       changeId: "chg-paper",
@@ -303,7 +283,7 @@ describe("a save is held to what CI holds", () => {
     );
 
     // Allene's record is Allene's alone: a second phage cannot claim it.
-    const claim = await send("PUT", `${PREFIX}/content/phage.allenetwo/draft`, {
+    const claim = await carrelSend("PUT", `${PREFIX}/content/phage.allenetwo/draft`, {
       source: "---\nname: AlleneTwo\nyear: 2026\nhost: null\ncounty: null\nphagesdb: Allene\n---\n",
       expectedVersion: null,
       changeId: "chg-claim",
@@ -311,7 +291,7 @@ describe("a save is held to what CI holds", () => {
     expect(claim.status).toBe(422);
     expect(((await claim.json()) as { message: string }).message).toMatch(/not AlleneTwo's record/);
 
-    const stale = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const stale = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: acornPhage.replace("county: Hood County", "county: Parker County"),
       expectedVersion: "b".repeat(40),
       changeId: "chg-stale",
@@ -325,7 +305,7 @@ describe("a save is held to what CI holds", () => {
   });
 
   it("has no draft state: a phage cannot be unpublished, and the answer says how to remove one", async () => {
-    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, {
+    const response = await carrelSend("POST", `${PREFIX}/content/${ID}/unpublish`, {
       expectedVersion: await versionOf(FILE),
       changeId: "chg-down",
     });
@@ -378,7 +358,7 @@ versionCases({
   id: ID,
   file: FILE,
   edit: () => acornPhage.replace("county: Hood County", "county: Parker County"),
-  get,
-  send,
+  get: carrelGet,
+  send: carrelSend,
   timeout: 240000,
 });

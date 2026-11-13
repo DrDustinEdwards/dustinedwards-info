@@ -21,7 +21,7 @@ import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
-import { thing } from "@drdustinedwards/site-helpers/schema";
+import { itemList, thing } from "@drdustinedwards/site-helpers/schema";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import {
   LIBRARY,
@@ -134,16 +134,11 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
     name: page.title,
     description: page.description,
     url: `${SITE_ORIGIN}${LIBRARY_PATH}`,
-    mainEntity: {
-      "@type": "ItemList",
-      numberOfItems: items.length,
-      itemListElement: items.map((item, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        name: item.title,
-        url: `${SITE_ORIGIN}${item.path}`,
-      })),
-    },
+    mainEntity: itemList(
+      SITE_ORIGIN,
+      page.title,
+      items.map((item) => ({ name: item.title, path: item.path })),
+    ),
   });
   return (
     <PageShell trail={<JsonLd data={collection} />}>

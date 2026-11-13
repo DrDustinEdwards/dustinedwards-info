@@ -90,3 +90,15 @@ export async function paperExists(slug) {
   );
   return info !== null && info.isFile();
 }
+
+/**
+ * Throws naming every file that does not compile, with its errors: a build never ships a file CI would refuse.
+ *
+ * @param {Array<{ file: string, compiled: { ok: true } | { ok: false, errors: string[] } }>} compiled
+ */
+export function throwOnCompileErrors(compiled) {
+  const failed = compiled.flatMap((c) =>
+    c.compiled.ok ? [] : [`${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`],
+  );
+  if (failed.length > 0) throw new Error(failed.join("\n"));
+}

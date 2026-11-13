@@ -13,6 +13,7 @@ import {
 } from "../dictionary-entries.mjs";
 import { dictionaryPath, parseDictionaryEntry } from "./parse.mjs";
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
+import { wideDashError } from "../content/front-matter.mjs";
 
 const DICTIONARY_KIND = "dictionary";
 
@@ -168,15 +169,7 @@ function entryFromData(data) {
 export async function compileDictionaryEntry({ key, raw, pipeline, host, others = [] }) {
   const file = dictionaryPath(key);
   const parsed = parseDictionaryEntry({ file, raw });
-  const errors = [
-    ...parsed.problems,
-    ...pipeline
-      .findWideDashes(raw)
-      .map(
-        (hit) =>
-          `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
-      ),
-  ];
+  const errors = [...parsed.problems, ...pipeline.findWideDashes(raw).map(wideDashError)];
   if (parsed.problems.length > 0) return { ok: false, errors };
 
   if (!SLUG_PATTERN.test(key))
