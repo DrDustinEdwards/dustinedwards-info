@@ -99,6 +99,11 @@ describe("the Carrel key reaches only its prefix", () => {
     const response = await get(`${PREFIX}/content`, testEnv.OPERATOR_TOKEN);
     expect(response.status).toBe(401);
   });
+  it("answers the key on its prefix", async () => {
+    const response = await get(`${PREFIX}/meta`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ site: { id: "dustinedwards-info" } });
+  });
 });
 
 describe("every write names the version it was loaded at", () => {
