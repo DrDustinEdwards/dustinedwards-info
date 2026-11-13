@@ -15,7 +15,7 @@ const STEP_GAP = /^step (\d+) \(line \d+\)\.(\w+)$/;
 export const FIELD_PREFIX = "kb-field";
 
 /** An input's id from a field key, the id the form gives the field's input. @param {string} key */
-export const fieldAnchor = (key) => specId(key, FIELD_PREFIX);
+const fieldAnchor = (key) => specId(key, FIELD_PREFIX);
 
 /** A cell's id in a list the form edits as rows (materials): the list, the row's name, the column. */
 export const cellAnchor = (
