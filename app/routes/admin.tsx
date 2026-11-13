@@ -45,7 +45,7 @@ import "@fontsource-variable/source-serif-4/index.css";
 import "@fontsource-variable/source-serif-4/wght-italic.css";
 import "~/admin.css";
 import { markup } from "capsomer/behavior/trusted-html";
-import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
+import { PRIVATE_PAGE_HEADERS, UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta() {
   return [{ title: "Admin" }, { name: "robots", content: "noindex" }];
@@ -53,6 +53,9 @@ export function meta() {
 
 /** Root renders `<Scripts>` only when a match carries this flag. */
 export const handle = { hydrate: true };
+
+// A private page, like every child: no-transform keeps the Web Analytics beacon out (site-runtime PRIVATE_PAGE_HEADERS).
+export const headers = () => PRIVATE_PAGE_HEADERS;
 
 /**
  * Two ways in, only the first may write: a person Cloudflare Access admitted (a verified signed

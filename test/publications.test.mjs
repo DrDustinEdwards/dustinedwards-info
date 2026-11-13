@@ -285,6 +285,27 @@ await test("the write policy: an operator may edit but never first-publish, Carr
       priorRaw: "live",
     }),
   );
+  // Unpublished now, but an earlier revision was live: a republication, which an operator may do.
+  assert.doesNotThrow(() =>
+    decideFileWrite({
+      ...base,
+      actor: { kind: "operator", id: "t" },
+      incomingDraft: false,
+      priorRaw: "draft",
+      history: ["draft", "live", "draft"],
+    }),
+  );
+  assert.throws(
+    () =>
+      decideFileWrite({
+        ...base,
+        actor: { kind: "operator", id: "t" },
+        incomingDraft: false,
+        priorRaw: "draft",
+        history: ["draft"],
+      }),
+    /reserved to the human admin/,
+  );
   assert.doesNotThrow(() =>
     decideFileWrite({
       ...base,

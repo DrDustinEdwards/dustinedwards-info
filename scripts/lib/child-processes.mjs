@@ -179,11 +179,18 @@ export function killTree(pid) {
         spawnSync("taskkill", ["/F", "/T", "/PID", String(pid)], { stdio: "ignore" }).status === 0
       );
     }
-    // Needs the child spawned into its own process group, which a negative pid addresses.
+    // A group leader (the preview server is spawned detached into its own group): the negative pid reaches
+    // the whole tree.
     process.kill(-pid, "SIGKILL");
     return true;
   } catch {
-    return false;
+    // Not a leader (a port holder or a registry entry, found by `ps` and so a grandchild): only that process.
+    try {
+      process.kill(pid, "SIGKILL");
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

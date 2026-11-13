@@ -220,13 +220,18 @@ export function decide(options) {
 
 /**
  * The rule for a file kind whose only status is its own `draft` flag (procedures, publications): the
- * same policy as a post, read from the prior FILE. An actor without the write capability is refused, and
- * one without first-publish may unpublish and republish but never make something public that never was.
+ * same policy as a post. An actor without the write capability is refused, and one without first-publish
+ * may unpublish and republish but never make something public that never was.
  *
- * @param {{ actor: Actor, noun: string, incomingDraft: boolean, priorRaw: string | null, isDraft: (raw: string) => boolean }} options
+ * A post keeps that fact in its own `first_published` stamp. These kinds keep it in their revision
+ * history instead (`history`, every earlier stored version, from `fileHistory`): a stamp would change a
+ * frozen procedure's blob sha and trip its frozen-edit check. The history is server-side, so an agent
+ * cannot forge it any more than the prior file.
+ *
+ * @param {{ actor: Actor, noun: string, incomingDraft: boolean, priorRaw: string | null, history?: readonly string[], isDraft: (raw: string) => boolean }} options
  *   `noun` is the thing saved ("procedure"), named in the refusal.
  */
-export function decideFileWrite({ actor, noun, incomingDraft, priorRaw, isDraft }) {
+export function decideFileWrite({ actor, noun, incomingDraft, priorRaw, history = [], isDraft }) {
   const may = WRITE_CAPABILITIES[actor.kind];
   if (!may.write) {
     throw new PolicyError(
@@ -234,7 +239,7 @@ export function decideFileWrite({ actor, noun, incomingDraft, priorRaw, isDraft 
       SMOKE_READ_ONLY_POLICY,
     );
   }
-  const everPublished = priorRaw !== null && !isDraft(priorRaw);
+  const everPublished = [priorRaw, ...history].some((raw) => raw !== null && !isDraft(raw));
   if (!may.firstPublish && !incomingDraft && !everPublished) {
     throw new PolicyError(
       `Refused: publishing a ${noun} for the first time is reserved to the human admin. Save it with ` +

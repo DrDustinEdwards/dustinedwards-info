@@ -16,7 +16,13 @@ import { purgePages, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/source/store.server";
+import {
+  blobGuard,
+  commitFiles,
+  publicFileEntry,
+  fileHistory,
+  readFile,
+} from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
@@ -174,6 +180,7 @@ export async function saveDictionaryEntry(
     noun: "dictionary entry",
     incomingDraft: compiled.draft,
     priorRaw: existing?.content ?? null,
+    history: await fileHistory(env, path),
     isDraft: fileIsDraft,
   });
 

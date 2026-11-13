@@ -14,7 +14,7 @@ import { listRegistry } from "~/db/registry";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRegistry, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
+import { blobGuard, commitFiles, fileHistory, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
@@ -242,6 +242,7 @@ export async function saveRegistryItem(
     noun: kinds[kind]?.singular ?? "registry item",
     incomingDraft: compiled.item.status === "draft",
     priorRaw: existing?.content ?? null,
+    history: await fileHistory(env, file),
     isDraft,
   });
 
