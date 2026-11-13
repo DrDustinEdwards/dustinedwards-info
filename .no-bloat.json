@@ -36,6 +36,7 @@
       "clones": 1,
       "lines": 23
     },
+    "legacy": {},
     "tests": {
       "files": 206,
       "cases": 1642

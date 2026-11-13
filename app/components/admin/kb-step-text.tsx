@@ -105,6 +105,7 @@ function ChipPopover({
         if (e.key === "Escape") {
           e.preventDefault();
           onCancel();
+          // legacy-scan:keep isImeEnter (Capsomer shortcuts.ts) checks isComposing and keyCode 229; the scanner cannot follow it.
         } else if (
           e.key === "Enter" &&
           !isImeEnter(e.nativeEvent) &&
