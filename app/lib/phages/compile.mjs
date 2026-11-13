@@ -9,11 +9,10 @@
 // visitor cannot already read in the table can enter the repository or D1: no sample, location beyond the county
 // the table shows, or personal data.
 
-import { matter } from "@drdustinedwards/site-helpers/matter";
-
 import { gitBlobSha } from "../content/hashes.mjs";
 import { foldText } from "../cv/view.mjs";
 import { phagesDbUrl } from "../phage-table.mjs";
+import { parseFrontMatter, wideDashError } from "../content/front-matter.mjs";
 
 export const PHAGES_DIR = "content/phages";
 
@@ -119,26 +118,9 @@ const matches = (value, pattern) => typeof value === "string" && pattern.test(va
  */
 export async function compilePhage({ slug, raw, host, pipeline, sourcePath }) {
   /** @type {string[]} */
-  const errors = pipeline
-    .findWideDashes(raw)
-    .map(
-      (hit) =>
-        `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
-    );
-  if (!raw.startsWith("---")) errors.push("the file must start with a --- front matter block");
-
-  let parsed;
-  try {
-    parsed = matter(raw);
-  } catch (error) {
-    return {
-      ok: false,
-      errors: [
-        ...errors,
-        `the front matter is not valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
-      ],
-    };
-  }
+  const errors = pipeline.findWideDashes(raw).map(wideDashError);
+  const parsed = parseFrontMatter(raw, errors);
+  if (!parsed) return { ok: false, errors };
   const data = parsed.data;
   if (parsed.content.trim() !== "")
     errors.push("the body must be empty: a phage is its front matter and nothing else");
