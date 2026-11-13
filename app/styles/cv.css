@@ -146,9 +146,10 @@
   gap: var(--space-5) var(--space-6);
 }
 
-/* The chip groups' legends (capsomer CheckChips) read as the other filter labels beside them. */
-.cv-label,
-.cv-more-body .cap-chips-label {
+/* The filters' labels and legends (Capsomer's chips and fields) in the manual's small capitals; the From and
+   To labels inside the years field stay Capsomer's. */
+.cv-more-body .cap-chips-label,
+.cv-filter-row > .cap-field > .cap-field-label {
   display: block;
   margin: 0 0 var(--space-3);
   padding: 0;
@@ -159,43 +160,8 @@
   text-transform: uppercase;
 }
 
-.cv-field {
-  display: block;
-}
-
 .cv-search {
   flex: 1 1 18rem;
-}
-
-.cv-filters select {
-  box-sizing: border-box;
-  min-height: var(--control-min);
-  padding: 0.5rem 0.75rem;
-  border: var(--line-w) solid var(--line-strong);
-  border-radius: 0;
-  background: var(--paper);
-  color: var(--text);
-  font: inherit;
-  font-size: 1rem;
-}
-
-.cv-filters select:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
-}
-
-.cv-facet {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.cv-years-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  color: var(--text-secondary);
 }
 
 .cv-filter-actions {
@@ -517,17 +483,8 @@
     gap: var(--space-5);
   }
 
-  .cv-filter-row > .cv-field,
-  .cv-years {
+  .cv-filter-row > .cap-field {
     flex: 1 1 100%;
-  }
-
-  .cv-filters select {
-    width: 100%;
-  }
-
-  .cv-years-row select {
-    flex: 1 1 0;
   }
 }
 

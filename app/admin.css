@@ -5,6 +5,7 @@
 @import "capsomer/layers.css";
 @import "capsomer/tokens.css";
 @import "capsomer/base.css";
+@import "capsomer/layout.css";
 @import "capsomer/prose.css";
 
 /* Shared building blocks first, then the components built on them. */

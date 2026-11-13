@@ -1,5 +1,5 @@
 import { CheckChips } from "capsomer/react/chips";
-import { SearchField } from "capsomer/react/field";
+import { SearchField, SpanField } from "capsomer/react/field";
 import { JsonLd } from "capsomer/react/json-ld";
 import { ButtonLink } from "capsomer/react/link";
 import { Fragment, useState, type ReactNode } from "react";
@@ -55,6 +55,7 @@ import "capsomer/copy.css";
 import "capsomer/button.css";
 import "capsomer/chips.css";
 import "capsomer/field.css";
+import "capsomer/select.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/cv.css";
@@ -491,7 +492,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
           data-cv-form=""
         >
           <div className="cv-filter-row cv-filter-top">
-            <div className="cv-field cv-search">
+            <div className="cv-search">
               <CvSearch defaultValue={state.q} />
             </div>
           </div>
@@ -524,39 +525,16 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                     ([id, label]) => ({ value: id, label, count: facets.areas[id] ?? 0 }),
                   )}
                 />
-                <fieldset className="cv-facet cv-years">
-                  <legend className="cv-label">Years</legend>
-                  <div className="cv-years-row">
-                    <select
-                      name="from"
-                      defaultValue={state.from === null ? "" : String(state.from)}
-                      aria-label="From year"
-                    >
-                      <option value="">Earliest</option>
-                      {YEARS.map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                    <span aria-hidden="true">to</span>
-                    <select
-                      name="to"
-                      defaultValue={state.to === null ? "" : String(state.to)}
-                      aria-label="To year"
-                    >
-                      <option value="">Latest</option>
-                      {[...YEARS].reverse().map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </fieldset>
-                <label className="cv-field">
-                  <span className="cv-label">Role</span>
-                  <select name="role" defaultValue={state.role ?? ""}>
+                <SpanField
+                  label="Years"
+                  names={{ from: "from", to: "to" }}
+                  options={YEARS.map((y) => ({ value: String(y), label: y }))}
+                  from={state.from}
+                  to={state.to}
+                />
+                <label className="cap-field">
+                  <span className="cap-field-label">Role</span>
+                  <select className="cap-select" name="role" defaultValue={state.role ?? ""}>
                     <option value="">Any role</option>
                     {ROLES.filter(([id]) => FACTS.some((f) => f.role === id)).map(([id, label]) => (
                       <option key={id} value={id} data-cv-facet={id} data-label={label}>
@@ -565,9 +543,9 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                     ))}
                   </select>
                 </label>
-                <label className="cv-field">
-                  <span className="cv-label">Sort</span>
-                  <select name="sort" defaultValue={state.sort}>
+                <label className="cap-field">
+                  <span className="cap-field-label">Sort</span>
+                  <select className="cap-select" name="sort" defaultValue={state.sort}>
                     {SORTS.map(([id, label]) => (
                       <option key={id} value={id}>
                         {label}
