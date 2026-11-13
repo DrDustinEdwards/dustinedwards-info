@@ -5,7 +5,7 @@
 // Pure: no Env, no filesystem, no clock beyond the year bound below.
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { findWideDashes } from "@drdustinedwards/site-helpers/text";
 import { canonicalAuthor } from "../publications/authors.mjs";

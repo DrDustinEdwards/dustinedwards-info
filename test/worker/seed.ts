@@ -277,10 +277,12 @@ export async function cohortFile(cohort: {
   photo: unknown;
   researchers: readonly string[];
 }) {
-  const { default: matter } = await import("gray-matter");
-  return matter
-    .stringify("", { year: cohort.year, photo: cohort.photo, researchers: [...cohort.researchers] })
-    .replace(/\n+$/, "\n");
+  const { stringifyMatter } = await import("@drdustinedwards/site-helpers/matter");
+  return stringifyMatter("", {
+    year: cohort.year,
+    photo: cohort.photo,
+    researchers: [...cohort.researchers],
+  }).replace(/\n+$/, "\n");
 }
 
 /** The roster table, from the synthetic cohorts (or the ones given), written through the save's own row writer. */

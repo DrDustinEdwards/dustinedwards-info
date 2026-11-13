@@ -9,7 +9,7 @@
 // declare, so nothing enters the repository or D1 that a page would not show, and it states a value nobody has yet
 // as "MISSING: <why>", never a guess.
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { gitBlobSha } from "../../lib/content/hashes.mjs";
 import { foldText } from "../../lib/cv/view.mjs";
@@ -113,8 +113,7 @@ export async function compileRegistryItem({
 
   let parsed;
   try {
-    // An options object, even an empty one: gray-matter caches by input when it is omitted.
-    parsed = matter(raw, {});
+    parsed = matter(raw);
   } catch (error) {
     return {
       ok: false,

@@ -111,7 +111,7 @@ export async function run({ page, browser }) {
   await page.setViewport({ width: 320, height: 800 });
   for (const path of ["/", "/writing", "/search?q=workers", "/colophon", "/software"]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-    const o = await page.evaluate(overflowScan);
+    const o = await overflowScan(page);
     ok(
       `${path}: no horizontal scroll at 320px`,
       o.scrollW <= o.clientW,

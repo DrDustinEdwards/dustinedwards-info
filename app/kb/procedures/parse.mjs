@@ -4,7 +4,7 @@
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { slug as githubSlug } from "github-slugger";
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { yamlPlain } from "../../lib/yaml-plain.mjs";
 

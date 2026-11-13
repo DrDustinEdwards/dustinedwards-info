@@ -3,7 +3,7 @@
 // a file CI passes is the file the save tool accepts and the page draws (docs/PAGES.md).
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { gitBlobSha } from "../content/hashes.mjs";
 import {

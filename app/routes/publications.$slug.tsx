@@ -2,7 +2,8 @@ import { AuthorList } from "capsomer/react/author-list";
 import { CitedBy, CitedByCount } from "capsomer/react/cited-by";
 import { JsonLd } from "capsomer/react/json-ld";
 import { RecordFacts } from "capsomer/react/record-facts";
-import { Link } from "react-router";
+import { LinkChips } from "capsomer/react/chips";
+import { routerRenderLink } from "capsomer/react/link";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { ShellFooter } from "~/components/shell-footer";
@@ -43,6 +44,7 @@ import type { Route } from "./+types/publications.$slug";
 import "capsomer/author-list.css";
 import "capsomer/record-facts.css";
 import "capsomer/cited-by.css";
+import "capsomer/chips.css";
 import "~/styles/paper.css";
 
 /**
@@ -241,13 +243,16 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           ) : null}
 
           {topics.length > 0 ? (
-            <p className="paper-topics">
-              {topics.map((t) => (
-                <Link key={t.id} to={`${PUBLICATIONS_PATH}?topic=${t.id}`}>
-                  {t.label}
-                </Link>
-              ))}
-            </p>
+            <div className="paper-topics">
+              <LinkChips
+                label="Topics"
+                renderLink={routerRenderLink}
+                chips={topics.map((t) => ({
+                  href: `${PUBLICATIONS_PATH}?topic=${t.id}`,
+                  label: t.label,
+                }))}
+              />
+            </div>
           ) : null}
         </div>
 

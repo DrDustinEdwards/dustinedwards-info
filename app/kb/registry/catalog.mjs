@@ -401,19 +401,6 @@ export function phageYearsText(strain) {
     : `${strain.firstYear} to ${strain.lastYear}`;
 }
 
-/** The strains as a markdown table for the twin. @param {StrainRow[]} strains @param {string} origin */
-export function strainsMarkdown(strains, origin) {
-  const lines = strains.map(
-    (s) =>
-      `| [${mdCell(s.name)}](${origin}${s.path}) | ${mdCell(s.organism)} | ${mdCell(s.collection)} | ${mdCell(s.collectionNumber)} | ${s.phages.length} |`,
-  );
-  return [
-    "| Strain | Organism | Collection | Collection number | Phages isolated |",
-    "| --- | --- | --- | --- | --- |",
-    ...lines,
-  ].join("\n");
-}
-
 /**
  * One strain as markdown for the twin: the same facts the page states, with a fact nobody has set said with its reason.
  *
@@ -931,20 +918,6 @@ export const INVENTORY = defineCatalog(
 );
 
 /* ------------------------------------------------------------------------------------------------ markdown twins */
-
-/**
- * The inventory as a markdown table, for the twin: the facts a person sees.
- *
- * @param {InventoryRow[]} rows
- * @param {string} origin
- */
-export function inventoryMarkdown(rows, origin) {
-  const lines = rows.map(
-    (row) =>
-      `| [${mdCell(row.name)}](${origin}${row.path}) | ${mdCell(row.kindLabel)} | ${mdCell(row.summary)} |`,
-  );
-  return ["| Name | Kind | About |", "| --- | --- | --- |", ...lines].join("\n");
-}
 
 /**
  * A site on a reference in words, as the page and the twin state it: its span in the accession's own coordinates, its

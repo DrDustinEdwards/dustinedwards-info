@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import matter from "gray-matter";
+import { stringifyMatter } from "@drdustinedwards/site-helpers/matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
 import {
@@ -26,7 +26,7 @@ const PHOTO = {
 const NAMES = ["Example Person One", "Example Person Two"];
 
 /** @param {Record<string, unknown>} data @param {string} [body] */
-const file = (data, body = "") => matter.stringify(body, data);
+const file = (data, body = "") => stringifyMatter(body, data);
 const GOOD = { year: 2031, photo: PHOTO, researchers: NAMES };
 
 /** @param {string} raw @param {{ slug?: string, photo?: boolean }} [options] */
