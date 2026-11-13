@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createTally } from "@dustinedwards/devkit/node";
-import { overflowScan } from "capsomer/testing/page";
+import { overflowScan as capsomerOverflow } from "capsomer/testing/page";
 
 export const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 export const PORT = 4173;
@@ -175,13 +175,19 @@ export const bundleFetches = (target, stem) =>
 
 /* Page functions: each runs inside the page through `evaluate`, so each is self-contained. */
 
-/** The document's widths, and the first four elements reaching past its right edge (Capsomer's overflowScan). */
-export async function pageOverflow(/** @type {any} */ page) {
-  const [scrollW, clientW] = await page.evaluate(() => [
-    document.documentElement.scrollWidth,
-    document.documentElement.clientWidth,
-  ]);
-  return { scrollW, clientW, over: await overflowScan(page) };
+/**
+ * The document's widths and the first four elements reaching past its right edge (Capsomer's scan, which skips the
+ * skip link and a closed drawer translated out of view).
+ *
+ * @param {import("puppeteer").Page} page
+ */
+export async function overflowScan(page) {
+  const over = await capsomerOverflow(page);
+  const { scrollW, clientW } = await page.evaluate(() => ({
+    scrollW: document.documentElement.scrollWidth,
+    clientW: document.documentElement.clientWidth,
+  }));
+  return { scrollW, clientW, over };
 }
 
 /** Whether the skip link exists, where it points, and whether anything carries that id. */

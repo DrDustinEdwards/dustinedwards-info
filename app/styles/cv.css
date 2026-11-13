@@ -146,7 +146,9 @@
   gap: var(--space-5) var(--space-6);
 }
 
-.cv-label {
+/* The chip groups' legends (capsomer CheckChips) read as the other filter labels beside them. */
+.cv-label,
+.cv-more-body .cap-chips-label {
   display: block;
   margin: 0 0 var(--space-3);
   padding: 0;

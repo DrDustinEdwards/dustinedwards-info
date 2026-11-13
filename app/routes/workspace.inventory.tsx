@@ -8,7 +8,8 @@ import { Field } from "capsomer/react/field";
 import { Panel } from "capsomer/react/panel";
 
 import { PageHead } from "capsomer/react/page-head";
-import { LabTable, Result } from "~/components/lab/lab-ui";
+import { Table } from "capsomer/react/table";
+import { LabStatus } from "~/components/lab/lab-ui";
 import { labActorContext } from "~/lab/actor.server";
 import { inventoryAction, inventoryPage } from "~/lab/inventory.server";
 import { amountText } from "~/lab/forms.mjs";
@@ -57,44 +58,57 @@ export default function LabInventory({ loaderData, actionData }: Route.Component
         title="Inventory"
         lead="The lots on the shelf: which lot of each reagent, how much is left, and where it is. Every change is recorded."
       />
-      <Result result={actionData} />
+      <LabStatus result={actionData} />
       {lots.length === 0 ? (
         <p className="cap-muted">No lots recorded yet.</p>
       ) : (
-        <LabTable label="Lots" head={["Item", "Lot", "Left", "Expires", "Where", "Status", ""]}>
-          {lots.map((lot) => (
-            <tr key={lot.id}>
-              <th scope="row">{lot.item}</th>
-              <td>
-                <Link to={`${LAB_BENCH_PATH}/inventory/${lot.id}`} className="cap-mono">
-                  {lot.lot_number}
-                </Link>
-              </td>
-              <td>{lot.amount === null ? "" : amountText(lot.amount, lot.unit)}</td>
-              <td>{lot.expiry ?? ""}</td>
-              <td>{lot.location ?? ""}</td>
-              <td>
-                {STATUS_TEXT[lot.status]}
-                {lot.opened ? <span className="cap-muted">, opened {lot.opened}</span> : null}
-              </td>
-              <td>
-                {canUse && lot.status === "in_stock" ? (
-                  <Form method="post" className="lab-actions">
-                    <input type="hidden" name="lot" value={lot.id} />
-                    {lot.opened ? null : (
-                      <Button type="submit" size="sm" name="intent" value="mark_opened">
-                        Mark opened<span className="cap-sr-only"> lot {lot.lot_number}</span>
-                      </Button>
-                    )}
-                    <Button type="submit" size="sm" name="intent" value="mark_empty">
-                      Mark empty<span className="cap-sr-only"> lot {lot.lot_number}</span>
-                    </Button>
-                  </Form>
-                ) : null}
-              </td>
+        <Table caption="Lots" captionHidden>
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">Lot</th>
+              <th scope="col">Left</th>
+              <th scope="col">Expires</th>
+              <th scope="col">Where</th>
+              <th scope="col">Status</th>
+              <th scope="col"></th>
             </tr>
-          ))}
-        </LabTable>
+          </thead>
+          <tbody>
+            {lots.map((lot) => (
+              <tr key={lot.id}>
+                <th scope="row">{lot.item}</th>
+                <td>
+                  <Link to={`${LAB_BENCH_PATH}/inventory/${lot.id}`} className="cap-mono">
+                    {lot.lot_number}
+                  </Link>
+                </td>
+                <td>{lot.amount === null ? "" : amountText(lot.amount, lot.unit)}</td>
+                <td>{lot.expiry ?? ""}</td>
+                <td>{lot.location ?? ""}</td>
+                <td>
+                  {STATUS_TEXT[lot.status]}
+                  {lot.opened ? <span className="cap-muted">, opened {lot.opened}</span> : null}
+                </td>
+                <td>
+                  {canUse && lot.status === "in_stock" ? (
+                    <Form method="post" className="lab-actions">
+                      <input type="hidden" name="lot" value={lot.id} />
+                      {lot.opened ? null : (
+                        <Button type="submit" size="sm" name="intent" value="mark_opened">
+                          Mark opened<span className="cap-sr-only"> lot {lot.lot_number}</span>
+                        </Button>
+                      )}
+                      <Button type="submit" size="sm" name="intent" value="mark_empty">
+                        Mark empty<span className="cap-sr-only"> lot {lot.lot_number}</span>
+                      </Button>
+                    </Form>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       )}
       {canEdit ? (
         <>

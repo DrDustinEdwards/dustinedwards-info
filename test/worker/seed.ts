@@ -1,5 +1,4 @@
 import { env } from "cloudflare:test";
-import { stringifyMatter } from "@drdustinedwards/site-helpers/matter";
 
 import cvArtifact from "../../content/generated/cv.json";
 import dictionaryArtifact from "../../content/generated/dictionary.json";
@@ -278,6 +277,7 @@ export async function cohortFile(cohort: {
   photo: unknown;
   researchers: readonly string[];
 }) {
+  const { stringifyMatter } = await import("@drdustinedwards/site-helpers/matter");
   return stringifyMatter("", {
     year: cohort.year,
     photo: cohort.photo,
