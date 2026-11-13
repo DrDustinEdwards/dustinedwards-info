@@ -10,7 +10,7 @@
 
 import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
-import { decodeEntities } from "./entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { TOPICS, TOPIC_IDS } from "./topics.mjs";
 
 /** @typedef {import("./types.ts").Publication} Publication */
@@ -35,7 +35,7 @@ const TYPE_LABELS = /** @type {Record<string, string>} */ ({
 
 /** The journal, volume and pages as the page prints them, entities decoded (the year has its own column). @param {Publication} p */
 export function venue(p) {
-  return decodeEntities([p.journal, p.volume, p.pages].filter(Boolean).join(", "));
+  return unescapeHtml([p.journal, p.volume, p.pages].filter(Boolean).join(", "));
 }
 
 /** The papers' catalog. Newest first by default, under a heading for each year; any search or other sort is flat. */
@@ -51,12 +51,17 @@ export const PUBLICATIONS = defineCatalog(
       {
         key: "title",
         label: "Title",
-        value: (p) => decodeEntities(p.title),
+        value: (p) => unescapeHtml(p.title),
         search: 3,
         sort: true,
         column: { header: "Paper" },
       },
-      { key: "authors", label: "Authors", value: (p) => p.authors.map(decodeEntities), search: 1 },
+      {
+        key: "authors",
+        label: "Authors",
+        value: (p) => p.authors.map((name) => unescapeHtml(name)),
+        search: 1,
+      },
       {
         key: "journal",
         label: "Journal",

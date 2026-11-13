@@ -34,6 +34,7 @@ import {
 } from "../app/lib/content-pages.mjs";
 // The one reader of the ids a rendered page carries: the page save judges anchors with it too.
 import { idsIn } from "../app/lib/pages/links.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { buildNav, menuLinks } from "../app/lib/nav.ts";
 import { paperSlashTarget } from "../app/lib/publications/pdf-redirect.mjs";
 import { paperMarkdownPath, paperPath } from "../app/lib/publications/paths.mjs";
@@ -371,16 +372,6 @@ function add(group, link) {
 }
 
 /** @param {string} value */
-function decodeEntities(value) {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;|&#39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
-}
-
-/** @param {string} value */
 function safeDecode(value) {
   try {
     return decodeURIComponent(value);
@@ -390,7 +381,8 @@ function safeDecode(value) {
 }
 
 /** @param {string} html */
-const hrefsIn = (html) => [...html.matchAll(/\shref="([^"]*)"/g)].map((m) => decodeEntities(m[1]));
+const hrefsIn = (html) =>
+  [...html.matchAll(/\shref="([^"]*)"/g)].map((m) => unescapeHtml(m[1] ?? ""));
 
 /** @param {string} markdown */
 const markdownLinks = (markdown) =>

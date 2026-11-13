@@ -20,6 +20,7 @@ import { askCorpusRecords, askExpectedUrls } from "./search.server";
 import { listPublishedPublicationTwins } from "~/db/publications";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { withTimeout } from "@dustinedwards/site-runtime/time";
 import { type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
@@ -66,32 +67,24 @@ export function askAvailable(env: Env): boolean {
  * `custom_metadata`, up to two entries on the gateway's log, so Ask's calls are told apart by app and feature.
  */
 export async function askStream(env: Env, question: string): Promise<ReadableStream> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const late = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`AI Search did not answer within ${ASK_TIMEOUT_MS} ms`)),
-      ASK_TIMEOUT_MS,
-    );
-  });
-  const call = env.AI_SEARCH.chatCompletions({
-    // The last message is the retrieval query; decorating it costs the whole search.
-    messages: askMessages(question),
-    model: ASK_MODEL,
-    stream: true,
-    max_tokens: ASK_MAX_TOKENS,
-    ai_search_options: {
-      // Under `retrieval`, where the binding's AiSearchOptions type and the AI Search docs put it
-      // (https://developers.cloudflare.com/ai-search/api/search/workers-binding/); at the top level it was
-      // ignored and the default of 10 chunks applied.
-      retrieval: { max_num_results: MAX_CHUNKS },
-      custom_metadata: ASK_GATEWAY_METADATA,
-    },
-  });
-  try {
-    return await Promise.race([call, late]);
-  } finally {
-    clearTimeout(timer);
-  }
+  return withTimeout(
+    env.AI_SEARCH.chatCompletions({
+      // The last message is the retrieval query; decorating it costs the whole search.
+      messages: askMessages(question),
+      model: ASK_MODEL,
+      stream: true,
+      max_tokens: ASK_MAX_TOKENS,
+      ai_search_options: {
+        // Under `retrieval`, where the binding's AiSearchOptions type and the AI Search docs put it
+        // (https://developers.cloudflare.com/ai-search/api/search/workers-binding/); at the top level it was
+        // ignored and the default of 10 chunks applied.
+        retrieval: { max_num_results: MAX_CHUNKS },
+        custom_metadata: ASK_GATEWAY_METADATA,
+      },
+    }),
+    ASK_TIMEOUT_MS,
+    `AI Search did not answer within ${ASK_TIMEOUT_MS} ms`,
+  );
 }
 
 /** The cache copy is parsed inside waitUntil, so caching costs time-to-first-token nothing. */

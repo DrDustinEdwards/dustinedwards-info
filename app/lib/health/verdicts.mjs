@@ -1,4 +1,3 @@
-
 /**
  * A derived index against its source: the sizes, what it lacks and what it holds beyond the source,
  * each sorted. Kept apart so a missing key and an extra one cannot cancel out in a count.

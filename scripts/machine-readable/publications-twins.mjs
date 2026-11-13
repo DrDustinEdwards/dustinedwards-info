@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { listedPaperTwins, overAdvertisedTwins } from "../../app/lib/llms/validate.mjs";
 import { paperAskUrl, paperMarkdownPath, paperPath } from "../../app/lib/publications/paths.mjs";
-import { decodeEntities } from "../../app/lib/publications/entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { paperSearchInputs } from "../../app/lib/publications/search-inputs.mjs";
 import { recordsForPapers } from "../../app/lib/search/records.mjs";
 import { keyForUrl, urlForKey } from "../../app/lib/search/ask-keys.mjs";
@@ -199,7 +199,7 @@ ok(
 
 {
   const badAskUrls = papers
-    .map((paper) => ({ id: paper.id, url: paperAskUrl(decodeEntities(paper.title)) }))
+    .map((paper) => ({ id: paper.id, url: paperAskUrl(unescapeHtml(paper.title)) }))
     .filter(({ url }) => !url.startsWith("/search?q=") || url.length > 600);
   ok(
     `paperAskUrl builds a /search query for every paper (${papers.length})`,
@@ -210,7 +210,7 @@ ok(
   /* The quoted title and nothing else, because the classic index ANDs its terms. */
   const notJustTheTitle = papers
     .filter((paper) => {
-      const title = decodeEntities(paper.title);
+      const title = unescapeHtml(paper.title);
       const q = new URL(paperAskUrl(title), "https://example.invalid").searchParams.get("q");
       return q !== `"${title}"`;
     })

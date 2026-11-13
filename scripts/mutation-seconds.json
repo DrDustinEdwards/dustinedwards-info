@@ -74,7 +74,6 @@
   "app/lib/post-order.mjs": 24,
   "app/lib/primers.mjs": 1052,
   "app/lib/publications/compile.mjs": 58,
-  "app/lib/publications/entities.mjs": 7,
   "app/lib/publications/listing.mjs": 18,
   "app/lib/publications/parse.mjs": 14,
   "app/lib/publications/pdf-redirect.mjs": 5,
