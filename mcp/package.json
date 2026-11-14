@@ -19,17 +19,17 @@
     "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.48.1",
     "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.156.2",
     "@modelcontextprotocol/server": "2.4.0",
-    "agents": "0.32.0",
-    "zod": "4.6.6"
+    "agents": "0.33.0",
+    "zod": "4.6.7"
   },
   "devDependencies": {
-    "@modelcontextprotocol/conformance": "0.2.0-alpha.10",
+    "@modelcontextprotocol/conformance": "0.2.0-alpha.12",
     "typescript": "6.0.3",
     "wrangler": "4.158.0"
   },
   "overrides": {
-    "@modelcontextprotocol/client": "2.3.1",
-    "@modelcontextprotocol/sdk": "1.32.1"
+    "@modelcontextprotocol/client": "2.4.0",
+    "@modelcontextprotocol/sdk": "1.32.2"
   },
   "allowScripts": {
     "core-js-pure": false,
