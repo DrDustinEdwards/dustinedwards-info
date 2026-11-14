@@ -29,6 +29,7 @@
  */
 
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
+import { robotsResponse } from "@drdustinedwards/site-helpers/robots";
 import { adminMcpWorker, type AdminMcpEnv } from "@dustinedwards/site-runtime/admin-mcp";
 import { kvCheck } from "@dustinedwards/site-runtime/health";
 import { clientIp } from "@dustinedwards/site-runtime/http";
@@ -65,6 +66,9 @@ stays with you.</p>`,
   serve: (request, env, ctx, caller) => handleMcp(request, env, ctx, caller),
   routes: async (request, env) => {
     const url = new URL(request.url);
+    // The door is for machines: its robots.txt is Prelum's in the preview form, Disallow: / for every crawler.
+    if (url.pathname === "/robots.txt")
+      return robotsResponse({ origin: url.origin, request, preview: true });
     if (!url.pathname.startsWith("/probe")) return null;
     if (!env.PROBE_KV)
       return refuse("The measurement probe is not configured: PROBE_KV is unbound.", 503);
