@@ -207,9 +207,10 @@ real. That is a known and accepted gap.
 
 ### 4b. From a per-table export
 
-`wrangler d1 export` does not work on this database as a whole: it refuses while
-any fts5 virtual table exists, and search needs them permanently.
-So the backup is per table.
+`wrangler d1 export` gives no restore for this database as a whole: it refuses while
+any fts5 virtual table exists unless `--compatibility sqlite3_cli_only` is passed
+(Cloudflare changelog, 2026-11-12), and that dump cannot be imported back into D1.
+Search needs the fts5 tables permanently. So the backup is per table.
 
 **1. Take an export of what is there now**, whatever state it is in. Two minutes,
 and it is what you fall back to if the restore makes things worse:
