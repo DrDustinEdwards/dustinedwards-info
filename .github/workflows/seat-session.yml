@@ -79,7 +79,7 @@ jobs:
       # CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC on the Action step turns off.
       # The agent splits this list on spaces only (agent config.go, parseEndpoints), so
       # it is a folded scalar: a literal block would leave newlines inside the entries.
-      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: block
           allowed-endpoints: >-
@@ -223,7 +223,7 @@ jobs:
 
       # The subscription token and nothing else: an ANTHROPIC_API_KEY in the
       # environment would outrank it and bill the API.
-      - uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790 # v1.0.235
+      - uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
         id: session
         # MCP tools load at startup. "Unset, Claude Code defers all MCP tools by
         # default ... `false` loads all tools upfront" (code.claude.com/docs/en/env-vars,
