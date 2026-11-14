@@ -94,7 +94,7 @@
     "hastscript": "9.0.3",
     "htmlparser2": "10.1.0",
     "image-size": "2.1.0",
-    "katex": "0.16.47",
+    "katex": "0.18.2",
     "linkedom": "0.18.14",
     "mdast-util-gfm": "3.1.0",
     "mdast-util-to-markdown": "2.2.0",
