@@ -8,7 +8,7 @@
 
 .cv {
   --cv-rail: 7.5rem;
-  --cv-gap: 1.25rem;
+  --cv-gap: var(--space-5-5);
 }
 
 /* Head */
@@ -96,7 +96,7 @@
 .cv-stat-value {
   color: var(--text-heading);
   font-family: var(--font-sans);
-  font-size: clamp(2rem, 1.5rem + 1.6vw, 2.75rem);
+  font-size: clamp(var(--title-1-5), 1.5rem + 1.6vw, var(--display-4));
   font-weight: var(--weight-bold);
   font-variant-numeric: var(--figures) lining-nums;
   line-height: var(--leading-none);
@@ -290,7 +290,7 @@
   display: grid;
   grid-template-columns: var(--cv-rail) minmax(0, 1fr);
   column-gap: var(--cv-gap);
-  padding-block: 0.875rem;
+  padding-block: var(--space-4-5);
   border-block-end: var(--line-w) solid var(--dust);
   scroll-margin-top: calc(var(--header-h) + var(--space-5));
 }
@@ -480,7 +480,7 @@
   }
 
   .cv-stat-value {
-    font-size: 1.75rem;
+    font-size: var(--title-2-5);
   }
 
   .cv-spark .cap-spark {

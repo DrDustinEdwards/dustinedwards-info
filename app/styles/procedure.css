@@ -6,7 +6,7 @@
 .procedure-facts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  margin: 0 0 1.25rem;
+  margin: 0 0 var(--space-5-5);
   border-block-start: var(--line-w) solid var(--text);
   border-inline-start: var(--line-w) solid var(--text);
   font-family: var(--font-sans);
@@ -33,7 +33,7 @@
 .procedure-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.25rem;
+  gap: var(--space-5-5);
   font-family: var(--font-sans);
   font-size: var(--fs-body);
 }
@@ -132,7 +132,7 @@
 }
 
 .procedure-steps {
-  padding-inline-start: 1.75rem;
+  padding-inline-start: var(--space-6-5);
 }
 
 .procedure-step + .procedure-step {
@@ -237,7 +237,7 @@
 
 .procedure-sheet-head h1 {
   margin: 0;
-  font: var(--weight-bold) 1.75rem / 1.1 var(--font-sans);
+  font: var(--weight-bold) var(--title-2-5) / 1.1 var(--font-sans);
   letter-spacing: var(--tracking-tight);
 }
 
@@ -250,7 +250,7 @@
 }
 
 .procedure-sheet h2 {
-  margin: 1.25rem 0 var(--space-3);
+  margin: var(--space-5-5) 0 var(--space-3);
   font-size: var(--fs-h3);
 }
 
@@ -322,7 +322,7 @@
 
 /* Version history, the cite block, and the notice a frozen version's page carries when it is not the current one. */
 .procedure-history {
-  padding-left: 1.25rem;
+  padding-left: var(--space-5-5);
 }
 
 .procedure-cite {

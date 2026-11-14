@@ -15,7 +15,7 @@
 }
 
 .colophon-body h2[id] {
-  scroll-margin-block-start: 6rem;
+  scroll-margin-block-start: var(--space-10);
 }
 
 .colophon-chips {
@@ -87,7 +87,7 @@
 .colophon-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4) 2.5rem;
+  gap: var(--space-4) var(--space-7-5);
   margin-block: var(--space-4) var(--space-6);
 }
 
@@ -257,7 +257,7 @@ tr[hidden],
 
 .colophon-stack-layers {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--space-5-5);
   margin: 0;
   padding: 0;
   list-style: none;

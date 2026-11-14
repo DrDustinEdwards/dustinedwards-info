@@ -90,7 +90,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3) var(--space-5);
-  margin: var(--space-4) 0 1.25rem;
+  margin: var(--space-4) 0 var(--space-5-5);
 }
 
 .legal-status p {

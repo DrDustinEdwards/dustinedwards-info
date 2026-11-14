@@ -19,5 +19,5 @@
 
 /* The filters in force sit above the results (Capsomer's chips), a gap below them. */
 .search-active-filters {
-  margin: 0 0 1.25rem;
+  margin: 0 0 var(--space-5-5);
 }

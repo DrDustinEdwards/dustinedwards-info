@@ -4,7 +4,7 @@
 
 .ask-panel {
   margin: var(--space-4) 0 0;
-  padding: 0.875rem var(--space-5);
+  padding: var(--space-4-5) var(--space-5);
   border: var(--line-w) solid var(--border);
   border-left: var(--line-w-bar) solid var(--brand);
   border-radius: 0;

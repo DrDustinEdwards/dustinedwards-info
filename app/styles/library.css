@@ -81,7 +81,7 @@
   color: var(--paper);
   font-size: var(--fs-h3);
   font-weight: var(--weight-bold);
-  line-height: 1.25;
+  line-height: var(--leading-tight-5);
   text-decoration: none;
 }
 
@@ -117,7 +117,7 @@
 
 /* The tabs sit above the catalog's form: room beneath them, and no scrollbar chrome on a list that fits. */
 .library > .cap-tabs-list {
-  margin-block-end: 1.25rem;
+  margin-block-end: var(--space-5-5);
   scrollbar-width: none;
 }
 
