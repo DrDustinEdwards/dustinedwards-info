@@ -1,5 +1,5 @@
 .search-page {
-  padding-block: 2rem 4rem;
+  padding-block: var(--space-7) var(--space-9);
 }
 
 /* The results page is wider than its column: the results and the facets beside them (Capsomer's search results). */
@@ -8,13 +8,13 @@
 }
 
 .search-hint {
-  margin: 0.5rem 0 0;
+  margin: var(--space-3) 0 0;
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
 }
 
 .search-hint code {
-  font-size: 0.8125rem;
+  font-size: var(--fs-detail);
 }
 
 /* The filters in force sit above the results (Capsomer's chips), a gap below them. */

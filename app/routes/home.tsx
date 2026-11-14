@@ -29,10 +29,11 @@ import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
 import { listPublishedPublicationSummaries, type PublicationSummary } from "~/db/publications";
 import { rosterFactsFromDb } from "~/db/roster";
-import { decodeEntities } from "~/lib/publications/entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
 
+import "capsomer/eyebrow.css";
 import "~/styles/home.css";
 
 /** Publicly cacheable; the theme is a cache-key dimension, not a Vary. The short edge policy is for the Germomics episode. */
@@ -68,12 +69,12 @@ function homePapers(papers: PublicationSummary[]) {
     (a, b) => b.year - a.year || (b.publishedDate ?? "").localeCompare(a.publishedDate ?? ""),
   );
   const selected = newest.filter((p) => p.selected);
-  /* Titles and journals go through `decodeEntities`: the deposited records carry HTML entities React would print literally. */
+  /* Titles and journals go through `unescapeHtml`: the deposited records carry HTML entities React would print literally. */
   return (selected.length > 0 ? selected : newest).slice(0, HOME_PAPERS).map((p) => ({
     id: p.id,
     year: p.year,
-    title: decodeEntities(p.title),
-    journal: p.journal ? decodeEntities(p.journal) : null,
+    title: unescapeHtml(p.title),
+    journal: p.journal ? unescapeHtml(p.journal) : null,
     href: `/research/publications/${p.slug}/`,
   }));
 }
@@ -196,7 +197,9 @@ function Row({
 }) {
   return (
     <li className="home-row">
-      <span className="home-row-date">{rail}</span>
+      <span className="cap-eyebrow home-row-date" data-variant="mono">
+        {rail}
+      </span>
       <span className="home-row-body">
         <span className="home-row-title">
           <Link to={to}>{title}</Link>
@@ -295,7 +298,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 <span className="home-refs-body">
                   <Link to={paper.href}>{paper.title}</Link>
                   {paper.journal ? (
-                    <span className="home-refs-journal">{paper.journal}</span>
+                    <span className="cap-eyebrow home-refs-journal" data-variant="mono">
+                      {paper.journal}
+                    </span>
                   ) : null}
                 </span>
               </li>
@@ -359,7 +364,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <ol className="home-rows">
               {[featured, ...recent.filter((post) => post.slug !== featured.slug)].map((post) => (
                 <li key={post.slug} className="home-row h-entry">
-                  <span className="home-row-date">
+                  <span className="cap-eyebrow home-row-date" data-variant="mono">
                     {post.publishAt ? (
                       <time
                         className="dt-published"

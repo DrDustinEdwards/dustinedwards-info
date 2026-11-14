@@ -1,13 +1,13 @@
 /* The palette is Capsomer's command menu (capsomer/listbox.css and command-menu.css, loaded with this sheet by
    app/enhance/theme.ts; capsomer/dialog.css is on every public page). This sheet holds only Ask AI under the list. */
 .palette-ask {
-  padding: 0 0.75rem;
+  padding: 0 var(--space-4);
 }
 
 .palette-ask-status {
-  margin: 0.25rem 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--text-secondary);
-  font-size: 0.8125rem;
+  font-size: var(--fs-detail);
 }
 
 .palette-ask-status:empty {
@@ -15,7 +15,7 @@
 }
 
 .palette-ask-container .ask-panel {
-  margin-top: 0.5rem;
+  margin-top: var(--space-3);
   max-height: 40vh;
   overflow-y: auto;
 }

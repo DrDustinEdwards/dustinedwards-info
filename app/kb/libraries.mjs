@@ -7,7 +7,7 @@ import { mdCell } from "@drdustinedwards/site-helpers/text";
 import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
 import { BASES } from "./bases.mjs";
-import { stepCount } from "./procedures/library.mjs";
+import { libraryTable, stepCount } from "./procedures/library.mjs";
 import { courseLabel, methodLabel } from "./procedures/taxonomy.mjs";
 import { HOWTO_TYPES } from "./procedures/validate.mjs";
 
@@ -259,7 +259,7 @@ export function baseMarkdown(base, items, origin) {
     ? [base.singular, "Category", "Cuisine", "Diet", "Servings", "Time", "Updated"]
     : [base.singular, "Type", "Method", "Course", "Steps", "Updated"];
   const rows = items.map((p) =>
-    (recipe
+    recipe
       ? [
           `[${mdCell(p.title)}](${origin}${p.path})`,
           p.category,
@@ -276,14 +276,9 @@ export function baseMarkdown(base, items, origin) {
           p.courses.map(courseLabel).join(", "),
           String(p.steps),
           p.updated,
-        ]
-    ).map((c, i) => (i === 0 ? c : mdCell(c))),
+        ],
   );
-  return [
-    `| ${head.join(" | ")} |`,
-    `| ${head.map(() => "---").join(" | ")} |`,
-    ...rows.map((r) => `| ${r.join(" | ")} |`),
-  ].join("\n");
+  return libraryTable(head, rows);
 }
 
 /** How to cite the library, from the site's identity and the library's address. @param {KnowledgeBase} base @param {{ name: string, affiliation: string, origin: string }} who */

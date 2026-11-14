@@ -1,3 +1,4 @@
+import "capsomer/eyebrow.css";
 import { plural } from "@drdustinedwards/site-helpers/text";
 import { Catalog } from "capsomer/react/catalog";
 import type { CatalogResult } from "capsomer/behavior/catalog";
@@ -62,7 +63,7 @@ export function LabInventory({
         records what a thing is, never how much of it the lab has or where it sits.{" "}
         {inventorySentence(rows)}
       </p>
-      <div className="registry site-catalog site-catalog-wide">
+      <div className="registry page-wide">
         <Catalog
           definition={INVENTORY}
           result={result}
@@ -90,7 +91,7 @@ export function LabPrimers({ result }: { result: CatalogResult<PrimerListRow> })
         and melting temperature are computed from the sequence, and a pair&rsquo;s product is
         computed from where its primers bind a reference sequence.
       </p>
-      <div className="registry site-catalog site-catalog-wide">
+      <div className="registry page-wide">
         <Catalog
           definition={PRIMERS}
           result={result}
@@ -115,7 +116,9 @@ export function LabPrimers({ result }: { result: CatalogResult<PrimerListRow> })
 function Fact({ term, children }: { term: string; children: React.ReactNode }) {
   return (
     <>
-      <dt>{term}</dt>
+      <dt className="cap-eyebrow" data-variant="mono">
+        {term}
+      </dt>
       <dd>{children}</dd>
     </>
   );
@@ -300,7 +303,7 @@ export function LabStrains({ result }: { result: CatalogResult<StrainRow> }) {
         counted from the phages table, so a phage added there is counted here with no edit to the
         strain.
       </p>
-      <div className="registry site-catalog site-catalog-wide">
+      <div className="registry page-wide">
         <Catalog
           definition={STRAINS}
           result={result}
@@ -386,7 +389,7 @@ export function LabReagents({ result }: { result: CatalogResult<ReagentRow> }) {
         protocols that use it, and each protocol&rsquo;s own table has its amount, stock and final
         concentration.
       </p>
-      <div className="registry site-catalog site-catalog-wide">
+      <div className="registry page-wide">
         <Catalog
           definition={REAGENTS}
           result={result}
@@ -438,7 +441,7 @@ export function LabEquipment({ result }: { result: CatalogResult<EquipmentRow> }
         rotor is recorded as a gap until Dustin names it. Each row lists the protocols that use it,
         and each protocol&rsquo;s own table has its words and settings for the item.
       </p>
-      <div className="registry site-catalog site-catalog-wide">
+      <div className="registry page-wide">
         <Catalog
           definition={EQUIPMENT_CATALOG}
           result={result}

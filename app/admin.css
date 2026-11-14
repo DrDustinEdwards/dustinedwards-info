@@ -164,7 +164,7 @@ main.app-page {
 }
 
 .kb-step-number {
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .kb-inserts {
@@ -207,11 +207,11 @@ main.app-page {
 .kb-chip {
   display: inline-block;
   padding: 0 0.45em;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-full);
   background: var(--accent-soft);
   color: var(--text);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
@@ -246,7 +246,7 @@ main.app-page {
   }
   &:focus-visible {
     outline: var(--ring-width) solid var(--ring);
-    outline-offset: 1px;
+    outline-offset: var(--focus-offset-tight);
   }
 }
 
@@ -258,7 +258,7 @@ main.app-page {
   gap: var(--space-3);
   width: min(19rem, 100%);
   padding: var(--space-3);
-  border: 1px solid var(--line-strong);
+  border: var(--line-w) solid var(--line-strong);
   border-radius: 0.5rem;
   background: var(--raised);
   box-shadow: var(--shadow-m);
@@ -266,7 +266,7 @@ main.app-page {
 
 .kb-popover-title {
   margin: 0;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .kb-popover-fields {

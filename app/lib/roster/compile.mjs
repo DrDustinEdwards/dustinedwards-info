@@ -7,10 +7,9 @@
 // in the media library (/media/<key>) with its measured size and its alt text, and the names. The validator REFUSES any
 // other field, so nothing a visitor cannot already see on the roster page can enter the repository or D1.
 
-import { matter } from "@drdustinedwards/site-helpers/matter";
-
 import { dimensionsFromKey } from "../media/classify.mjs";
 import { gitBlobSha } from "../content/hashes.mjs";
+import { parseFrontMatter, wideDashError } from "../content/front-matter.mjs";
 
 export const ROSTER_DIR = "content/roster";
 
@@ -157,26 +156,9 @@ function researcherErrors(researchers) {
  */
 export async function compileCohort({ slug, raw, host, pipeline, sourcePath }) {
   /** @type {string[]} */
-  const errors = pipeline
-    .findWideDashes(raw)
-    .map(
-      (hit) =>
-        `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
-    );
-  if (!raw.startsWith("---")) errors.push("the file must start with a --- front matter block");
-
-  let parsed;
-  try {
-    parsed = matter(raw);
-  } catch (error) {
-    return {
-      ok: false,
-      errors: [
-        ...errors,
-        `the front matter is not valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
-      ],
-    };
-  }
+  const errors = pipeline.findWideDashes(raw).map(wideDashError);
+  const parsed = parseFrontMatter(raw, errors);
+  if (!parsed) return { ok: false, errors };
   const data = parsed.data;
   if (parsed.content.trim() !== "")
     errors.push("the body must be empty: a cohort is its front matter and nothing else");

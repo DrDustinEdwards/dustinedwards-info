@@ -11,17 +11,17 @@
 
 .systems-lead {
   max-inline-size: 46rem;
-  margin-block: 0.5rem 0.75rem;
+  margin-block: var(--space-3) var(--space-4);
   color: var(--text-secondary);
 }
 
 .systems-links {
-  margin-block: 0 1.5rem;
+  margin-block: 0 var(--space-6);
   overflow-wrap: anywhere;
 }
 
 .systems-map {
-  margin-block: 2rem 1.5rem;
+  margin-block: var(--space-7) var(--space-6);
 }
 
 .systems-source {
