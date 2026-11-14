@@ -107,10 +107,10 @@ const CHECK_COPY = {
     name: "Search answers",
     failing: (counts) =>
       counts
-        ? `The answer index has ${counts.present} of ${counts.expected} posts, so an answer may quote text that has changed.`
-        : "The answer index is out of step with the posts, so an answer may quote text that has changed.",
-    passing: "The answer index has every post, and none it should not.",
-    repair: { action: "/admin/tools", intent: "sync-ask", label: "Rebuild the answer index" },
+        ? `The answer index has ${counts.present} of ${counts.expected} posts and papers, so an answer may quote text that has changed. It catches up on its next sync.`
+        : "The answer index is out of step with the posts and papers, so an answer may quote text that has changed. It catches up on its next sync.",
+    passing: "The answer index has every post and paper, and none it should not.",
+    repair: { action: "/admin/tools", intent: "sync-ask", label: "Sync the answer index now" },
   },
   "media-index-drift": {
     name: "Site files",

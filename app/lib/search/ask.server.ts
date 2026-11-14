@@ -1,29 +1,10 @@
 // With AI_SEARCH unbound no Ask affordance renders and /search is pure D1: that off switch is a requirement.
 
-import { createContext } from "react-router";
-
-import {
-  dropCachedDrift,
-  invalidateAnswerCache,
-  readCachedDrift,
-  writeCachedDrift,
-} from "./ask-guard.server";
-import { KEY_SEPARATOR, keyForUrl, ownsAskKey } from "./ask-keys.mjs";
-import { askUploadsNeeded, uploadAskItems, withRetry } from "./ask-twins.mjs";
-import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
-import { forgetAskUploads, readAskUploads, recordAskUploads } from "~/db/ask-uploads";
+import { invalidateAnswerCache } from "./ask-guard.server";
 import { answerDelta, replayFrames, takeSseFrames } from "@dustinedwards/site-runtime/ai-ask";
-import { setDrift } from "~/lib/health/verdicts.mjs";
-import { isPubliclyVisible } from "@drdustinedwards/site-helpers/search";
-import { statusForDraft } from "./visibility.mjs";
-import { askCorpusRecords, askExpectedUrls } from "./search.server";
-import { listPublishedPublicationTwins } from "~/db/publications";
-import { paperPath } from "~/lib/publications/paths.mjs";
-import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { ASK_INDEX_QUERY, askIndexExpected } from "./search.server";
 import { withTimeout } from "@dustinedwards/site-runtime/time";
-import { type Timings } from "~/lib/timing";
-import { recordsForPosts } from "./records.mjs";
-import { errorMessage } from "@dustinedwards/site-runtime/log";
+import { errorMessage, logEvent } from "@dustinedwards/site-runtime/log";
 import {
   ASK_MAX_TOKENS,
   ASK_TIMEOUT_MS,
@@ -138,328 +119,178 @@ export function replayCachedAnswer(cached: { answer: string; chunks: unknown[] }
   });
 }
 
-interface CorpusSyncResult {
-  uploaded: number;
-  keys: string[];
-  /** Non-empty means the sync did NOT converge. */
-  failed: Array<{ key: string; error: string }>;
-  cacheDropped: number;
-}
-
-/** items.list() is paged: a bare call returns only the first page, and a prune cannot delete what it cannot see. */
-async function listAllAskItems(env: Env, timings?: Timings) {
-  const all: Awaited<ReturnType<typeof env.AI_SEARCH.items.list>>["result"] = [];
-  // 50 is the API maximum.
-  const perPage = 50;
-  // One mark per page, so round trips are counted rather than inferred from the index size.
-  const listPage = (page: number) =>
-    timed(timings, "ask_list_page", () => env.AI_SEARCH.items.list({ page, per_page: perPage }));
-
-  // The first page says how many items there are, so the rest are fetched together instead of one round trip after
-  // another. The loop below still runs after them: it ends at once when they were all of it, and carries on page by
-  // page when the count was wrong, so a listing is never taken for complete on the count alone.
-  let page = 1;
-  const first = await listPage(1);
-  all.push(...(first.result ?? []));
-  const total = first.result_info?.total_count;
-  let last = first;
-  if (typeof total === "number" && (first.result ?? []).length === perPage && total > perPage) {
-    const lastPage = Math.ceil(total / perPage);
-    const rest = await Promise.all(Array.from({ length: lastPage - 1 }, (_, i) => listPage(i + 2)));
-    for (const listed of rest) all.push(...(listed.result ?? []));
-    page = lastPage;
-    last = rest[rest.length - 1] ?? first;
-  }
-  for (;;) {
-    const batch = last.result ?? [];
-    if (batch.length < perPage) break;
-    if (typeof total === "number" && all.length >= total) break;
-    // Backstop against a server that never shrinks a page. Thrown, not a break: a truncated listing
-    // would make every unlisted item look absent to the prune and the drift count.
-    if (page > 200) {
-      throw new Error(
-        `AI Search listing did not end after ${page} pages of ${perPage} (${all.length} items); ` +
-          `refusing to act on a listing that may be truncated.`,
-      );
-    }
-    page += 1;
-    last = await listPage(page);
-    all.push(...(last.result ?? []));
-  }
-  return all;
-}
-
-/** AI Search has no per-item status to filter on, so nothing unpublished may be uploaded at all. */
-function publishableForAsk<T extends { draft?: boolean; publishAt?: string | null }>(
-  posts: readonly T[],
-): T[] {
-  const now = Date.now();
-  return posts.filter((p) =>
-    isPubliclyVisible({ status: statusForDraft(p.draft), publishAt: p.publishAt }, now),
-  );
-}
-
-function askPublishable(post: { draft?: boolean; publishAt?: string | null }): boolean {
-  return publishableForAsk([post]).length === 1;
-}
-
-/**
- * One search record as an Ask item. Fails closed: a url containing the separator would produce a
- * key that resolves to the wrong URL. The heading is in the text: the body alone loses what the
- * section is about.
+/*
+ * The index. The instance's data source is this site's D1 (ASK_INDEX_QUERY in search.server.ts), so AI Search reads
+ * the corpus itself on every sync: new rows are indexed, changed rows re-indexed, unchanged rows skipped, and a row the
+ * query no longer returns (a draft, a post set back to draft, a renamed or deleted post) is removed once the whole
+ * result has been read. Nothing is uploaded and nothing is pruned here. A sync runs on the instance's own schedule
+ * (every 15 minutes), when a post or paper is published or withdrawn, when a scheduled post goes live (askIndexTick),
+ * and on every deploy (sync_ask).
+ *
+ * The instance was created once through the API (type "d1", source this database, token_id the account's AI Search
+ * service token, whose Index Engine permission holds D1 Read; template content_only, so only the title and content
+ * are embedded; sync_interval 900; hybrid search with reranking; the public endpoint with MCP on and chat completions
+ * off). A missing instance is never re-created here, because creating one needs that token.
  */
-function askItemFor(record: { url: string; title: string; body: string }) {
-  if (record.url.includes(KEY_SEPARATOR)) {
-    throw new Error(
-      `record url contains the key separator "${KEY_SEPARATOR}" and cannot be ` +
-        `uploaded safely: ${record.url}`,
-    );
-  }
-  return { key: keyForUrl(record.url), body: `# ${record.title}\n\n${record.body}\n` };
-}
 
-/** Lists every item, deletes the ones whose key matches, and returns their keys. */
-async function deleteAskItemsWhere(env: Env, matches: (key: string) => boolean) {
-  const removed: string[] = [];
-  for (const item of await listAllAskItems(env)) {
-    if (!matches(item.key)) continue;
-    await env.AI_SEARCH.items.delete(item.id);
-    removed.push(item.key);
-  }
-  if (removed.length > 0) await forgetAskUploads(env, removed);
-  return removed;
-}
+const QUERY_KEY = "ask:index:query";
+/** The sync whose end drops the cached answers, which were written against the index before it. */
+const JOB_KEY = "ask:index:job";
+/** Set when a sync was asked for while an earlier one, which may have read D1 before the change, was running. */
+const AGAIN_KEY = "ask:index:again";
+const MARK_KEY = "ask:index:mark";
 
-/**
- * One item to AI Search and its hash to the ledger, retried. Every upload goes through here or uploadAskItems, so the
- * ledger never holds a hash for a body the index was not sent.
- */
-async function uploadAskItem(env: Env, key: string, body: string): Promise<void> {
-  await withRetry(() => env.AI_SEARCH.items.upload(key, body));
-  await recordAskUploads(env, [{ key, hash: await sha256Hex(body) }]);
-}
+const INDEX_TEMPLATE = "content_only";
 
-/**
- * Uploaded rather than crawled: the crawler would index the apex (the legacy site) and lose heading granularity.
- * Only what changed is sent (askUploadsNeeded): a deploy that re-sent all of the corpus drew AI Search's rate limit.
- */
-export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
-  // From D1 with visibilityClause composed in the SQL, so drafts and future posts never enter the index. Papers from
-  // their twins, not search_docs: uploading both would let the shorter win questions the longer answers.
-  const [records, twins, listed, ledger] = await Promise.all([
-    askCorpusRecords(env),
-    listPublishedPublicationTwins(env),
-    listAllAskItems(env),
-    readAskUploads(env),
-  ]);
-  // Every item is built before the first upload, so a bad url fails the sync before it writes anything.
-  const items = [
-    ...records.map(askItemFor),
-    ...twins.map(({ slug, markdown }) => ({ key: keyForUrl(paperPath(slug)), body: markdown })),
-  ];
-  const hashed = await Promise.all(
-    items.map(async (item) => ({ ...item, hash: await sha256Hex(item.body) })),
-  );
-  const needed = askUploadsNeeded(hashed, listed, ledger);
-
-  const { uploaded, failed } = await uploadAskItems(needed, {
-    upload: (key, body) => env.AI_SEARCH.items.upload(key, body),
+/** Sends ASK_INDEX_QUERY when the instance was last given another one; the change itself starts a sync. */
+async function ensureQuery(env: Env): Promise<void> {
+  if ((await env.APP_KV.get(QUERY_KEY)) === ASK_INDEX_QUERY) return;
+  await env.AI_SEARCH.update({
+    source_params: { d1: { query: ASK_INDEX_QUERY, template: INDEX_TEMPLATE } },
   });
-  const hashOf = new Map(hashed.map(({ key, hash }) => [key, hash]));
-  await recordAskUploads(
-    env,
-    uploaded.map((key) => ({ key, hash: hashOf.get(key) ?? "" })),
-  );
-
-  // Only when something was sent: an unchanged corpus leaves cached answers true.
-  const dropped = uploaded.length > 0 ? await invalidateAnswerCache(env) : 0;
-  if (uploaded.length > 0) await dropCachedDrift(env);
-
-  return {
-    uploaded: uploaded.length,
-    // Every key, failed ones too: the caller prunes every key it is not given.
-    keys: items.map(({ key }) => key),
-    failed,
-    cacheDropped: dropped,
-  };
+  await env.APP_KV.put(QUERY_KEY, ASK_INDEX_QUERY);
+  logEvent("ASK_INDEX_QUERY_SET", { message: "ASK_INDEX_QUERY_SET dustinedwards-ask" });
 }
 
-/** The published papers' Ask keys, from D1: a draft paper is not public, so it is not asked about. */
-async function paperItemKeys(env: Env): Promise<string[]> {
-  return (await listPublishedPublicationTwins(env)).map(({ slug }) => keyForUrl(paperPath(slug)));
-}
+/** AI Search writes its times as "YYYY-MM-DD HH:MM:SS" in UTC. */
+const jobTime = (at: string | undefined) => Date.parse(`${at?.replace(" ", "T")}Z`);
 
-/** Scoped to this post's keys, which is sound because sections are a pure function of one post's markdown. */
-export async function syncAskPost(
+/**
+ * Asks for a sync. A sync already running answers with itself, and it may have read D1 before this change, so then
+ * the next tick asks again once it ends. Never throws: a publish must not fail because the index could not be asked.
+ */
+export async function startAskSync(
   env: Env,
-  post: Parameters<typeof recordsForPosts>[0][number],
-): Promise<{ uploaded: number; removed: number; failed: string[] }> {
-  // A draft uploads nothing, and the empty live set makes the prune below remove what it had.
-  const records = askPublishable(post) ? recordsForPosts([post]) : [];
-  const live = new Set<string>();
-
-  // A failed key still joins live: the prune deletes every key not in it, which would delete the indexed copy.
-  const failed: string[] = [];
-
-  for (const record of records) {
-    // Outside the retry: a bad url would produce the same wrong key every time.
-    const { key, body } = askItemFor(record);
-    try {
-      await uploadAskItem(env, key, body);
-    } catch (error) {
-      console.error(
-        JSON.stringify({ alert: "ask-upload-failed", key, detail: errorMessage(error) }),
-      );
-      failed.push(key);
-    }
-    live.add(key);
+  why: string,
+): Promise<{ ok: true; job: AiSearchJobInfo; joined: boolean } | { ok: false; error: string }> {
+  if (!askAvailable(env)) return { ok: false, error: "AI_SEARCH is not bound" };
+  try {
+    await ensureQuery(env);
+    // Workers' clock moves only across I/O, so this is the moment before the sync is asked for.
+    const asked = Math.floor(Date.now() / 1000) * 1000;
+    const job = await env.AI_SEARCH.jobs.create({ description: why });
+    const joined = !(jobTime(job.started_at) >= asked);
+    await env.APP_KV.put(JOB_KEY, job.id);
+    if (joined) await env.APP_KV.put(AGAIN_KEY, why);
+    return { ok: true, job, joined };
+  } catch (error) {
+    console.error(JSON.stringify({ alert: "ask-sync-refused", why, detail: errorMessage(error) }));
+    return { ok: false, error: errorMessage(error) };
   }
+}
 
-  const ours = ownsAskKey(post.slug);
-  const removed = await deleteAskItemsWhere(env, (key) => ours(key) && !live.has(key));
+/**
+ * After a write that changes what Ask may quote (a post or paper saved, published, withdrawn, renamed or deleted): a
+ * sync, so the index follows D1 within a minute or two instead of at the next scheduled one. The write has landed,
+ * so this never fails it; null means Ask is not configured, and a refusal is reported, never the same null.
+ */
+export async function askSyncAfterWrite(env: Env, why: string) {
+  if (!askAvailable(env)) return null;
+  const asked = await startAskSync(env, why);
+  return asked.ok
+    ? { ok: true as const, job: asked.job.id, joined: asked.joined }
+    : {
+        ok: false as const,
+        message:
+          `The write landed, but the Ask index could not be asked to sync: ${asked.error}. ` +
+          `It catches up on its next scheduled sync, within 15 minutes.`,
+      };
+}
 
-  await invalidateAnswerCache(env);
-  await dropCachedDrift(env);
-  return { uploaded: records.length - failed.length, removed: removed.length, failed };
+/** What would change the visible corpus with no write: a scheduled post or section going live. */
+async function visibleMark(env: Env): Promise<string> {
+  return String(await askIndexExpected(env));
+}
+
+/**
+ * The cron's minute: when the sync this site last asked for has ended, the cached answers are dropped (they were
+ * written against the index before it) and a sync asked for during it is asked for again; and a change in how many
+ * rows the corpus has (a scheduled post going live) asks for one.
+ */
+export async function askIndexTick(env: Env): Promise<string> {
+  if (!askAvailable(env)) return "AI_SEARCH is not bound";
+  const notes: string[] = [];
+  const pending = await env.APP_KV.get(JOB_KEY);
+  if (pending) {
+    const info = await env.AI_SEARCH.jobs.get(pending).info();
+    if (info.ended_at) {
+      await env.APP_KV.delete(JOB_KEY);
+      notes.push(`sync ${pending} ended (${info.end_reason ?? "no reason given"})`);
+      notes.push(`${await invalidateAnswerCache(env)} cached answer(s) dropped`);
+      const again = await env.APP_KV.get(AGAIN_KEY);
+      if (again) {
+        await env.APP_KV.delete(AGAIN_KEY);
+        const asked = await startAskSync(env, again);
+        notes.push(asked.ok ? `sync ${asked.job.id} asked for again` : asked.error);
+      }
+    }
+  }
+  const mark = await visibleMark(env);
+  if ((await env.APP_KV.get(MARK_KEY)) !== mark) {
+    const asked = await startAskSync(env, "the visible corpus changed");
+    if (asked.ok) await env.APP_KV.put(MARK_KEY, mark);
+    notes.push(asked.ok ? `sync ${asked.job.id} asked for: ${mark} rows` : asked.error);
+  }
+  return notes.join("; ") || "nothing changed";
 }
 
 export interface AskIndexStatus {
+  /** Rows ASK_INDEX_QUERY returns now. */
   expected: number;
+  /** Items the index holds indexed. */
   present: number;
-  missing: string[];
-  stale: string[];
+  /** Rows the index refused (a row too large, an empty one). */
+  failed: number;
+  /** Items queued or being indexed. */
+  indexing: number;
+  /** The newest sync, or null before the first. */
+  lastSync: AiSearchJobInfo | null;
 }
 
-/** Both directions: an item the corpus does not know is as much a defect as a missing one. */
-export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIndexStatus> {
-  // publishableForAsk must stay in step with the SQL predicate here; check:ask-guards binds the two.
-  // The papers are read with the rest, not after it: without them the badge would report them stale and the repair
-  // button would delete them, and a read that waited for the listing was a round trip of pure waiting.
-  const [expectedUrls, listed, paperKeys] = await Promise.all([
-    askExpectedUrls(env),
-    listAllAskItems(env, timings),
-    paperItemKeys(env),
+/** Both sides are counts: the index holds one item per row, and AI Search removes a row's item when the row goes. */
+export async function askIndexStatus(env: Env): Promise<AskIndexStatus> {
+  const [expected, stats, jobs] = await Promise.all([
+    askIndexExpected(env),
+    env.AI_SEARCH.stats(),
+    env.AI_SEARCH.jobs.list({ per_page: 1 }),
   ]);
-  const expected = new Set([...expectedUrls.map((u) => keyForUrl(u)), ...paperKeys]);
-  const present = new Set(listed.map((item) => item.key));
-
-  const { extra, ...drift } = setDrift(expected, present);
-  return { ...drift, stale: extra };
-}
-
-/** On the context because a parent cannot read a child's loader data; a getter, so a route that never asks never pays. */
-type AskStatusReader = () => Promise<AskIndexStatus | null>;
-
-export const askStatusContext = createContext<AskStatusReader>();
-
-/** Null rather than throwing: an enhancement must not take an admin page down. */
-export function askStatusReader(env: Env, timings?: Timings): AskStatusReader {
-  let pending: Promise<AskIndexStatus | null> | undefined;
-  return () => {
-    pending ??= (async () => {
-      if (!askAvailable(env)) return null;
-      try {
-        return await askIndexStatus(env, timings);
-      } catch (error) {
-        console.error(
-          JSON.stringify({ alert: "ask-index-status-failed", detail: errorMessage(error) }),
-        );
-        return null;
-      }
-    })();
-    return pending;
+  return {
+    expected,
+    present: stats.completed ?? 0,
+    failed: stats.error ?? 0,
+    indexing: (stats.queued ?? 0) + (stats.running ?? 0),
+    lastSync: jobs.result[0] ?? null,
   };
 }
 
 /**
- * On a hit nothing touches AI Search: keep the early return before any index use. Null, not zero, on
- * failure. A late listing is handed to waitUntil, since a floating write never lands after the response.
+ * A sync, waited on until it ends, then the index read back: sync_ask's answer on every deploy. A sync that was
+ * already running may have read D1 before the deploy's writes, so once it ends one is asked for again. The wait is
+ * bounded below the five minutes Node's fetch gives an operator call (scripts/lib/operator-sync.mjs).
  */
-export async function askDriftCount(
+export async function syncAskAndWait(
   env: Env,
-  ctx: ExecutionContext,
-  timings?: Timings,
-): Promise<number | null> {
-  if (!askAvailable(env)) return null;
-
-  const cached = await timed(timings, "drift_cache_read", () => readCachedDrift(env));
-  if (cached !== null) return cached;
-
-  const listing = askIndexStatus(env, timings).catch((error) => {
-    console.error(JSON.stringify({ alert: "ask-drift-count-failed", detail: errorMessage(error) }));
-    return null;
-  });
-
-  const budget = new Promise<undefined>((resolve) => {
-    setTimeout(() => resolve(undefined), DRIFT_BUDGET_MS);
-  });
-
-  const status = await Promise.race([listing, budget]);
-
-  if (status === undefined) {
-    // The catch stays: a rejecting waitUntil is no better than a floating rejection.
-    ctx.waitUntil(
-      listing
-        .then((late) =>
-          late ? writeCachedDrift(env, late.missing.length + late.stale.length) : null,
-        )
-        .catch((error) =>
-          console.error(
-            JSON.stringify({ alert: "ask-drift-cache-write-failed", detail: errorMessage(error) }),
-          ),
-        ),
-    );
-    return null;
+  why: string,
+  { waitMs = 240_000, pollMs = 5_000 } = {},
+): Promise<{ job: AiSearchJobInfo; ended: boolean; status: AskIndexStatus }> {
+  const deadline = Date.now() + waitMs;
+  for (;;) {
+    const asked = await startAskSync(env, why);
+    if (!asked.ok) throw new Error(asked.error);
+    let job = asked.job;
+    while (!job.ended_at && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
+      job = await env.AI_SEARCH.jobs.get(job.id).info();
+    }
+    if (job.ended_at && asked.joined && Date.now() < deadline) {
+      await env.APP_KV.delete(AGAIN_KEY);
+      continue;
+    }
+    if (job.ended_at) {
+      // The tick would drop them within the minute; a deploy's first reader should not get one in between.
+      await env.APP_KV.delete(JOB_KEY);
+      await invalidateAnswerCache(env);
+    }
+    return { job, ended: Boolean(job.ended_at), status: await askIndexStatus(env) };
   }
-
-  if (!status) return null;
-
-  const drift = status.missing.length + status.stale.length;
-  await writeCachedDrift(env, drift);
-  return drift;
-}
-
-/** Measured: admits all but the one pathological listing this budget exists for. */
-const DRIFT_BUDGET_MS = 1000;
-
-export async function removeAskPost(env: Env, slug: string): Promise<number> {
-  const removed = await deleteAskItemsWhere(env, ownsAskKey(slug));
-  await invalidateAnswerCache(env);
-  await dropCachedDrift(env);
-  return removed.length;
-}
-
-/** Upload is an upsert, so a renamed or deleted post leaves its old item answering forever. */
-export async function pruneAskCorpus(env: Env, liveKeys: string[]): Promise<string[]> {
-  const live = new Set(liveKeys);
-  const removed = await deleteAskItemsWhere(env, (key) => !live.has(key));
-  // Only on an actual removal; dropping the keys otherwise would cost the next reader a listing and an answer.
-  if (removed.length > 0) {
-    await invalidateAnswerCache(env);
-    await dropCachedDrift(env);
-  }
-  return removed;
-}
-
-/**
- * One paper's twin in or out of the Ask index: uploaded when `markdown` is given, removed when it is null
- * (a draft, or a paper that is gone). Scoped to this paper's key, as syncAskPost is to a post's.
- */
-export async function syncAskPaper(
-  env: Env,
-  slug: string,
-  markdown: string | null,
-): Promise<{ uploaded: number; removed: number }> {
-  const key = keyForUrl(paperPath(slug));
-  let uploaded = 0;
-  let removed = 0;
-  if (markdown !== null) {
-    await uploadAskItem(env, key, markdown);
-    uploaded = 1;
-  } else {
-    removed = (await deleteAskItemsWhere(env, (itemKey) => itemKey === key)).length;
-  }
-  await invalidateAnswerCache(env);
-  await dropCachedDrift(env);
-  return { uploaded, removed };
 }

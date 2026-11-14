@@ -2,11 +2,11 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { listedPaperTwins, overAdvertisedTwins } from "../../app/lib/llms/validate.mjs";
-import { paperAskUrl, paperMarkdownPath, paperPath } from "../../app/lib/publications/paths.mjs";
+import { paperAskUrl, paperPath } from "../../app/lib/publications/paths.mjs";
 import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { paperSearchInputs } from "../../app/lib/publications/search-inputs.mjs";
 import { recordsForPapers } from "../../app/lib/search/records.mjs";
-import { keyForUrl, urlForKey } from "../../app/lib/search/ask-keys.mjs";
+import { urlForRowId } from "../../app/lib/search/ask-citations.mjs";
 import {
   closePart,
   compiled,
@@ -168,32 +168,15 @@ ok(
   shown(refusalsFor("search record")),
 );
 
-/* `keyForUrl` and `urlForKey` are asymmetric: a key that did not round-trip cites a 404. */
+/* The Ask index's id for a paper is its page, and a citation reads that id back: an id the reader refuses cites nothing. */
 {
-  const brokenKeys = papers
-    .map((paper) => {
-      const key = keyForUrl(paperPath(paper.slug));
-      return { slug: paper.slug, key, back: urlForKey(key) };
-    })
-    .filter(
-      ({ slug, key, back }) =>
-        key !== `research/publications/${slug}.md` || back !== paperPath(slug),
-    );
-  ok(
-    `every paper's Ask key is its twin and maps back to its page (${papers.length} papers)`,
-    brokenKeys.length === 0,
-    brokenKeys.length
-      ? brokenKeys.map((b) => `${b.slug}: key ${b.key}, back ${b.back}`).join("; ")
-      : "",
-  );
-
-  const keyPathMismatch = papers
+  const uncited = papers
     .map((paper) => paper.slug)
-    .filter((slug) => `/${keyForUrl(paperPath(slug))}` !== paperMarkdownPath(slug));
+    .filter((slug) => urlForRowId(paperPath(slug)) !== paperPath(slug));
   ok(
-    "every Ask key names the path the twin route serves",
-    keyPathMismatch.length === 0,
-    keyPathMismatch.length ? `key and twin path disagree: ${keyPathMismatch.join(", ")}` : "",
+    `every paper's Ask citation is its page (${papers.length} papers)`,
+    uncited.length === 0,
+    uncited.length ? `no citation for: ${uncited.join(", ")}` : "",
   );
 }
 

@@ -257,11 +257,12 @@ in the path and no per-request cost.
 The same corpus is exposed as a Model Context Protocol endpoint, so an agent can
 search this site as a tool without scraping it:
 
-- [Search MCP endpoint](https://2795d719-a4de-4558-9322-8fced66a48e6.search.ai.cloudflare.com/mcp): no authentication, one tool, "search"
+- [Search MCP endpoint](https://f73aeb3b-7f38-44f7-bba6-d7559da7e0a2.search.ai.cloudflare.com/mcp): no authentication, one tool, "search"
 
-Results carry the same section-grained keys the rest of the site uses:
-blog/<slug>.md is a whole post and blog/<slug>__<anchor>.md is one heading
-within it, which maps back to /writing/<slug>#<anchor>.
+It searches the posts and the papers. Each result carries the page it came
+from as its row_id: /writing/<slug> is a post's opening, /writing/<slug>#<anchor>
+is one heading within it, and /research/publications/<slug>/ is a paper (a long
+paper's later parts end in #part-2 and on, and cite the same page).
 
 This is semantic retrieval and it is not the same thing as the JSON endpoint
 above. It finds passages that answer a question phrased in a sentence, and it

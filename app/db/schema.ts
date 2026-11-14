@@ -790,11 +790,3 @@ export const scheduledPublishes = sqliteTable(
 // The 404 counts (drizzle/0041_not_found.sql, site-runtime's NOT_FOUND_SQL), written by countNotFound in workers/app.ts
 // and read by Carrel's 404 report (notFoundReport). site-runtime's own mirror, re-exported so the schema test sees its index.
 export { page404Daily } from "@dustinedwards/site-runtime/drizzle";
-
-// The Ask upload ledger (drizzle/0043_ask_uploads.sql): the sha-256 of the body last uploaded to AI Search under each
-// item key, so sync_ask uploads only what changed. Derived, so not in the backup's required tables.
-export const askUploads = sqliteTable("ask_uploads", {
-  key: text("key").primaryKey(),
-  bodySha256: text("body_sha256").notNull(),
-  uploadedAt: text("uploaded_at").notNull(),
-});

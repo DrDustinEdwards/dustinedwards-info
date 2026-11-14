@@ -18,7 +18,7 @@ Build order: `build:stack` (build:content reads its output), `build:content`, th
 
 The pipeline module is imported by both the build scripts and the Worker, and there is never a second renderer: if the two could disagree, a save would publish HTML the next build would not reproduce. The pipeline itself is Prelum's (`@drdustinedwards/site-helpers/render`, with its `editorialPack` and `createHighlight`); `pipeline.mjs` adds the site's frontmatter, media rules and post record. The cost is Worker size, accepted: highlighting is `shiki/core` with an explicit grammar list, because full `shiki` took the Worker to 14 MB.
 
-Anything derived that both callers need lives in one module both import: `withRelated`, `withBacklinks`, `records.mjs`, `ask-keys.mjs`, `colophon-sections.mjs`. That also lets a plain Node check import exactly what the Worker runs.
+Anything derived that both callers need lives in one module both import: `withRelated`, `withBacklinks`, `records.mjs`, `ask-citations.mjs`, `colophon-sections.mjs`. That also lets a plain Node check import exactly what the Worker runs.
 
 `renderAndWrite` is the only writer of a rendered row. Rows carry the source blob sha and a render hash. `check:content` renders the corpus twice and byte-compares the runs, because a nondeterministic render would make every writer disagree with every other.
 
@@ -57,7 +57,7 @@ The durable fact is `first_published` in frontmatter, not a rows column, because
 
 ## Ask outside a save
 
-`syncAskPost` runs only on saves, and `sync:content --remote` writes D1 and the classic index only. A row written any other way is covered by convergence: ship converges Ask last, Capsid's watcher runs `sync_ask` when the Ask drift check fails, and `sync_ask` is on the operator API for a manual repair.
+Ask reads D1 itself (docs/SEARCH.md, Ask), so a row written any way is indexed on the next sync. A save asks for one at once; `sync:content --remote` is followed by ship's `sync_ask`; Capsid's watcher runs `sync_ask` when the Ask drift check fails; and the instance syncs every 15 minutes regardless.
 
 ## Social cards
 

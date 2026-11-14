@@ -2,7 +2,9 @@ import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { healthChecks } from "@dustinedwards/site-runtime/health-read";
 
 /**
- * @typedef {import("../../app/lib/health/ask-converge.mjs").HealthCheckRow} HealthCheckRow
+ * One row of /health, as ship reads it (site-runtime ./health-read healthChecks).
+ *
+ * @typedef {{ name?: string, ok?: boolean, expected?: number, present?: number }} HealthCheckRow
  */
 
 /**
@@ -146,12 +148,8 @@ export function deferredMisses(checks, deferred, path = "/health") {
       typeof row.expected === "number" && typeof row.present === "number"
         ? ` (expected ${row.expected}, present ${row.present})`
         : "";
-    const waited =
-      typeof row.waitedMs === "number"
-        ? `, after re-reading for ${Math.round(row.waitedMs / 1000)}s`
-        : "";
     misses.push(
-      `${name} is STILL failing after ${repairedBy}${counts}${waited}. The endpoint says ` +
+      `${name} is STILL failing after ${repairedBy}${counts}. The endpoint says ` +
         `no more than the counts on purpose; the why is in Workers Logs`,
     );
   }

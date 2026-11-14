@@ -20,15 +20,6 @@ const ANSWER_CACHE_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 const ANSWER_CACHE_PREFIX = "ask:answer:";
 
-/**
- * TTL cache, not compute-on-write: the expected set moves with the clock as scheduled posts go live.
- * KV refuses a TTL under 60 seconds; five minutes of an under-reported badge harms nobody.
- */
-const DRIFT_CACHE_KEY = "ask:drift";
-
-/** Stated here and repeated to the reader in the badge's own title text. */
-export const DRIFT_CACHE_TTL_SECONDS = 300;
-
 export interface CachedAnswer {
   answer: string;
   chunks: unknown[];
@@ -106,26 +97,6 @@ export async function writeCachedAnswer(env: Env, key: string, value: CachedAnsw
   await env.APP_KV.put(key, JSON.stringify(value), {
     expirationTtl: ANSWER_CACHE_TTL_SECONDS,
   });
-}
-
-/** Null, not zero, on a miss: zero means the index agrees, and a miss must not render a clean badge. */
-export async function readCachedDrift(env: Env): Promise<number | null> {
-  const cached = await env.APP_KV.get(DRIFT_CACHE_KEY, "json");
-  if (!cached || typeof cached !== "object") return null;
-  const value = (cached as { drift?: unknown }).drift;
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) return null;
-  return value;
-}
-
-export async function writeCachedDrift(env: Env, drift: number): Promise<void> {
-  await env.APP_KV.put(DRIFT_CACHE_KEY, JSON.stringify({ drift }), {
-    expirationTtl: DRIFT_CACHE_TTL_SECONDS,
-  });
-}
-
-/** A delete rather than a write: the caller knows the count is stale, not what it became. */
-export async function dropCachedDrift(env: Env): Promise<void> {
-  await env.APP_KV.delete(DRIFT_CACHE_KEY);
 }
 
 /**

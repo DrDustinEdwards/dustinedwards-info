@@ -2,7 +2,7 @@
 
 import { WRITING_RULES } from "@dustinedwards/site-runtime/prose";
 
-import { slugForKey } from "./ask-keys.mjs";
+import { rowIdOf, slugForRowId } from "./ask-citations.mjs";
 import { FOLLOW_UP_MARKER } from "./follow-up.mjs";
 import { guardAnswerStream } from "@dustinedwards/site-runtime/ai-ask";
 
@@ -84,8 +84,8 @@ export function answerLeaksPrompt(answer) {
 export function citedSlugs(chunks) {
   return [
     ...new Set(
-      /** @type {Array<{ item?: { key?: string } }>} */ (chunks)
-        .map((chunk) => slugForKey(chunk?.item?.key ?? ""))
+      chunks
+        .map((chunk) => slugForRowId(rowIdOf(chunk)))
         .filter(
           /** @returns {slug is string} @param {string | null} slug */
           (slug) => typeof slug === "string" && slug.length > 0,

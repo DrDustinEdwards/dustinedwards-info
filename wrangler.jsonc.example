@@ -310,7 +310,7 @@
 	"ai_search": [
 		{
 			"binding": "AI_SEARCH",
-			"instance_name": "dustinedwards"
+			"instance_name": "dustinedwards-ask"
 		}
 	],
 	// **THIS IS THE WHOLE SITE'S RATE LIMITER. THE NAME SAYS ASK AND THE NAME

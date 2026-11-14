@@ -1,19 +1,12 @@
-// The two converge steps scripts/converge.mjs runs through the deployed Worker's operator API: sync_ask brings the
-// Ask index into step and sync_media the media index. Each returns a miss rather than refusing,
+// The converge steps scripts/converge.mjs runs through the deployed Worker's operator API: sync_ask has AI Search read
+// the Ask corpus from D1 and waits for it, sync_cv_pdf brings the CV PDF into step and sync_media the media index. Each returns a miss rather than refusing,
 // because every failure here happens after the deploy has landed.
-
-import {
-  ASK_POLL_INTERVAL_MS,
-  ASK_POLL_WINDOW_MS,
-  awaitAskConvergence,
-} from "../../app/lib/health/ask-converge.mjs";
-import { healthChecks } from "@dustinedwards/site-runtime/health-read";
 
 /** @typedef {{ origin: string, token: string }} OperatorTarget the site and its operator token */
 
 /**
  * Generous, but not the real limit: Node's fetch gives up after 300 s without response headers, whatever this
- * says. A tool must answer inside that, which is why sync_ask uploads in parallel (ASK_UPLOAD_CONCURRENCY).
+ * says. A tool must answer inside that, which is why sync_ask stops waiting on its sync at four minutes.
  */
 const OPERATOR_TIMEOUT_MS = 10 * 60_000;
 
@@ -95,97 +88,29 @@ async function operatorSync(tool, { origin, token }) {
 }
 
 /**
- * The ask-index-drift row from /health. AI Search is eventually consistent, so drift is re-read
- * before it is a miss, and through health, which writes nothing; `sync_ask` would repair what it
- * measures.
- *
- * @param {string} origin
- * @returns {Promise<any>} the row, or null when health did not report one
- */
-export async function readAskDrift(origin) {
-  const res = await fetch(`${origin}/health`, {
-    headers: { "user-agent": "deploy-converge", "cache-control": "no-cache" },
-    signal: AbortSignal.timeout(30_000),
-  });
-  // Parsed regardless of status: health answers 503 when the database fails, and the body is still the answer.
-  const health = await res.json().catch(() => null);
-  return healthChecks(health).find((c) => c.name === "ask-index-drift") ?? null;
-}
-
-/**
- * sync_ask, then, when the write-back read has not converged, re-reads /health for the Ask
- * index to catch up on its own.
+ * sync_ask, which asks AI Search to read the corpus from D1, waits for that sync to end and reads the index back.
  *
  * @param {OperatorTarget} target
  * @returns {Promise<string>} the miss, or "" when the index converged
  */
 export async function convergeAsk(target) {
-  const { origin } = target;
-  let askMiss = "";
-
-  let askLateConverge = false;
-
   const { report, miss } = await operatorSync("sync_ask", target);
-  askMiss = miss;
+  let askMiss = miss;
 
-  // A named failure is a miss, not drift to wait out: those keys were never written, so the index
-  // will not catch up on its own.
-  if (!askMiss && Array.isArray(report.failed) && report.failed.length > 0) {
-    askMiss =
-      `the Ask upload failed for ${report.failed.length} key(s) after retries: ` +
-      report.failed.map((/** @type {any} */ f) => `${f.key} (${f.error})`).join(", ") +
-      `. Re-run sync_ask once the cause clears`;
-  } else if (!askMiss && report.converged !== true) {
-    const driftReading = () => readAskDrift(origin);
-
-    const firstReading = `${report.expected} expected, ${report.present} present, drift ${report.drift}`;
-    console.log(
-      `  not converged on the write-back (${firstReading}). Re-reading /health for up ` +
-        `to ${ASK_POLL_WINDOW_MS / 1000}s before calling it a miss.`,
-    );
-
-    const { converged, polls, latest } = await awaitAskConvergence({
-      reading: driftReading,
-      sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
-      onPoll: ({ poll, reading }) => {
-        if (!reading) console.log(`  poll ${poll}: health unreadable`);
-        else if (!reading.ok)
-          console.log(
-            `  poll ${poll}: still behind (${reading.expected} expected, ${reading.present} present)`,
-          );
-      },
-    });
-
-    if (converged) {
-      askLateConverge = true;
-      console.log(
-        `  CONVERGED after ${polls} poll(s), roughly ${polls * (ASK_POLL_INTERVAL_MS / 1000)}s. ` +
-          `The write-back read was early, not wrong: nothing was re-uploaded during the ` +
-          `window, so the index caught up on its own.`,
-      );
-    } else {
-      const last = latest
-        ? `${latest.expected} expected, ${latest.present} present`
-        : `health was unreadable on every poll, last write-back reading: ${firstReading}`;
-      askMiss =
-        `the Ask index did not converge within ${ASK_POLL_WINDOW_MS / 1000}s (${last}), ` +
-        `after uploading ${report.uploaded} and removing ${report.removed}`;
-    }
+  if (!askMiss && report.converged !== true) {
+    askMiss = report.ended
+      ? `the Ask index did not converge after sync ${report.job}: ${report.expected} expected, ` +
+        `${report.present} present, ${report.refused} refused. A refused row is named in that job's ` +
+        `logs (AI Search, dustinedwards-ask, Jobs)`
+      : `sync ${report.job} had not ended when sync_ask stopped waiting (${report.expected} expected, ` +
+        `${report.present} present, ${report.indexing} indexing). It goes on, and /health reports the result`;
   }
 
   if (askMiss) {
     console.log(`  MISSED: ${askMiss}`);
-  } else if (askLateConverge) {
-    console.log(
-      `  converged inside the window: ${report.uploaded} uploaded, ${report.removed} removed, ` +
-        `${report.cacheDropped} cached answer(s) dropped. The counts are deliberately not ` +
-        `restated here; the write-back pair was stale and health reported the current one.`,
-    );
   } else {
     console.log(
-      `  converged: ${report.expected} expected, ${report.present} present, ` +
-        `${report.uploaded} uploaded, ${report.removed} removed, ` +
-        `${report.cacheDropped} cached answer(s) dropped.`,
+      `  converged after sync ${report.job}: ${report.expected} expected, ${report.present} present.`,
     );
   }
   return askMiss;

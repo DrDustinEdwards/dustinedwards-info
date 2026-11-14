@@ -6,7 +6,8 @@
 // Timeouts (site-runtime runJobs, area 8 C3): carrel-schedules gets two minutes; the dump gets ten, its last runs took
 // seconds and a dump that has not finished in ten minutes is hung, not slow. The media backup gets ten too: each of its
 // two backupFiles passes stops itself at five minutes (d1-dump's timeBudgetMs) and the next night goes on from there.
-// prune-404 is one DELETE, so one minute. A job past its timeout is recorded failed and the next one starts.
+// prune-404 is one DELETE, so one minute; ask-index is a count and two or three AI Search calls, so one minute too. A
+// job past its timeout is recorded failed and the next one starts.
 //
 // Three jobs came from the retired watchdog Worker (2026-11-06; Capsid's watcher now reads /health, repairs drift and
 // runs the weekly citation refresh, as it does for every site): health-snapshot stores the colophon's health verdict
@@ -19,6 +20,7 @@ export const HEALTH_SNAPSHOT_EVERY_MINUTES = 15;
 
 export const CRON_JOBS = Object.freeze([
   Object.freeze({ name: "carrel-schedules", everyMinutes: 1, timeoutMs: 2 * 60_000 }),
+  Object.freeze({ name: "ask-index", everyMinutes: 1, timeoutMs: 60_000 }),
   Object.freeze({ name: "backup", everyMinutes: 1440, timeoutMs: 10 * 60_000 }),
   Object.freeze({ name: "media-backup", everyMinutes: 1440, timeoutMs: 10 * 60_000 }),
   Object.freeze({ name: "prune-404", everyMinutes: 1440, timeoutMs: 60_000 }),
