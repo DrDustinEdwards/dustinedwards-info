@@ -144,7 +144,7 @@ textarea,
 }
 
 :where(select:is([multiple], [size])) optgroup option {
-  padding-inline-start: 20px;
+  padding-inline-start: var(--space-5-5);
 }
 
 ::file-selector-button {

@@ -225,7 +225,7 @@
   --t-h2-size: clamp(var(--title-4), 1.1rem + 0.6vw, var(--title-3));
 
   --t-h1-family: var(--font-sans);
-  --t-h1-size: clamp(2.5rem, 1.6rem + 3.6vw, 4.5rem);
+  --t-h1-size: clamp(var(--display-5), 1.6rem + 3.6vw, var(--display-1));
   --t-h1-leading: 0.98;
   /* Titles in Inter Light (Capsomer's --weight-title), the 1976 manual's Helvetica Light; the opsz axis
      draws Inter's display cut at this size, already set tight, so the tracking stays light. */

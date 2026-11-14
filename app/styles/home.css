@@ -70,7 +70,7 @@
 }
 
 .home-section {
-  margin-block-start: 6rem;
+  margin-block-start: var(--space-10);
 }
 
 .home-section > :is(.home-rows, .home-refs, .cap-checklist, .podcast) {
@@ -91,7 +91,7 @@
   column-gap: var(--space-5);
   align-items: baseline;
   border-block-end: var(--line-w) solid var(--dust);
-  padding-block: 0.875rem;
+  padding-block: var(--space-4-5);
 }
 
 .home-row-date {
@@ -147,7 +147,7 @@
   display: grid;
   grid-template-columns: 2.5rem 3.5rem minmax(0, 1fr);
   column-gap: var(--space-4);
-  padding-block: 0.875rem;
+  padding-block: var(--space-4-5);
   border-block-end: var(--line-w) solid var(--dust);
   counter-increment: ref;
 }
@@ -333,7 +333,7 @@
   }
 
   .tracks > .home-hero + .home-key {
-    margin-block-start: 2.5rem;
+    margin-block-start: var(--space-7-5);
   }
 }
 
@@ -462,7 +462,7 @@
 }
 
 .podcast > .cap-player {
-  margin-block: 1.25rem 0;
+  margin-block: var(--space-5-5) 0;
 }
 
 .home-more.podcast-x {

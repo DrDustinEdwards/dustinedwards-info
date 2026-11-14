@@ -169,7 +169,7 @@ main.app-page {
 
 .kb-inserts {
   padding: var(--space-3);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-m-5);
   background: var(--sunken);
 }
 
@@ -259,7 +259,7 @@ main.app-page {
   width: min(19rem, 100%);
   padding: var(--space-3);
   border: var(--line-w) solid var(--line-strong);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-m-5);
   background: var(--raised);
   box-shadow: var(--shadow-m);
 }

@@ -24,7 +24,7 @@
   overflow: hidden;
   /* The rounded card with its lift, kept from before the manual theme (Dustin, 2026-10-26). */
   border: var(--nav-rule);
-  border-radius: 1rem;
+  border-radius: var(--radius-xl-5);
   background: var(--nav-card-bg);
   box-shadow: 0 18px 40px rgb(20 10 40 / 0.14);
   color: var(--text);
@@ -65,7 +65,7 @@
 .site-nav-band {
   display: grid;
   grid-template-columns: 2.75rem minmax(0, 1fr);
-  column-gap: 0.875rem;
+  column-gap: var(--space-4-5);
   align-items: center;
   padding: 1.125rem 1.375rem;
   border-block-end: var(--nav-rule);
@@ -145,7 +145,7 @@
 .site-nav-tile:visited {
   display: block;
   flex: 1;
-  padding: 0.875rem var(--space-5);
+  padding: var(--space-4-5) var(--space-5);
   color: var(--text);
   text-decoration: none;
 }
@@ -168,7 +168,7 @@
   font-size: var(--fs-h3);
   font-weight: var(--weight-semibold);
   font-variation-settings: normal;
-  line-height: 1.25;
+  line-height: var(--leading-tight-5);
   overflow-wrap: anywhere;
   /* A long article title stops at three lines so the tiles stay one height. */
   display: -webkit-box;
@@ -285,7 +285,7 @@ a.site-nav-row-title:hover {
 .site-nav-link:visited {
   display: inline-block;
   min-block-size: 1.5rem;
-  line-height: 1.5rem;
+  line-height: var(--line-box-6);
   color: var(--brand);
   text-decoration: none;
 }
@@ -303,7 +303,7 @@ a.site-nav-row-title:hover {
   gap: var(--space-3-5);
   box-sizing: border-box;
   min-inline-size: 0;
-  padding: var(--space-5) 1.25rem;
+  padding: var(--space-5) var(--space-5-5);
   background: var(--nav-spot-bg);
   color: var(--text);
   text-decoration: none;

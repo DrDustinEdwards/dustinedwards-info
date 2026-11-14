@@ -54,7 +54,7 @@
 .post-history {
   margin: var(--space-7) 0 0;
   border-block-start: var(--line-w) solid var(--dust);
-  padding-block-start: 0.875rem;
+  padding-block-start: var(--space-4-5);
   color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: var(--fs-small);
@@ -80,7 +80,7 @@
   gap: 0 var(--space-6);
   margin-block-start: var(--space-7);
   border-block-start: var(--line-w) solid var(--dust);
-  padding-block-start: 0.875rem;
+  padding-block-start: var(--space-4-5);
   font-family: var(--font-sans);
   font-size: var(--fs-lead);
 }
@@ -127,7 +127,7 @@
 }
 
 .post-body .prose h2 {
-  margin: 3.5rem 0 0.875rem;
+  margin: var(--space-8-5) 0 var(--space-4-5);
   color: var(--text);
 }
 
@@ -163,7 +163,7 @@
   margin: 2.125rem 0;
   max-width: 30ch;
   border-block: var(--line-w) solid var(--dust);
-  padding-block: 1.25rem;
+  padding-block: var(--space-5-5);
   color: var(--text);
   font-family: var(--font-serif);
   font-size: 1.625rem;

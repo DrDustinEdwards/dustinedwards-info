@@ -64,7 +64,7 @@
 }
 
 .post-machine b + b {
-  margin-block-start: 0.875rem;
+  margin-block-start: var(--space-4-5);
 }
 
 .post-toc {
@@ -76,7 +76,7 @@
   .post-toc {
     /* The header is sticky, so the rail clears --header-h plus 20px. */
     position: sticky;
-    top: calc(var(--header-h) + 1.25rem);
+    top: calc(var(--header-h) + var(--space-5-5));
   }
 }
 

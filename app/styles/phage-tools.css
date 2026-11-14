@@ -2,8 +2,8 @@
    procedure step each folds under. The calculator itself is Capsomer's (capsomer/calculator.css). */
 
 .phage-tool {
-  margin: var(--space-6) 0 2.5rem;
-  padding: 1.25rem 0 0;
+  margin: var(--space-6) 0 var(--space-7-5);
+  padding: var(--space-5-5) 0 0;
   border-top: var(--line-w) solid var(--border);
 }
 
@@ -14,7 +14,7 @@
 .phage-tool-title {
   margin: 0 0 var(--space-5);
   font-size: var(--title-4);
-  line-height: 1.25;
+  line-height: var(--leading-tight-5);
 }
 
 .phage-tool-hint {
