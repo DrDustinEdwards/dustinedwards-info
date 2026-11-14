@@ -1,4 +1,4 @@
-import { labelForUrl, urlForKey } from "../lib/search/ask-keys.mjs";
+import { labelForUrl, rowIdOf, urlForRowId } from "../lib/search/ask-citations.mjs";
 import { splitFollowUp } from "../lib/search/follow-up.mjs";
 import { CUT_EVENT, answerDelta, takeSseFrames } from "@dustinedwards/site-runtime/ai-ask";
 
@@ -36,15 +36,14 @@ function attach(parent: HTMLElement, ...children: HTMLElement[]): void {
 }
 
 /**
- * The `chunks` event's payload as citations, deduplicated by URL. Same key-to-URL mapping as the
- * upload path, so a citation cannot disagree with what was indexed.
+ * The `chunks` event's payload as citations, deduplicated by URL: each chunk's row id is the URL it was indexed under.
  */
 function citationsFromChunks(parsed: unknown): AskCitation[] {
-  const chunks: Array<{ item?: { key?: string } }> = Array.isArray(parsed) ? parsed : [];
+  const chunks: unknown[] = Array.isArray(parsed) ? parsed : [];
   const seen = new Set<string>();
   const out: AskCitation[] = [];
   for (const chunk of chunks) {
-    const url = urlForKey(chunk?.item?.key ?? "");
+    const url = urlForRowId(rowIdOf(chunk));
     if (!url || seen.has(url)) continue;
     seen.add(url);
     out.push({

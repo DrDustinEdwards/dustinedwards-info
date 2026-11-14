@@ -33,6 +33,14 @@ export function siteJobs(env: Env, ctx: ExecutionContext, at: Date): SiteJob[] {
         return run;
       },
     },
+    // The Ask index's sync bookkeeping: cached answers dropped when a sync ends, a scheduled post going live.
+    {
+      ...cronJob("ask-index"),
+      due: () => true,
+      run: async () => ({
+        note: await (await import("~/lib/search/ask.server")).askIndexTick(env),
+      }),
+    },
     {
       ...cronJob("backup"),
       backup: true,

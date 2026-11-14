@@ -5,9 +5,10 @@
     "min_files": 34,
     "min_actions": 12,
     "min_intents": 3,
-    "destructive": ["admin.tools.tsx:rebuild", "admin.tools.tsx:sync-ask"],
+    "destructive": ["admin.tools.tsx:rebuild"],
     "reversible": {
       "admin.tools.tsx:regenerate": "rewrites D1 rows from the artifact, idempotent",
+      "admin.tools.tsx:sync-ask": "asks AI Search to read the corpus from D1 now; nothing is deleted here, and the index follows the database's own rows",
       "admin.tools.tsx:reset-ask-budget": "a counter; see the report, no data is lost"
     }
   },
@@ -20,7 +21,7 @@
     "reversible": {
       "sync_status": "a read",
       "backup_status": "a read",
-      "sync_ask": "converges a DERIVED index to the corpus through its own derivation, which is repair rather than destruction. Idempotent, and it reports a read-back reconciliation rather than its own counters",
+      "sync_ask": "asks AI Search to read the corpus from D1 and waits for that sync; nothing is deleted here, the index follows the database's own rows, and it reports a read-back of the counts",
       "list_procedures": "a read",
       "get_procedure": "a read",
       "save_procedure": "creates or edits a procedure file through compile.mjs, the validator CI runs; the file and its git history stand, its D1 row and search records are derived, and there is no delete branch",

@@ -3,94 +3,39 @@ import assert from "node:assert/strict";
 
 import {
   askSyncReport,
-  askSyncSummary,
   mediaSyncReport,
   mediaSyncSummary,
 } from "../app/lib/operator/sync-report.mjs";
 
-await test("a real convergence reports converged and zero drift", () => {
-  const r = askSyncReport({
-    uploaded: 122,
-    removed: 0,
-    cacheDropped: 3,
-    expected: 122,
-    present: 122,
-  });
+const SYNCED = { job: "j1", ended: true, expected: 191, present: 191, refused: 0, indexing: 0 };
+
+await test("an ended sync whose index matches its query is converged, with zero drift", () => {
+  const r = askSyncReport(SYNCED);
   assert.equal(r.converged, true);
   assert.equal(r.drift, 0);
-  assert.equal(r.expected, 122);
-  assert.equal(r.present, 122);
 });
 
-await test("SUCCESS WITHOUT UPLOADING IS NOT CONVERGED, which is the plant", () => {
-  // The counts are the only thing that can tell, so they are the only thing trusted.
-  const r = askSyncReport({ uploaded: 0, removed: 0, cacheDropped: 0, expected: 122, present: 90 });
-  assert.equal(r.converged, false, "an untouched short index must never read as converged");
-  assert.equal(r.drift, 32);
-  assert.match(askSyncSummary(r), /STILL SHORT/);
+await test("a short index is NOT converged, and drift is absolute either way", () => {
+  // More present than expected is a withdrawn post still answering; a negative drift would read as healthy.
+  assert.equal(askSyncReport({ ...SYNCED, present: 160 }).converged, false);
+  assert.equal(askSyncReport({ ...SYNCED, present: 222 }).drift, 31, "not -31");
 });
 
-await test("uploading a lot and still being short is NOT converged either", () => {
-  // `uploaded` is what the loop THINKS it did; only the read-back can contradict it.
-  const r = askSyncReport({
-    uploaded: 122,
-    removed: 0,
-    cacheDropped: 0,
-    expected: 122,
-    present: 121,
-  });
-  assert.equal(r.converged, false);
-  assert.equal(r.drift, 1);
+await test("a sync that had not ended, or a refused row, is not converged even when the counts agree", () => {
+  assert.equal(askSyncReport({ ...SYNCED, ended: false }).converged, false);
+  assert.equal(askSyncReport({ ...SYNCED, refused: 1 }).converged, false);
 });
 
-await test("DRIFT IS ABSOLUTE, because a too-large index is also wrong", () => {
-  // More present than expected is stale items, which is how a withdrawn post keeps answering.
-  // A negative drift would read as healthy to any caller comparing drift > 0.
-  const r = askSyncReport({ uploaded: 0, removed: 0, cacheDropped: 0, expected: 90, present: 122 });
-  assert.equal(r.drift, 32, "not -32");
-  assert.equal(r.converged, false);
-});
-
-await test("AN UNREADABLE COUNT FAILS CLOSED", () => {
-  // A count that could not be read must not average out to agreement.
-  for (const bad of [null, undefined, Number.NaN, "122", 1.5]) {
+await test("AN UNREADABLE COUNT FAILS CLOSED, and converged is never taken from the caller", () => {
+  for (const bad of [null, undefined, Number.NaN, "191", 1.5]) {
     assert.equal(
-      askSyncReport({ uploaded: 1, removed: 0, cacheDropped: 0, expected: bad, present: bad })
-        .converged,
+      askSyncReport({ ...SYNCED, expected: bad, present: bad }).converged,
       false,
       `expected/present ${String(bad)} must not converge`,
     );
+    assert.equal(askSyncReport({ ...SYNCED, refused: bad }).converged, false);
   }
-});
-
-await test("converged is never taken from the caller", () => {
-  // Passing it in must change nothing: it is derived or it is worthless.
-  const r = askSyncReport({
-    uploaded: 0,
-    removed: 0,
-    cacheDropped: 0,
-    expected: 122,
-    present: 90,
-    converged: true,
-    ok: true,
-    drift: 0,
-  });
-  assert.equal(r.converged, false);
-  assert.equal(r.drift, 32);
-});
-
-await test("the summary carries both counts either way, so a log line is diagnosable", () => {
-  const good = askSyncSummary(
-    askSyncReport({ uploaded: 5, removed: 1, cacheDropped: 0, expected: 7, present: 7 }),
-  );
-  assert.match(good, /7 expected/);
-  assert.match(good, /7 present/);
-  const bad = askSyncSummary(
-    askSyncReport({ uploaded: 5, removed: 1, cacheDropped: 0, expected: 9, present: 7 }),
-  );
-  assert.match(bad, /9 expected/);
-  assert.match(bad, /7 present/);
-  assert.match(bad, /drift 2/);
+  assert.equal(askSyncReport({ ...SYNCED, present: 90, converged: true }).converged, false);
 });
 
 /* The media index drifts by KEY, so the two totals can agree while the index is wrong in
@@ -189,16 +134,6 @@ await test("media: a failure entry that is not a string still counts as a failur
   const r = mediaSyncReport({ ...CLEAN, failures: [{ key: "/x.png" }] });
   assert.equal(r.converged, false);
   assert.equal(r.unreadable, true);
-});
-
-await test("ask: an unreadable failure list is not converged, an absent one is", () => {
-  const counts = { uploaded: 5, removed: 0, cacheDropped: 0, expected: 5, present: 5 };
-  for (const bad of [7, null, "nope", {}]) {
-    const r = askSyncReport({ ...counts, failed: bad });
-    assert.equal(r.converged, false, `failed=${JSON.stringify(bad)}`);
-    assert.match(askSyncSummary(r), /UNREADABLE/);
-  }
-  assert.equal(askSyncReport(counts).converged, true);
 });
 
 await test("media: the summary names what is wrong, not just that something is", () => {

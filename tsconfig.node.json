@@ -168,7 +168,7 @@
     // back to the page cites a URL that 404s, and only a reader who clicked
     // would ever find out. The uploader and the client chunk both import it,
     // which is why there is one module to reach.
-    "app/lib/search/ask-keys.mjs",
+    "app/lib/search/ask-citations.mjs",
     // The colophon's section descriptor. build-content.mjs reads it to emit the
     // page's search records, and app/routes/colophon.tsx renders from the same
     // list, which is what stops an anchor existing in two places.
@@ -235,7 +235,6 @@
     "app/lib/cron-jobs.mjs",
     // How every reader of /health turns its checks into rows: ship's readiness, operator-sync and the snapshot.
     // The Ask settle loop, which the deploy's two Ask steps call: one cadence and one window.
-    "app/lib/health/ask-converge.mjs",
     // Imported by modules listed above, so this project must reach them too:
     // the status rule (pdf-redirect) and the hast builders (chart, diagram).
     // Each is dependency-free.

@@ -133,7 +133,7 @@ await test("the audit question itself is not mistaken for a leak", () => {
   assert.equal(answerLeaksPrompt(AUDIT_QUESTION), false);
 });
 
-const chunk = (slug) => ({ item: { key: `writing/${slug}.md` } });
+const chunk = (slug) => ({ item: { key: `k-${slug}`, metadata: { row_id: `/writing/${slug}` } } });
 
 await test("citedSlugs reads the chunk shape once, for both paths", () => {
   assert.deepEqual(citedSlugs([chunk("a"), chunk("b"), chunk("a")]), ["a", "b"]);
@@ -198,7 +198,7 @@ await test("A PARAGRAPH WITH A HIGH CHECKPROSE FINDING IS NOT SHOWN, AND ENDS TH
     out += decoder.decode(value, { stream: true });
   }
   assert.equal(answerOf(out), first, "nothing after the refused paragraph is shown");
-  assert.ok(out.includes('"key":"writing/live.md"'), "the citations of the shown paragraph stay");
+  assert.ok(out.includes('"row_id":"/writing/live"'), "the citations of the shown paragraph stay");
   assert.ok(out.endsWith("data: [DONE]\n\n"), "the answer ends cleanly");
   assert.equal(refused, true, "the route skips the cache for a refused answer");
 });
@@ -214,7 +214,7 @@ await test("AN ANSWER CITING A POST THAT IS NO LONGER PUBLIC IS REFUSED WHOLE", 
     ),
   );
   assert.equal(answerOf(out), NO_ANSWER_TEXT);
-  assert.ok(!out.includes("a-draft"), `the draft's key reached the client: ${out}`);
+  assert.ok(!out.includes("a-draft"), `the draft's citation reached the client: ${out}`);
   assert.ok(!out.includes("secret"), `the answer text reached the client: ${out}`);
 });
 
