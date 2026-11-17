@@ -4,8 +4,7 @@ import {
   REQUIRED_CITATION_TAGS,
 } from "@drdustinedwards/site-helpers/scholar";
 import { paperPath, paperPdfPath } from "../../app/lib/publications/paths.mjs";
-import { SHOWCASE_TYPES } from "../../app/lib/publications/export-response.mjs";
-import { SHOWCASE_TYPES as PAGE_SHOWCASE_TYPES } from "../../app/lib/publications/listing.mjs";
+import { SHOWCASE_TYPES } from "../../app/lib/publications/showcase.mjs";
 import {
   organismsIn,
   paperBibtex,
@@ -191,23 +190,6 @@ ok(
   showcase.length > 0,
   "every export assertion below iterates it",
 );
-
-/* Stated twice, the page's in its pure listing module, so it is imported rather than parsed out of the route. */
-{
-  const routeTypes = new Set(/** @type {Set<string>} */ (PAGE_SHOWCASE_TYPES));
-  ok(
-    `the page's SHOWCASE_TYPES set is non-empty (${routeTypes.size} types)`,
-    routeTypes.size > 0,
-    "an empty set would make the comparison below vacuous",
-  );
-  const onlyRoute = [...routeTypes].filter((t) => !SHOWCASE_TYPES.has(t));
-  const onlyExport = [...SHOWCASE_TYPES].filter((t) => !routeTypes.has(t));
-  ok(
-    "the page and the exports agree about which types are shown",
-    onlyRoute.length === 0 && onlyExport.length === 0,
-    `only in listing.mjs: ${onlyRoute.join(", ") || "none"}; only in export-response.mjs: ${onlyExport.join(", ") || "none"}`,
-  );
-}
 
 {
   const papers = showcase;

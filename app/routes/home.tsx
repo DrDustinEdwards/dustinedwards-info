@@ -28,6 +28,7 @@ import { PlateI, PlateKeyRow } from "~/components/plate-i";
 import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
 import { listPublishedPublicationSummaries, type PublicationSummary } from "~/db/publications";
+import { isShowcase } from "~/lib/publications/showcase.mjs";
 import { rosterFactsFromDb } from "~/db/roster";
 import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
@@ -91,13 +92,16 @@ export async function loader({ context }: Route.LoaderArgs) {
     timed(timings, "home_roster", () => rosterFactsFromDb(env)),
   ]);
 
+  const shown = papers.filter(isShowcase);
+
   return data(
     {
       posts: start.total,
       featured: start.featured,
       recent: start.recent,
-      papers: homePapers(papers),
-      paperCount: papers.length,
+      papers: homePapers(shown),
+      // The index page's count: the same definition (app/lib/publications/showcase.mjs), so conference abstracts are in neither.
+      paperCount: shown.length,
       // Counted from the roster table, never typed: a typed number drifts when a cohort lands. The names stay out of the payload.
       discovery: cohorts,
       podcast,
