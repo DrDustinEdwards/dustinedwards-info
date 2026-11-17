@@ -215,7 +215,7 @@ function buildProceduresSql(rows) {
         `title = excluded.title, description = excluded.description, status = excluded.status, ` +
         `version = excluded.version, updated = excluded.updated, record = excluded.record, ` +
         `markdown = excluded.markdown, source_path = excluded.source_path, ` +
-        `source_blob_sha = excluded.source_blob_sha, synced_at = excluded.synced_at;`,
+        `source_blob_sha = excluded.source_blob_sha, synced_at = CASE WHEN procedures.source_blob_sha = excluded.source_blob_sha THEN procedures.synced_at ELSE excluded.synced_at END;`,
     );
     out.push(...freezeSql(r));
   }
@@ -251,7 +251,7 @@ function buildPublicationsSql(rows, seeds) {
         `type = excluded.type, title = excluded.title, year = excluded.year, selected = excluded.selected, ` +
         `record = excluded.record, csl = excluded.csl, markdown = excluded.markdown, ` +
         `source_path = excluded.source_path, source_blob_sha = '', ` +
-        `synced_at = excluded.synced_at;`,
+        `synced_at = CASE WHEN publications.source_blob_sha = ${sql(r.sourceBlobSha)} THEN publications.synced_at ELSE excluded.synced_at END;`,
     );
     for (const chunk of rest) {
       out.push(
@@ -339,7 +339,7 @@ function buildPagesSql(rows) {
         `path = excluded.path, title = excluded.title, description = excluded.description, ` +
         `status = excluded.status, record = excluded.record, markdown = excluded.markdown, ` +
         `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
-        `synced_at = excluded.synced_at;`,
+        `synced_at = CASE WHEN pages.source_blob_sha = excluded.source_blob_sha THEN pages.synced_at ELSE excluded.synced_at END;`,
     );
   }
   return `${out.join("\n")}\n`;
@@ -362,7 +362,7 @@ function buildCvSql(rows) {
         `${sql(r.type)}, ${sql(r.record)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
         `ON CONFLICT(slug) DO UPDATE SET type = excluded.type, record = excluded.record, ` +
         `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
-        `synced_at = excluded.synced_at;`,
+        `synced_at = CASE WHEN cv.source_blob_sha = excluded.source_blob_sha THEN cv.synced_at ELSE excluded.synced_at END;`,
     );
   }
   return `${out.join("\n")}\n`;
@@ -387,7 +387,7 @@ function buildDictionarySql(rows) {
         `${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ON CONFLICT(key) DO UPDATE SET ` +
         `path = excluded.path, term = excluded.term, status = excluded.status, record = excluded.record, ` +
         `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
-        `synced_at = excluded.synced_at;`,
+        `synced_at = CASE WHEN dictionary_entries.source_blob_sha = excluded.source_blob_sha THEN dictionary_entries.synced_at ELSE excluded.synced_at END;`,
     );
   }
   return `${out.join("\n")}\n`;
@@ -410,7 +410,7 @@ function buildRosterSql(rows) {
         `${num(r.year)}, ${sql(r.record)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
         `ON CONFLICT(slug) DO UPDATE SET year = excluded.year, record = excluded.record, ` +
         `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
-        `synced_at = excluded.synced_at;`,
+        `synced_at = CASE WHEN roster.source_blob_sha = excluded.source_blob_sha THEN roster.synced_at ELSE excluded.synced_at END;`,
     );
   }
   return `${out.join("\n")}\n`;
@@ -433,7 +433,7 @@ function buildPhagesSql(rows) {
         `${sql(r.name)}, ${num(r.year)}, ${sql(r.record)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
         `ON CONFLICT(slug) DO UPDATE SET name = excluded.name, year = excluded.year, record = excluded.record, ` +
         `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
-        `synced_at = excluded.synced_at;`,
+        `synced_at = CASE WHEN phages.source_blob_sha = excluded.source_blob_sha THEN phages.synced_at ELSE excluded.synced_at END;`,
     );
   }
   return `${out.join("\n")}\n`;
@@ -459,7 +459,7 @@ function buildRegistrySql(rows) {
         `${sql(r.id)}, ${sql(r.name)}, ${sql(r.status)}, ${sql(r.record)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
         `ON CONFLICT(kind, id) DO UPDATE SET name = excluded.name, status = excluded.status, record = excluded.record, ` +
         `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
-        `synced_at = excluded.synced_at;`,
+        `synced_at = CASE WHEN registry.source_blob_sha = excluded.source_blob_sha THEN registry.synced_at ELSE excluded.synced_at END;`,
     );
   }
   return `${out.join("\n")}\n`;
