@@ -213,7 +213,7 @@ export async function run({ page }) {
       return {
         exists: Boolean(region),
         text: region?.textContent?.trim() ?? "",
-        visuallyHidden: region ? region.classList.contains("sr-only") : false,
+        visuallyHidden: region ? region.classList.contains("cap-sr-only") : false,
       };
     });
     ok(
@@ -227,7 +227,7 @@ export async function run({ page }) {
       `${codePost}: the status region is visually hidden, not a second visible label`,
       status.exists && status.visuallyHidden,
       status.exists
-        ? `the region is not .sr-only, so the announcement is also painted on screen ` +
+        ? `the region is not .cap-sr-only, so the announcement is also painted on screen ` +
             `beside the control's own feedback.`
         : "there is no role=status region at all",
     );
