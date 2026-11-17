@@ -132,7 +132,7 @@
     "@types/react-dom": "19.2.3",
     "axe-core": "4.14.0",
     "esbuild": "0.28.1",
-    "fontkit": "2.0.4",
+    "fontkit": "3.0.0",
     "lighthouse": "13.5.0",
     "microformats-parser": "2.0.6",
     "oxfmt": "0.77.0",
