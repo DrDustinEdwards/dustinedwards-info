@@ -15,7 +15,10 @@
 	// a flag the runtime ignores and a reader takes for a decision. Turning
 	// Node compatibility off at this date is `no_nodejs_compat`, not the
 	// absence of the positive flag.
-	"compatibility_flags": ["global_fetch_strictly_public"],
+	//
+	// enable_request_signal: request.signal fires on a client disconnect (site-runtime reads it); on by
+	//   default only from a compatibility date of 2026-11-17.
+	"compatibility_flags": ["global_fetch_strictly_public", "enable_request_signal"],
 
 	// head_sampling_rate stated (area 8, L1): every log kept; an admin server's traffic is one person's.
 	"observability": { "enabled": true, "head_sampling_rate": 1 },
