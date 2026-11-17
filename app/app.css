@@ -82,11 +82,9 @@
     "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   /* Running text is the report's serif (the manual theme); labels and controls stay in the sans. */
-  --font-prose:
-    "Source Serif 4", "Source Serif 4 Web Fallback", Georgia, "Times New Roman", serif;
+  --font-prose: "Source Serif 4", "Source Serif 4 Web Fallback", Georgia, "Times New Roman", serif;
   --font-mono: "Martian Mono", "Martian Mono Fallback", ui-monospace, Menlo, Consolas, monospace;
-  --font-serif:
-    "Source Serif 4", "Source Serif 4 Web Fallback", Georgia, "Times New Roman", serif;
+  --font-serif: "Source Serif 4", "Source Serif 4 Web Fallback", Georgia, "Times New Roman", serif;
 }
 
 /* The site's own display scale: the cover's h1, the part titles and the small print. Everything else is
