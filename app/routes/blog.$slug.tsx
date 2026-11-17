@@ -7,7 +7,6 @@ import { PostRail, ymd } from "~/components/post-rail";
 import { Signs } from "capsomer/react/manual";
 import { RelatedLinks } from "capsomer/react/related-links";
 import { SeriesNav } from "capsomer/react/series-nav";
-import { httpHref } from "capsomer/behavior/related-links";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { EvidenceRow } from "~/components/evidence-row";
 import { ISLAND_GZIP_BYTES } from "virtual:islands";
@@ -24,7 +23,7 @@ import {
 } from "~/db";
 import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
 import { blogPostView } from "~/lib/blog-view";
-import { renameRedirect } from "@dustinedwards/site-runtime/url";
+import { isHttpUrl, renameRedirect } from "@dustinedwards/site-runtime/url";
 import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv, postPreviewContext } from "~/lib/context";
 import { formatDate } from "capsomer/behavior/time";
@@ -363,7 +362,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             kind="mentions"
             title="Mentions"
             items={mentions.map((mention) => ({
-              href: httpHref(mention.authorUrl) ?? mention.sourceUrl,
+              href: isHttpUrl(mention.authorUrl) ? mention.authorUrl : mention.sourceUrl,
               title: mention.authorName ?? mention.sourceUrl,
               excerpt: mention.excerpt,
               date: mention.decidedAt,

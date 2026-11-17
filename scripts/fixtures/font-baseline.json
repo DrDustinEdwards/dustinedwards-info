@@ -1,8 +1,4 @@
 {
-  "app/fonts/inter-greek-italic.woff2": "94fd1ce2533a7db49fac13877633836edee820d2af40a0f1929d30c06e9dcacb",
-  "app/fonts/inter-greek-normal.woff2": "93c5ac80e25cda1cf289206c724027eeb187c9d398106f0079a912cbe80616ce",
-  "app/fonts/inter-math-italic.woff2": "10d69c109f4a3dc3d596235e425fbcee7d124fde3235b388474a6b98aebdbcdb",
-  "app/fonts/inter-math-normal.woff2": "02ec6366b668de9f01ce8d97b63ccf4f938f07427bb3c792f4faf815162b9129",
   "app/fonts/katex/KaTeX_AMS-Regular.woff2": "0cdd387c9590a1a9f9794560022dbb59654a7d86f187aa0c81495ad42d3a7308",
   "app/fonts/katex/KaTeX_Caligraphic-Bold.woff2": "de7701e42cf1f4cf0b766c03fb27977207eee2f4fd5d76fa82188406da43ea4c",
   "app/fonts/katex/KaTeX_Caligraphic-Regular.woff2": "5d53e70ad607c2352162dec9e0923fb54ecdafaccbf604cd8dcf7d00facb989b",
@@ -23,16 +19,8 @@
   "app/fonts/katex/KaTeX_Size3-Regular.woff2": "73d591271b1604960cb10bb90fee021670af7297017e0e98480b332d11f51995",
   "app/fonts/katex/KaTeX_Size4-Regular.woff2": "a4af7d414440a1c1790825cfb700cf9cf43b0f2c4b04f0ebc523011ad9853ec0",
   "app/fonts/katex/KaTeX_Typewriter-Regular.woff2": "71d517d67827787cfabdf186914cc3358eda539e37931941f2b2fd4a21f68c0b",
-  "app/fonts/source-serif-4-greek-italic.woff2": "d29b0cfc1b6bdca3d8ccca2b242f04f7c13d50934d31ea46fe19eb2313bc01bb",
-  "app/fonts/source-serif-4-greek-normal.woff2": "d69b8909cbccf5948675c7de331858d40f48b1ef3e4a9fc5ddfaa8c097fb434b",
-  "app/fonts/source-serif-4-latin-core-italic.woff2": "190845607ea6080bc052666e0895854e72d8dbaf2dd343af3372b0a8c617ebe7",
-  "app/fonts/source-serif-4-latin-core-normal.woff2": "87c3049adf84f8a63f9804b88b7960a9dd59368e79defbc9ac8571e5fb073f74",
   "app/fonts/source-serif-4-latin-italic.woff2": "96e6393209728ab93c334ae739af8a040cd2006c82e8614d6465a8084db88f89",
   "app/fonts/source-serif-4-latin-normal.woff2": "f2ea9c12d2fe9bd3a9589b02ad2c0909da88f30938c91adc838c4f4098f9f9e0",
-  "app/fonts/source-serif-4-latin-rest-italic.woff2": "ec93bc9a739a6c83a0836d159bd4eef4b4944cf4e5abb4c33b99d943ccce19fd",
-  "app/fonts/source-serif-4-latin-rest-normal.woff2": "c822a8e5632910af294ed7f606fc5f2bde197b52174fdba023fb620440e06b49",
-  "app/fonts/source-serif-4-math-italic.woff2": "a107b7db8b718c0796d2b2b77c547fd524af4a1a3195c49863fc22270f23a7c7",
-  "app/fonts/source-serif-4-math-normal.woff2": "a73065dbc87efa9de03c9210b6e3a3c06197abecdbc5a8752843272fb0ef6ca9",
   "assets/fonts/Jost-Regular.woff": "cbff28109ce89d7a6513fc0a6d441b46b14c9c050c6cc1ee96eaccbfc7fef082",
   "assets/fonts/Jost-SemiBold.woff": "30aa823efb48c1ef8f90119f61039d8c58071f2e30a3d7fa130414f81f80a095"
 }
