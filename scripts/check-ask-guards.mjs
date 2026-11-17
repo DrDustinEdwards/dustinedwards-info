@@ -624,7 +624,7 @@ refuses(
     let scanned = 0;
     for (const name of readdirSync(routeDir).filter((f) => f.endsWith(".tsx"))) {
       const code = stripComments(readFileSync(join(routeDir, name), "utf8"));
-      // Capsomer's JsonLd (capsomer/react/json-ld) escapes through Prelum's jsonLdText and sets the text
+      // Capsomer's JsonLd (capsomer/react/json-ld) escapes through site-runtime's scriptJson and sets the text
       // through the Trusted Types policy; a route that writes its own ld+json script bypasses both.
       if (code.includes("<JsonLd")) scanned += 1;
       if (code.includes("ld+json")) bare.push(name);
