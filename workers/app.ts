@@ -149,13 +149,13 @@ export class Renderer extends siteRenderer(WorkerEntrypoint<Env>, site) {
   }
 }
 
-export default {
-  ...siteWorker(site),
-  async queue(batch, env) {
+// The queue consumer goes in beside the shared fetch and cron, so Sentry (site-runtime ./sentry) wraps it too.
+export default siteWorker(site, {
+  async queue(batch: MessageBatch, env: Env) {
     if (batch.queue === WEBMENTION_VERIFY_QUEUE) await handleWebmentionVerify(batch, env);
     else await handleMediaEvents(batch, env);
   },
-} satisfies ExportedHandler<Env>;
+}) satisfies ExportedHandler<Env>;
 
 /** The site's own moves, ahead of site-runtime's canonical hop (`canonical.before`). */
 function earlierMove(request: Request): Response | null {
