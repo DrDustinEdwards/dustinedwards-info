@@ -57,6 +57,20 @@ export async function run({ page }) {
       n.focus();
       /** @type {HTMLInputElement} */ (n).select();
     });
+    // What held focus as the keys went in, and whether the tools island had started: this check failed now and then in
+    // its first pass on CI (runs 615 and 617, 2026-11-17) and never in a local repeat, so a failure says which it was.
+    const typedInto = await page.evaluate(() => {
+      const active = document.activeElement;
+      return {
+        active: active
+          ? `${active.tagName.toLowerCase()}${active.getAttribute("name") ? `[name=${active.getAttribute("name")}]` : ""}`
+          : "none",
+        hasFocus: document.hasFocus(),
+        toolsReady:
+          document.querySelector('[data-island="tools"]')?.hasAttribute("data-island-ready") ??
+          false,
+      };
+    });
     await page.type(`${selector} input[name="pfu"]`, typed);
     // The answer prints the number with thousands separators ("22,200 pfu"), so it is that string the answer must come to carry.
     const printed = Number(typed).toLocaleString("en-US");
@@ -66,14 +80,23 @@ export async function run({ page }) {
       (now) => now !== before && now.includes(`${printed} pfu`),
       { tries: 20, everyMs: 150 },
     );
-    const state = await page.evaluate(() => ({
-      search: location.search,
-      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    }));
+    const state = await page.evaluate(
+      (sel) => ({
+        value:
+          /** @type {HTMLInputElement | null} */ (
+            document.querySelector(`${sel} input[name="pfu"]`)
+          )?.value ?? "",
+        search: location.search,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      }),
+      selector,
+    );
     ok(
       `the webbed plate calculator under its step recomputes as a number is typed ${when}, and leaves the address bar alone`,
       after !== before && after.includes(`${printed} pfu`) && state.search === search,
-      `the answer was "${before}" and became "${after}"; the address went from "${search}" to "${state.search}".`,
+      `the answer was "${before}" and became "${after}"; the address went from "${search}" to "${state.search}". ` +
+        `The field holds "${state.value}"; as the keys went in, focus was on ${typedInto.active}, the document ` +
+        `${typedInto.hasFocus ? "had" : "did not have"} focus, and the tools island ${typedInto.toolsReady ? "had" : "had not"} started.`,
     );
     ok(
       `the open calculator fits a 390px screen ${when}`,
