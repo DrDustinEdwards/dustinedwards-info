@@ -25,6 +25,7 @@ import { ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
+import { applySqlFile } from "./lib/d1-apply.mjs";
 import { freezeSql } from "./lib/freeze-sql.mjs";
 import { sqlLiteral as sql } from "./lib/sql-literal.mjs";
 import { splitOversizeStatements } from "./lib/split-statements.mjs";
@@ -496,16 +497,16 @@ function buildSearchSql(records) {
  * Retried once, which is safe only because every file this runs deletes-and-replaces or upserts and
  * none appends.
  *
- * @param {string} args @param {string} label @returns {Promise<{ status: number, stdout: string, output: string }>}
+ * @param {() => Promise<{ status: number, stdout: string, output: string }>} apply @param {string} label @returns {Promise<{ status: number, stdout: string, output: string }>}
  */
-async function wranglerImport(args, label) {
+async function applyRetried(apply, label) {
   /** @type {{ status: number, stdout: string, output: string }} */
   let last = { status: 1, stdout: "", output: "" };
   try {
     return await retryRead(
-      () => {
-        last = runWrangler(args);
-        // retryRead can only see a rejection; wrangler RETURNS on failure.
+      async () => {
+        last = await apply();
+        // retryRead can only see a rejection; a failed apply RETURNS.
         if (last.status !== 0) throw new Error((last.output || "no output").slice(0, 200));
         return last;
       },
@@ -624,10 +625,9 @@ async function applySql(target, file, body, label, failure) {
     splitOversizeStatements(body, { lateColumns: ["source_blob_sha", "render_hash"] }),
     "utf8",
   );
-  const applied = await wranglerImport(
-    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${file}" --yes`,
-    label,
-  );
+  // Remote, a batch through D1's query API, never an import: scripts/lib/d1-apply.mjs.
+  const address = resolveD1Address(DB_NAME, target);
+  const applied = await applyRetried(() => applySqlFile({ address, target, file }), label);
   if (applied.status !== 0) {
     console.error(applied.output);
     throw new Error(failure);

@@ -11,6 +11,7 @@ import { isSourcePath, jsonRows } from "./lib/content-source.mjs";
 import { resolveD1Address } from "./lib/d1-address.mjs";
 import { sqlLiteral as sql } from "./lib/sql-literal.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
+import { applySqlFile } from "./lib/d1-apply.mjs";
 
 const file = process.argv.slice(2).find((a) => !a.startsWith("--"));
 const target = process.argv.includes("--remote") ? "--remote" : "--local";
@@ -40,7 +41,8 @@ await writeFile(
     `DELETE FROM source_files WHERE path = ${sql(file)};\n`,
   "utf8",
 );
-const applied = runWrangler(`d1 execute ${address} ${target} --file "${sqlFile}" --yes`);
+// Remote, a batch through D1's query API, never an import: scripts/lib/d1-apply.mjs.
+const applied = await applySqlFile({ address, target, file: sqlFile });
 if (applied.status !== 0) {
   console.error(applied.output);
   process.exit(1);
