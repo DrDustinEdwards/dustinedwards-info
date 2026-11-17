@@ -9,7 +9,7 @@
 	"name": "dustinedwards",
 	"compatibility_date": "2026-09-01",
 	"main": "./workers/app.ts",
-	// NO `compatibility_flags`, and the absence is the setting. `nodejs_compat`
+	// The only flag is `enable_request_signal` (below). `nodejs_compat`
 	// and `nodejs_compat_v2` are BOTH on by default for a compatibility date of
 	// 2026-08-04 or later, so an explicit `nodejs_compat` here would be a flag
 	// wrangler ignores and a reader would take for a decision. Measured on the
@@ -19,6 +19,11 @@
 	// Turning Node compatibility OFF at this date is `no_nodejs_compat` and
 	// `no_nodejs_compat_v2`, which is the pair to reach for if that is ever
 	// wanted; removing a positive flag no longer does it.
+	//
+	// `enable_request_signal`: `request.signal` fires when the client disconnects, which
+	// site-runtime reads (react-entry.mjs, log.mjs). It is on by default only from a
+	// compatibility date of 2026-11-17, and this date is earlier.
+	"compatibility_flags": ["enable_request_signal"],
 	"keep_vars": true,
 	// THE REAL DOMAIN, as Custom Domains and not route patterns: the zone has no A or CNAME for
 	// either name, because a Custom Domain creates its own proxied record. THIS LIST IS THE SOURCE OF
