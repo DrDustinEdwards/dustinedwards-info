@@ -33,7 +33,8 @@ export async function run({ browser }) {
 const keepPressed = (page, pressed, timeout) =>
   page
     .waitForFunction(
-      (want) => document.querySelector(".cap-keep")?.getAttribute("aria-pressed") === want,
+      (want) =>
+        document.querySelector(".cap-offline-keep-button")?.getAttribute("aria-pressed") === want,
       { timeout },
       pressed,
     )
@@ -60,11 +61,11 @@ async function keepOffline(context, page) {
     );
     return;
   }
-  const button = await page.$(".procedure-links .cap-keep");
+  const button = await page.$(".procedure-links .cap-offline-keep-button");
   ok(
     "a procedure page offers to keep it on this device",
     Boolean(button),
-    "no .cap-keep button in the page's links",
+    "no offline-keep button in the page's links",
   );
   if (!button) return;
   const before = await workersAndStores(page);
@@ -83,7 +84,7 @@ async function keepOffline(context, page) {
     return {
       page: keys.includes(p),
       files: keys.filter((k) => k.startsWith("/assets/") || k.startsWith("/islands/")).length,
-      pressed: document.querySelector(".cap-keep")?.getAttribute("aria-pressed"),
+      pressed: document.querySelector(".cap-offline-keep-button")?.getAttribute("aria-pressed"),
     };
   }, path);
   ok(
@@ -117,7 +118,7 @@ async function keepOffline(context, page) {
       .evaluate(() => ({
         title: document.querySelector("h1")?.textContent ?? "",
         styled: [...document.styleSheets].reduce((n, s) => n + (s.href ? s.cssRules.length : 0), 0),
-        pressed: document.querySelector(".cap-keep")?.getAttribute("aria-pressed"),
+        pressed: document.querySelector(".cap-offline-keep-button")?.getAttribute("aria-pressed"),
       }))
       .catch(() => ({ title: "", styled: 0, pressed: null }));
     ok(
@@ -147,7 +148,7 @@ async function keepOffline(context, page) {
 
   await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
   await keepPressed(page, "true", 15_000);
-  await page.click(".procedure-links .cap-keep");
+  await page.click(".procedure-links .cap-offline-keep-button");
   await keepPressed(page, "false", 15_000);
   const after = await workersAndStores(page);
   ok(
