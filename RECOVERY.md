@@ -313,7 +313,7 @@ search MCP URL in `content/llms.txt` changes with it (publish it through Carrel)
 
 ### Corpus
 
-The corpus is D1 itself: AI Search runs the query on creation, every 15 minutes and whenever the site asks for a
+The corpus is D1 itself: AI Search runs the query on creation, once a day and whenever the site asks for a
 sync. Once content is in D1 (step 7), nothing else is needed; `/admin/tools` has **Sync the answer index now**.
 
 **Drafts must never reach this index.** It is a public, unauthenticated surface. The query's visibility rule is the

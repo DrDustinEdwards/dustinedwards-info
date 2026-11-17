@@ -123,13 +123,14 @@ export function replayCachedAnswer(cached: { answer: string; chunks: unknown[] }
  * The index. The instance's data source is this site's D1 (ASK_INDEX_QUERY in search.server.ts), so AI Search reads
  * the corpus itself on every sync: new rows are indexed, changed rows re-indexed, unchanged rows skipped, and a row the
  * query no longer returns (a draft, a post set back to draft, a renamed or deleted post) is removed once the whole
- * result has been read. Nothing is uploaded and nothing is pruned here. A sync runs on the instance's own schedule
- * (every 15 minutes), when a post or paper is published or withdrawn, when a scheduled post goes live (askIndexTick),
- * and on every deploy (sync_ask).
+ * result has been read. Nothing is uploaded and nothing is pruned here. A sync runs when a post or paper is published
+ * or withdrawn, when a scheduled post goes live (askIndexTick), on every deploy (sync_ask), and once a day on the
+ * instance's own schedule as a safety net.
  *
  * The instance was created once through the API (type "d1", source this database, token_id the account's AI Search
  * service token, whose Index Engine permission holds D1 Read; template content_only, so only the title and content
- * are embedded; sync_interval 900; hybrid search with reranking; the public endpoint with MCP on and chat completions
+ * are embedded; sync_interval 86400, the default, because the triggers above cover every change and each sync reads
+ * the whole query result from D1; hybrid search with reranking; the public endpoint with MCP on and chat completions
  * off). A missing instance is never re-created here, because creating one needs that token.
  */
 
