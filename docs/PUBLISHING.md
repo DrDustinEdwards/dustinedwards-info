@@ -57,7 +57,7 @@ The durable fact is `first_published` in frontmatter, not a rows column, because
 
 ## Ask outside a save
 
-Ask reads D1 itself (docs/SEARCH.md, Ask), so a row written any way is indexed on the next sync. A save asks for one at once; `sync:content --remote` is followed by ship's `sync_ask`; Capsid's watcher runs `sync_ask` when the Ask drift check fails; and the instance syncs every 15 minutes regardless.
+Ask reads D1 itself (docs/SEARCH.md, Ask), so a row written any way is indexed on the next sync. A save asks for one at once; `sync:content --remote` is followed by ship's `sync_ask`; Capsid's watcher runs `sync_ask` when the Ask drift check fails; and the instance syncs once a day regardless.
 
 ## Social cards
 
