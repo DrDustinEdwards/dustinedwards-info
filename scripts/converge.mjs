@@ -11,7 +11,7 @@
 //
 //   OPERATOR_TOKEN_FILE=<file> CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... node scripts/converge.mjs
 
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,7 +23,6 @@ import {
   readinessLines,
   readinessVerdict,
 } from "./lib/readiness.mjs";
-import { spawnSyncBounded } from "./lib/retry.mjs";
 import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
 import { convergeAsk, convergeCvPdf, convergeMedia } from "./lib/operator-sync.mjs";
 import { readOperatorToken } from "./lib/operator-token.mjs";
@@ -60,38 +59,41 @@ function refuse(why, remedy) {
 }
 
 /**
- * A spawn error (npx not found, a timeout) is printed and carried in `text`, so a refusal names it.
- * `timeoutMs` bounds a read: retryRead's own timer cannot fire while spawnSync blocks.
+ * A spawn error (npx not found) is printed and carried in `text`, so a refusal names it.
+ *
+ * Asynchronous on purpose: the operator calls and /health reuse one pooled HTTP/2 connection to the site, and
+ * spawnSync froze this process's event loop for a whole child (build:og runs over a minute). A connection the edge
+ * closed meanwhile could not be noticed, nor could undici's own idle expiry (keepAliveTimeout, 4 s) retire it, so the
+ * next request went out on a dead socket and failed in milliseconds without reaching the edge: sync_media's
+ * UND_ERR_SOCKET after build:og and sync_ask's ECONNRESET after the sync (2026-11-13, -16, -17). With the loop free,
+ * the idle connection is retired after 4 s and the next call opens a fresh one.
  * @param {string} command @param {string[]} args
- * @param {{ capture?: boolean, timeoutMs?: number }} [options]
+ * @param {{ capture?: boolean }} [options]
+ * @returns {Promise<{ code: number, text: string }>}
  */
-function run(command, args, { capture = false, timeoutMs } = {}) {
-  const options = {
-    cwd: root,
-    shell: process.platform === "win32",
-    stdio: /** @type {any} */ (capture ? ["inherit", "pipe", "pipe"] : "inherit"),
-    encoding: /** @type {const} */ ("utf8"),
-  };
-  const result =
-    timeoutMs === undefined
-      ? (() => {
-          const r = spawnSync(command, args, options);
-          return {
-            stdout: String(r.stdout ?? ""),
-            stderr: String(r.stderr ?? ""),
-            status: r.error ? null : r.status,
-            error: r.error ? `${command} could not run: ${r.error.message}` : "",
-          };
-        })()
-      : spawnSyncBounded(command, args, { ...options, timeoutMs });
-  const failure = result.error ? `\n  converge: ${result.error}\n` : "";
-  if (failure) process.stderr.write(failure);
-  if (capture) {
-    const text = `${result.stdout}${result.stderr}${failure}`;
-    process.stdout.write(text);
-    return { code: result.status ?? 1, text };
-  }
-  return { code: result.status ?? 1, text: failure };
+function run(command, args, { capture = false } = {}) {
+  return new Promise((resolve) => {
+    /** @type {Buffer[]} */
+    const out = [];
+    let failure = "";
+    const child = spawn(command, args, {
+      cwd: root,
+      shell: process.platform === "win32",
+      stdio: capture ? ["inherit", "pipe", "pipe"] : "inherit",
+    });
+    // Both streams into one buffer in arrival order, printed whole once the child ends, as before.
+    child.stdout?.on("data", (chunk) => out.push(chunk));
+    child.stderr?.on("data", (chunk) => out.push(chunk));
+    child.on("error", (error) => {
+      failure = `\n  converge: ${command} could not run: ${error.message}\n`;
+    });
+    child.on("close", (status) => {
+      if (failure) process.stderr.write(failure);
+      const text = `${Buffer.concat(out).toString("utf8")}${failure}`;
+      if (capture) process.stdout.write(text);
+      resolve({ code: failure ? 1 : (status ?? 1), text: capture ? text : failure });
+    });
+  });
 }
 
 /* Read before anything writes, so a missing token costs no half-converged run. Never an argument or printed. */
@@ -149,7 +151,7 @@ let uptimeMiss = "";
 let uptimeSkip = "";
 
 {
-  const ensured = run("node", ["scripts/uptime-ensure.mjs"], { capture: true });
+  const ensured = await run("node", ["scripts/uptime-ensure.mjs"], { capture: true });
   const outcome = uptimeStepOutcome(ensured.code, ensured.text);
   if (outcome.state === "skipped") {
     uptimeSkip = outcome.note;
@@ -172,21 +174,21 @@ for (const step of [
   ["scripts/seed-sources.mjs", "--remote"],
   ["scripts/pull-sources.mjs", "--remote"],
 ]) {
-  if (run("node", step).code !== 0) refuse(`${step[0]} failed`, "Nothing was synced.");
+  if ((await run("node", step)).code !== 0) refuse(`${step[0]} failed`, "Nothing was synced.");
 }
 
 /* Rebuilt so the sync reads this deploy's content, not whatever a previous step left. */
 announce("build:content, the local build product the sync reads");
 /* build:content reads stack.json, a build product, and this job starts from a fresh checkout. */
 if (
-  run("npm", ["run", "build:stack"]).code !== 0 ||
-  run("npm", ["run", "build:content"]).code !== 0
+  (await run("npm", ["run", "build:stack"])).code !== 0 ||
+  (await run("npm", ["run", "build:content"])).code !== 0
 ) {
   refuse("the content build failed", "NOTHING WAS SYNCED.");
 }
 
 announce("check:content, because sync runs no gate of its own");
-if (run("npm", ["run", "check:content"]).code !== 0) {
+if ((await run("npm", ["run", "check:content"])).code !== 0) {
   refuse(
     "the content gate is red: the corpus fails validation or renders nondeterministically",
     "Fix the content or the pipeline. NOTHING WAS SYNCED. " +
@@ -198,7 +200,7 @@ announce("Sync content to remote D1");
 
 let renderDriftMiss = "";
 
-const sync = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
+const sync = await run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
 /** @type {typeof sync | null} The second sync, run only to confirm render drift. */
 let confirm = null;
 if (sync.code !== 0) {
@@ -216,7 +218,7 @@ if (sync.code !== 0) {
      * sync reads zero unless the converge write did not take, so only confirmed drift fails.
      */
     console.log(`  render drift on ${named}: converged, confirming with a second sync`);
-    confirm = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
+    confirm = await run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
     const confirmDrift = driftCount(confirm.text);
 
     if (confirmDrift === null) {
@@ -299,7 +301,7 @@ announce("Draw the share cards");
 
 let cardsMiss = "";
 {
-  const cards = run("npm", ["run", "build:og", "--", "--remote"], { capture: true });
+  const cards = await run("npm", ["run", "build:og", "--", "--remote"], { capture: true });
   if (cards.code !== 0) {
     cardsMiss =
       "build:og failed, so new or retitled pages have no share card. Run `npm run build:og -- --remote`.";
@@ -357,7 +359,9 @@ announce("Start the browser test against this deploy");
 let browserMiss = "";
 {
   const ref = "main";
-  const started = run("gh", ["workflow", "run", "browser.yml", "--ref", ref], { capture: true });
+  const started = await run("gh", ["workflow", "run", "browser.yml", "--ref", ref], {
+    capture: true,
+  });
   if (started.code !== 0) {
     browserMiss =
       `gh workflow run browser.yml --ref ${ref} did not start, so nothing is testing this deploy ` +

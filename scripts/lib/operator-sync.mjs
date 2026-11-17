@@ -2,6 +2,8 @@
 // the Ask corpus from D1 and waits for it, sync_cv_pdf brings the CV PDF into step and sync_media the media index. Each returns a miss rather than refusing,
 // because every failure here happens after the deploy has landed.
 
+import { transportFailure } from "./readiness.mjs";
+
 /** @typedef {{ origin: string, token: string }} OperatorTarget the site and its operator token */
 
 /**
@@ -12,23 +14,6 @@ const OPERATOR_TIMEOUT_MS = 10 * 60_000;
 
 /** One retry, this long after a call that never got an answer. */
 const TRANSPORT_RETRY_MS = 5_000;
-
-/**
- * Node's fetch says only "fetch failed" and keeps the reason in `cause` (ECONNRESET, a closed socket, DNS), so the
- * cause is named too: the 2026-11-11 sync_media miss said "fetch failed" and nothing more.
- * @param {unknown} error
- */
-function transportFailure(error) {
-  if (!(error instanceof Error)) return String(error);
-  const cause = /** @type {any} */ (error).cause;
-  const why =
-    cause instanceof Error
-      ? (/** @type {{ code?: string }} */ (cause).code ?? cause.message)
-      : cause
-        ? String(cause)
-        : "";
-  return why ? `${error.message} (${why})` : error.message;
-}
 
 /**
  * Returns a miss rather than throwing: every failure here happens after the deploy has landed. A call that got no

@@ -1,4 +1,3 @@
-import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { healthChecks } from "@dustinedwards/site-runtime/health-read";
 
 /**
@@ -191,6 +190,21 @@ const NOT_DEPLOY_CHECKS = {
 };
 
 /**
+ * Node's fetch says only "fetch failed" and keeps the reason in `cause`, so the cause is named too, its code and its
+ * words ("UND_ERR_SOCKET: other side closed"): the 2026-11-11 sync_media miss and the 2026-11-17 /health miss said
+ * "fetch failed" and nothing more.
+ * @param {unknown} error
+ */
+export function transportFailure(error) {
+  if (!(error instanceof Error)) return String(error);
+  const cause = /** @type {any} */ (error).cause;
+  if (!cause) return error.message;
+  if (!(cause instanceof Error)) return `${error.message} (${String(cause)})`;
+  const code = /** @type {{ code?: string }} */ (cause).code;
+  return `${error.message} (${code && code !== cause.message ? `${code}: ` : ""}${cause.message})`;
+}
+
+/**
  * One uncached read of the readiness endpoint: its status and body, or the error that stopped the
  * request. `redirect: "manual"`, so a redirect is read as the answer it is, not followed.
  *
@@ -205,6 +219,6 @@ export async function fetchHealth(url) {
     });
     return { status: res.status, text: await res.text(), error: "" };
   } catch (error) {
-    return { status: 0, text: "", error: errorMessage(error) };
+    return { status: 0, text: "", error: transportFailure(error) };
   }
 }
