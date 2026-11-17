@@ -591,8 +591,7 @@
 /* A transparent outline keeps each control's edge once its fill is gone. */
 @media (forced-colors: active) {
   .btn-danger,
-  .cap-skip,
-  .ask-badge {
+  .cap-skip {
     outline: var(--line-w) solid transparent;
   }
 }
