@@ -1,4 +1,4 @@
-// Judges a parsed procedure against its profile (docs/PROCEDURES.md). check:protocols and the operator
+// Judges a parsed procedure against its profile (docs/PROCEDURES.md). check:content and the operator
 // API's save_procedure both call validateProcedure, so a file CI refuses is a file the save tool refuses,
 // for the same reason in the same words.
 //

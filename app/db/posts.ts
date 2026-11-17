@@ -330,7 +330,7 @@ export async function listHomeStartHere(
       ]),
   );
 
-  /* Which list leads is `startHere`'s rule, shared with `check:machine-readable`. */
+  /* Which list leads is `startHere`'s rule, shared with `check:content`. */
   const otherRows = picksFirst([...pickedRows, ...newestRows]);
   const { featured, recent } = startHere(featuredRows, otherRows, cards);
 

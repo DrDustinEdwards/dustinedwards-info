@@ -16,7 +16,7 @@ const SCHEMA_TYPE = {
 
 /** @param {string} type @returns {string} */
 export function schemaTypeFor(type) {
-  // Falls back, never throws: types and check:machine-readable enforce the vocabulary, and a throw
+  // Falls back, never throws: types and check:content enforce the vocabulary, and a throw
   // would fail a page render.
   return SCHEMA_TYPE[/** @type {keyof typeof SCHEMA_TYPE} */ (type)] ?? "ScholarlyArticle";
 }

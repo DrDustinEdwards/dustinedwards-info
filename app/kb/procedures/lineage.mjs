@@ -69,7 +69,7 @@ export function withLineage(markdown, record, lineage, origin) {
 /**
  * What is wrong with a variant's `forked_from` against the procedures in the repository (P3): the parent is a file
  * here, of the same profile, and the version named is one the parent states (its current version or one in its history),
- * which is a version that is or will be frozen. The shape is validate.mjs's; this is the corpus check:protocols runs.
+ * which is a version that is or will be frozen. The shape is validate.mjs's; this is the corpus check:content runs.
  *
  * @param {{ forkedFrom: { slug: string, version: string | null } | null, profile: string }} record
  * @param {Map<string, { profile: string, version: string | null, history: Array<{ version: string }> }>} procedures by slug

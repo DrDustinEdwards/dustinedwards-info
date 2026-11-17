@@ -4,7 +4,7 @@ import { PUBLICATIONS_CACHE_TAG } from "./paths.mjs";
 
 /**
  * A second copy of the index page's set (app/lib/publications/listing.mjs) on purpose.
- * check:machine-readable asserts the two agree.
+ * check:content asserts the two agree.
  *
  * @type {Set<string>}
  */

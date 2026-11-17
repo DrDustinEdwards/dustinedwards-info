@@ -1,4 +1,4 @@
-// The one judgment of content/llms.txt, shared by check:machine-readable (scripts/machine-readable/llms.mjs)
+// The one judgment of content/llms.txt, shared by check:content (scripts/machine-readable/llms.mjs)
 // and the save (app/lib/llms/save.server.ts), so a file CI passes is the file a save accepts
 // (docs/LLMS.md). Pure: the caller supplies what the file is judged against.
 
@@ -56,7 +56,7 @@ export function listedPaperTwins(text) {
 }
 
 /**
- * Listed twins no paper produces: the one rule check:machine-readable's twin gate and a save share. A paper
+ * Listed twins no paper produces: the one rule check:content's twin gate and a save share. A paper
  * added later is not in the list until it is written there, so the reverse is not a rule.
  *
  * @param {string} text

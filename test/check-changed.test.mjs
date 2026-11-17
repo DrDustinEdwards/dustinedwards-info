@@ -62,19 +62,14 @@ await test("untracked, staged, unstaged and committed paths are all listed, once
   ]);
 });
 
-const DECLARED = new Set([
-  "check:policy",
-  "check:ask-guards",
-  "check:features",
-  "check:machine-readable",
-  "check:urls",
-]);
+const DECLARED = new Set(["check:ask-guards", "check:features", "check:content", "check:urls"]);
 
-await test("THE PLANT: a route edit reaches the two gates that parse routes", () => {
+await test("THE PLANT: a route edit reaches the gate that parses routes", () => {
   const { gates } = gatesFor("app/routes/search.ask.ts", DECLARED);
-  for (const gate of ["check:policy", "check:ask-guards"]) {
-    assert.ok(gates.includes(gate), `${gate} reads route modules and must run on a route edit`);
-  }
+  assert.ok(
+    gates.includes("check:ask-guards"),
+    "check:ask-guards reads route modules and must run on a route edit",
+  );
   assert.ok(gates.includes(RELATED));
 });
 

@@ -29,7 +29,7 @@
 #      under `--force`. On a CRLF checkout every asset would come back as a diff
 #      the moment anyone forced a rebuild, whether or not the drawing changed.
 #   4. `content/llms.txt` is the SOURCE of the `llms.txt` settings row and is
-#      compared against that row byte for byte by `check:machine-readable`. The live row is
+#      compared against that row byte for byte by `check:content`. The live row is
 #      LF, so a CRLF checkout would fail the gate AND sync CRLF into D1,
 #      changing what `/llms.txt` serves.
 #   5. `CLAUDE.md` is measured by `check:claude-md`, which asserts it fits under

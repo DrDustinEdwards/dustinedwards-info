@@ -101,7 +101,7 @@ export function openPart(name) {
  */
 export function closePart(tally, name, minimum) {
   const breach = assertFloor(
-    `check:machine-readable/publications-${name}`,
+    `check:content/publications-${name}`,
     "checks",
     tally.checks,
     minimum,

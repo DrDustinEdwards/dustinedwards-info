@@ -34,7 +34,7 @@ export function paperMarkdownPath(slug) {
 
 /**
  * A link to /search, so it works without script. Only the quoted title: the classic index ANDs its terms,
- * so extra words return nothing. check:machine-readable asserts no title contains a quotation mark.
+ * so extra words return nothing. check:content asserts no title contains a quotation mark.
  *
  * @param {string} title DECODED, the way a reader sees it
  */

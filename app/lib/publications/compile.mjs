@@ -1,5 +1,5 @@
 // One door from a publication file to everything derived from it: parse, validate, the record every
-// surface reads, the markdown twin and the search input. check:machine-readable, sync:content, the
+// surface reads, the markdown twin and the search input. check:content, sync:content, the
 // build and the Carrel adapter's save all call compilePublication, so a file CI passes is the file the
 // save accepts and the page draws, and the twin a machine reads is the one a person's page agrees with.
 

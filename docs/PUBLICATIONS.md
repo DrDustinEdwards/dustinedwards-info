@@ -91,13 +91,13 @@ in the repository.
 
 A hosted paper's extracted text is in the file body under `## Full text`, not in a D1 column and not in a
 second file. The file is then the whole source of the twin: a reviewer reads one diff, the save needs no second
-read, and `check:machine-readable` binds the text to the PDF through `pdfSha256`. The twin is stored whole in the
+read, and `check:content` binds the text to the PDF through `pdfSha256`. The twin is stored whole in the
 row's `markdown` column, so the page query never reads it.
 
 ## What validates it
 
 One module, `app/lib/publications/validate.mjs`, with the derived checks in `compile.mjs`, is called by
-`check:machine-readable` (every file), by `build:content` and `sync:content`, and by the Carrel adapter's
+`check:content` (every file), by `build:content` and `sync:content`, and by the Carrel adapter's
 save. A file CI passes is a file the save accepts. Every message starts with the field path, no leading dot:
 `authors[2]: is empty`. It holds: DOI shape and case-folded uniqueness, the slug rule and its length with the
 `publication.` prefix (200 characters at most), unique ids, the vocabulary, access and `pdfPath`

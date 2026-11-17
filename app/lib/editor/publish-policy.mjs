@@ -22,7 +22,7 @@ export const WRITE_CAPABILITIES = {
    */
   carrel: { write: true, firstPublish: true, destroy: true },
   /**
-   * Every capability false; check:policy asserts it. Read-only is not safe: it still sees drafts and
+   * Every capability false; check:ask-guards asserts it. Read-only is not safe: it still sees drafts and
    * the operator email (not stubbed, since the topbar's narrow-width measurement depends on it).
    */
   smoke: { write: false, firstPublish: false, destroy: false },

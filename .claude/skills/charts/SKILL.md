@@ -166,7 +166,7 @@ their `:::diagram` block, and `app/lib/content/blog-diagrams.mjs` replaces the
 images with one inline SVG (`figure.blog-diagram`). The fills are this site's
 tokens, so the same drawing works in both themes. `build:diagrams` does not
 draw these three. A change to their mermaid source changes the key, and
-`check:diagrams` refuses it until the inline drawing is updated to match.
+`check:content` refuses it until the inline drawing is updated to match.
 
 ## Syntax
 
@@ -233,8 +233,7 @@ finding, because for a reader who cannot see it, that prose is the diagram.
 
     npm run build:content     # the key changes with the source
     npm run build:diagrams    # renders anything whose key has no asset yet
-    npm run check:content     # validity and render determinism
-    npm run check:diagrams    # the assets exist, and every color is a token
+    npm run check:content     # validity, render determinism, and every diagram asset exists with token colors
 
 Commit the markdown and the assets TOGETHER (posts.json is a gitignored local
 build product and is never committed). `build:diagrams` is
@@ -245,8 +244,8 @@ longer references, so a re-render is only paid for by what actually changed.
 special care**, because the reference is derived from the source rather than
 stored: an unchanged diagram computes the same key on every writer. But a NEW or
 CHANGED diagram saved that way has no asset until `build:diagrams` runs from a
-clone, exactly like a retitled post has no social card. `check:diagrams` is what
+clone, exactly like a retitled post has no social card. `check:content` is what
 tells you, and it is red on purpose in that window.
 
-Do not hand-edit an SVG in `public/diagrams/`. `check:diagrams` audits every
+Do not hand-edit an SVG in `public/diagrams/`. `check:content` audits every
 color in every committed asset and exists to catch precisely that.

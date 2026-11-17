@@ -422,7 +422,7 @@ async function main() {
  * Deletes any page twin an earlier build left under public/. Every page's twin is served from D1
  * (app/routes/content-page[.md].ts, app/routes/cv[.md].ts), and a static file at its address would win over that
  * route. The paper twins are served from D1 too (app/routes/publications.$slug[.md].ts) and are left to
- * check:machine-readable (publications-twins).
+ * check:content (publications-twins).
  */
 async function pruneStaleContentTwins() {
   for (const rootName of ["research", "teaching", "software"]) {

@@ -1,5 +1,5 @@
 // Every procedure file compiled the one way the operator API's save_procedure compiles it
-// (app/kb/procedures/compile.mjs), for build:content, sync:content and check:protocols.
+// (app/kb/procedures/compile.mjs), for build:content, sync:content and check:content.
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";

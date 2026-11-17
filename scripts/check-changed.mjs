@@ -33,7 +33,7 @@ export const MAP = [
     test: /^app\/.+\.(ts|tsx|mjs)$/,
     gates: [
       "check:features",
-      "check:machine-readable",
+      "check:content",
       "check:urls",
       "check:links",
       "check:console",
@@ -41,10 +41,10 @@ export const MAP = [
     ],
   },
   {
-    /* check-policy and check-ask-guards read route files by name and scan app/routes. */
+    /* check-ask-guards reads route files by name and scans app/routes. */
     what: "a route module",
     test: /^app\/routes\/.+\.(ts|tsx)$/,
-    gates: ["check:policy", "check:ask-guards"],
+    gates: ["check:ask-guards"],
   },
   {
     /* check-ask-guards reads the operator bearer and API, and the Ask corpus. */
@@ -74,32 +74,31 @@ export const MAP = [
   {
     what: "a Worker entry",
     test: /^workers\/.+\.ts$/,
-    gates: ["check:urls", "check:policy", "check:secrets", RELATED],
+    gates: ["check:urls", "check:ask-guards", "check:secrets", RELATED],
   },
   {
     what: "a post or other content",
     test: /^content\/.+/,
-    gates: [
-      "check:content",
-      "check:diagrams",
-      "check:machine-readable",
-      "check:features",
-      "check:links",
-      "check:alt-text",
-    ],
+    gates: ["check:content", "check:features", "check:links", "check:alt-text"],
   },
   {
-    /* check-protocols compiles every procedure and fixture with the save tool's own validator. */
+    /* check:content's protocols part compiles every procedure and fixture with the save tool's own validator. */
     what: "a procedure, a procedure fixture or the procedure system",
     test: /^(content\/procedures\/.+\.md|test\/fixtures\/procedures\/.+\.md|app\/kb\/procedures\/.+|app\/kb\/bases\.mjs|scripts\/lib\/procedures\.mjs)$/,
-    gates: ["check:protocols", RELATED],
+    gates: ["check:content", RELATED],
+  },
+  {
+    /* check:content imports each part by name (scripts/check-content.mjs, PARTS). */
+    what: "a check:content part",
+    test: /^scripts\/machine-readable\/.+\.mjs$/,
+    gates: ["check:content"],
   },
   {
     /* content/publications/ is also a content path above; the cited-by snapshot and the publication
        build and gate modules are not, and each changes what the publication gates read. */
     what: "the cited-by snapshot or the publication build and gate modules",
     test: /^(data\/.+|scripts\/lib\/publications\.mjs|scripts\/machine-readable\/publications-.+)$/,
-    gates: ["check:machine-readable", "check:content", "check:links"],
+    gates: ["check:content", "check:links"],
   },
   {
     /* build:content compiles every page with these modules and check:links reads the result; the page
@@ -109,17 +108,17 @@ export const MAP = [
     gates: ["check:content", "check:links", "check:alt-text", RELATED],
   },
   {
-    /* The file CI judges and the save judges: check:machine-readable runs the shared rules on it. */
+    /* The file CI judges and the save judges: check:content runs the shared rules on it. */
     what: "the llms.txt rules",
     test: /^(app\/lib\/llms\/.+|scripts\/machine-readable\/llms\.mjs)$/,
-    gates: ["check:machine-readable", "check:links", RELATED],
+    gates: ["check:content", "check:links", RELATED],
   },
   {
     /* content/cv/ is a content path above; build:content compiles it with these modules, check:links reads
-       the result and check:machine-readable reads the twin, and the CV save runs the same compile. */
+       the result and check:content reads the twin, and the CV save runs the same compile. */
     what: "the CV system",
     test: /^(app\/lib\/cv\/.+|app\/db\/cv\.ts|scripts\/lib\/cv\.mjs|scripts\/build-cv-pdf\.mjs)$/,
-    gates: ["check:content", "check:links", "check:machine-readable", "check:alt-text", RELATED],
+    gates: ["check:content", "check:links", "check:alt-text", RELATED],
   },
   {
     /* build:content compiles every entry with these modules and check:links reads the twin it leads; the

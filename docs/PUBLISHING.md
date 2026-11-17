@@ -26,7 +26,7 @@ Dates stay out of the render; `sync-content.mjs` applies them at sync time, from
 
 ## The checks
 
-What covers this pipeline: `check:content` (render determinism), `check:policy` (the first-publish policy, with forgery cases), `check:urls` (the protocol allowlist), `check:diagrams`, `check:links` and `check:destructive` (reads the operator descriptors). `check-all.mjs` derives the list from `package.json`, refuses to run below `MINIMUM_GATES` (19) and refuses an untiered gate. CI runs on every push; a merge to main deploys through `deploy.yml` once CI is green on that sha. `verify-live` is outside the `check:` namespace on purpose: it needs a deploy and its Ask probes are billed.
+What covers this pipeline: `check:content` (render determinism, the machine-readable outputs, procedures and diagrams), `check:ask-guards` (the first-publish policy, with forgery cases), `check:urls` (the protocol allowlist), `check:links` and `check:destructive` (reads the operator descriptors). `check-all.mjs` derives the list from `package.json`, refuses to run below `MINIMUM_GATES` (20) and refuses an untiered gate. CI runs on every push; a merge to main deploys through `deploy.yml` once CI is green on that sha. `verify-live` is outside the `check:` namespace on purpose: it needs a deploy and its Ask probes are billed.
 
 ## The writers
 
@@ -53,7 +53,7 @@ Published posts live at `/writing/<slug>`; the route modules keep their `blog.*`
 
 Capabilities per actor are one table, `WRITE_CAPABILITIES` in `publish-policy.mjs`: the admin may do everything; an operator may write but not first-publish or delete (403 `first-publish-requires-admin`, `delete-requires-admin`); Carrel may write and first-publish but not delete; the smoke credential is read only. The first-publish rule: a first publication is Dustin's, in the admin or through Carrel.
 
-The durable fact is `first_published` in frontmatter, not a rows column, because the rows are rebuilt from the source and a column would be silently dropped, failing open. The value is read only from the stored file and always overwritten on the way out; otherwise a caller could publish any draft by asserting it in its payload. `check:policy` has paired forgery tests.
+The durable fact is `first_published` in frontmatter, not a rows column, because the rows are rebuilt from the source and a column would be silently dropped, failing open. The value is read only from the stored file and always overwritten on the way out; otherwise a caller could publish any draft by asserting it in its payload. `check:ask-guards` has paired forgery tests.
 
 ## Ask outside a save
 

@@ -18,7 +18,7 @@ import {
 import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
 import { SITE_ORIGIN as origin } from "../app/lib/site-origin.mjs";
 
-/* The rules every llms.txt write runs (app/lib/llms/validate.mjs): check:machine-readable and the save.
+/* The rules every llms.txt write runs (app/lib/llms/validate.mjs): check:content and the save.
  * Each case changes the real file by one thing, so a rule that stopped firing fails here instead of
  * letting an edit through. */
 

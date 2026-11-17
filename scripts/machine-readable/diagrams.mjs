@@ -19,18 +19,18 @@ import {
   BLOG_DIAGRAMS,
   BLOG_DIAGRAM_KEYS,
   inlineAssetNames,
-} from "../app/lib/content/blog-diagrams.mjs";
-import { DIAGRAM_ROLE_TOKENS } from "../app/lib/content/diagram.mjs";
-import { ASSET_PREFIX } from "../app/lib/media/classify.mjs";
-import { renderBody } from "../app/lib/content/pipeline.mjs";
-import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
+} from "../../app/lib/content/blog-diagrams.mjs";
+import { DIAGRAM_ROLE_TOKENS } from "../../app/lib/content/diagram.mjs";
+import { ASSET_PREFIX } from "../../app/lib/media/classify.mjs";
+import { renderBody } from "../../app/lib/content/pipeline.mjs";
+import { resolveTokens, THEME_SELECTORS, tokenBlock } from "../lib/tokens.mjs";
 import { assertFloor } from "@dustinedwards/devkit/node";
 import { createTally } from "@dustinedwards/devkit/node";
 
 const fileName = (/** @type {string} */ key, /** @type {string} */ theme) =>
   basename(diagramAssetPath(key, theme, ASSET_PREFIX));
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DIAGRAM_DIR = join(root, "public", DIAGRAM_ASSET_DIR);
 const ARTIFACT = join(root, "content", "generated", "posts.json");
 
@@ -269,7 +269,7 @@ if (!existsSync(ARTIFACT)) {
   );
 
   console.log(
-    `check:diagrams ${referenced.size} diagrams referenced, ${onDisk.length} mermaid assets on disk`,
+    `check:content/diagrams ${referenced.size} diagrams referenced, ${onDisk.length} mermaid assets on disk`,
   );
 }
 
@@ -277,11 +277,11 @@ if (!existsSync(ARTIFACT)) {
 // The declarations are fill, stroke and font-size on the three inline drawings. A mermaid
 // drawing that is still an image adds its own color declarations on top of that.
 const MINIMUM_CHECKS = 320;
-const floorBreach = assertFloor("check:diagrams", "checks", tally.checks, MINIMUM_CHECKS);
+const floorBreach = assertFloor("check:content/diagrams", "checks", tally.checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);
 const MINIMUM_DECLARATIONS = 179;
 const declarationBreach = assertFloor(
-  "check:diagrams",
+  "check:content/diagrams",
   "declarations",
   declarations,
   MINIMUM_DECLARATIONS,
@@ -289,10 +289,6 @@ const declarationBreach = assertFloor(
 );
 if (declarationBreach) failures.push(declarationBreach);
 
-if (failures.length > 0) {
-  console.error(`check:diagrams FAILED ${tally.failures} of ${tally.checks} assertions\n`);
-  for (const failure of failures) console.error(`  ${failure}`);
-  process.exit(1);
-}
-
-console.log(`check:diagrams passed ${tally.checks} assertions`);
+for (const failure of failures) console.error(`  FAIL  ${failure}`);
+console.log(`check:content/diagrams ${tally.checks} assertions, ${tally.failures} failures`);
+export const outcome = { checks: tally.checks, failures: tally.failures };

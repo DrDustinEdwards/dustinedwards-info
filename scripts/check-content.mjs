@@ -116,6 +116,49 @@ async function main() {
   if (failures.length > 0) process.exitCode = 1;
 }
 
+/*
+ * The machine-readable outputs, the procedures and the diagrams, one part module each in machine-readable/. Each
+ * exports `outcome`; llms reads --local or --remote from this process's arguments for the D1 row.
+ */
+const PARTS = [
+  "llms",
+  "microformats",
+  "publications-corpus",
+  "publications-paths",
+  "publications-meta",
+  "publications-twins",
+  "publications-notices",
+  "protocols",
+  "diagrams",
+];
+
+/** @returns {Promise<string[]>} one line per failed part */
+async function runParts() {
+  let checks = 0;
+  /** @type {string[]} */
+  const failed = [];
+  for (const part of PARTS) {
+    try {
+      const { outcome } = await import(`./machine-readable/${part}.mjs`);
+      // Counts, or the part did not report: an undefined count made the total NaN and the part a pass.
+      if (!Number.isInteger(outcome?.checks) || !Number.isInteger(outcome?.failures)) {
+        failed.push(`${part}: reported no outcome counts (${JSON.stringify(outcome)})`);
+        continue;
+      }
+      checks += outcome.checks;
+      if (outcome.checks === 0) failed.push(`${part}: asserted nothing`);
+      else if (outcome.failures > 0) failed.push(`${part}: ${outcome.failures} failure(s)`);
+    } catch (error) {
+      failed.push(`${part}: stopped early, ${errorMessage(error)}`);
+    }
+  }
+  console.log(
+    `\ncheck:content ${checks} checks across ${PARTS.length} parts, ${failed.length} part(s) failed`,
+  );
+  for (const line of failed) console.error(`  FAIL  ${line}`);
+  return failed;
+}
+
 /**
  * Needs one post with math and one without: every claim below is satisfied by a corpus with no math.
  *
@@ -361,7 +404,9 @@ function swatchProblems(post) {
   return problems;
 }
 
-main().catch((/** @type {unknown} */ error) => {
+await main().catch((/** @type {unknown} */ error) => {
   console.error(`check:content failed. ${errorMessage(error)}`);
   process.exitCode = 1;
 });
+// After main, and whether or not it threw: a failure there must not hide the parts.
+if ((await runParts()).length > 0) process.exitCode = 1;

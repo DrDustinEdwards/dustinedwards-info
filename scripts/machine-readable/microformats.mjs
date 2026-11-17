@@ -554,7 +554,7 @@ await cleanup();
 
 /* Measured 230 by running this part on 2026-09-24; the floor sits a little under it. */
 const floorBreach = assertFloor(
-  "check:machine-readable/microformats",
+  "check:content/microformats",
   "checks",
   tally.checks,
   216,
