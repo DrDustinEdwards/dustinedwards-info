@@ -48,6 +48,8 @@ There is a second cookie, a sign-in session, and it exists only for the one admi
 
 **The Germomics podcast host** is reached only if you play the episode on the home page: playing it loads the audio from the podcast’s host, by way of OP3, the download counter the show uses.
 
+**Sentry** receives a report when the server hits an error: what failed, with the page’s address cut to its path (nothing after a `?`, and a preview link’s code removed). A report never carries an IP address, a cookie, an email address or anything else that identifies a reader, and no Sentry script runs on any page.
+
 **Cloudflare Access** signs in the administrators of this site. It is reached only from the admin address, and only by the people it is set up to let in.
 
 ## Checking any of this
