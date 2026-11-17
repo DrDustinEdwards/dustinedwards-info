@@ -11,18 +11,12 @@
 import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
 import { unescapeHtml } from "@dustinedwards/site-runtime/html";
+import { isShowcase } from "./showcase.mjs";
 import { TOPICS, TOPIC_IDS } from "./topics.mjs";
 
 /** @typedef {import("./types.ts").Publication} Publication */
 /** @typedef {import("./types.ts").PublicationType} PublicationType */
 /** @typedef {import("./types.ts").TopicId} TopicId */
-
-/**
- * Conference abstracts stay in the data file, which the CV also reads, and are excluded here.
- *
- * @type {Set<PublicationType>}
- */
-export const SHOWCASE_TYPES = new Set(["article", "review", "chapter", "teaching-resource"]);
 
 const PUBLICATIONS_BASE = "/research/publications";
 
@@ -159,7 +153,7 @@ export function soleTopic(params) {
  * @param {Publication[]} publications every published paper, newest first (app/db/publications.ts)
  */
 export function publicationListing(params, publications) {
-  const showcase = publications.filter((p) => SHOWCASE_TYPES.has(p.type));
+  const showcase = publications.filter(isShowcase);
   const result = queryCatalog(PUBLICATIONS, showcase, parseCatalogParams(PUBLICATIONS, params));
   const items = result.rows;
   const span = {

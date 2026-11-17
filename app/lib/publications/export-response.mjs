@@ -3,14 +3,6 @@ import { ASSET_PREFIX } from "../media/classify.mjs";
 import { PUBLICATIONS_CACHE_TAG } from "./paths.mjs";
 
 /**
- * A second copy of the index page's set (app/lib/publications/listing.mjs) on purpose.
- * check:content asserts the two agree.
- *
- * @type {Set<string>}
- */
-export const SHOWCASE_TYPES = new Set(["article", "review", "chapter", "teaching-resource"]);
-
-/**
  * noindex: these are alternative representations of indexable pages. charset stated because names
  * carry diacritics. The dustin-edwards- prefix and the cache tag a save purges are added here so no route can
  * forget them.

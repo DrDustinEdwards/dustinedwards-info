@@ -22,7 +22,7 @@ export async function listPublishedPublications(env: Env): Promise<Publication[]
 /** What the home page reads of a published paper. */
 export type PublicationSummary = Pick<
   Publication,
-  "id" | "slug" | "year" | "title" | "journal" | "publishedDate" | "selected"
+  "id" | "slug" | "type" | "year" | "title" | "journal" | "publishedDate" | "selected"
 >;
 
 /**
@@ -34,6 +34,7 @@ export async function listPublishedPublicationSummaries(env: Env): Promise<Publi
     .select({
       id: sql<string>`json_extract(${publications.record}, '$.id')`,
       slug: publications.slug,
+      type: publications.type,
       year: publications.year,
       title: publications.title,
       journal: sql<string | null>`json_extract(${publications.record}, '$.journal')`,
