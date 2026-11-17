@@ -17,6 +17,7 @@ import { resolveD1Address } from "./lib/d1-address.mjs";
 import { sqlLiteral as sql } from "./lib/sql-literal.mjs";
 import { splitOversizeStatements } from "./lib/split-statements.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
+import { applySqlFile } from "./lib/d1-apply.mjs";
 
 const PREVIEW = process.argv.includes("--preview");
 const DB_NAME = PREVIEW ? "dustinedwards-preview" : "dustinedwards";
@@ -102,9 +103,12 @@ const dir = path.join(os.tmpdir(), "dustinedwards-seed");
 await mkdir(dir, { recursive: true });
 const sqlFile = path.join(dir, `seed-sources-${target.slice(2)}.sql`);
 await writeFile(sqlFile, splitOversizeStatements(statements.join("\n")), "utf8");
-const applied = runWrangler(
-  `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${sqlFile}" --yes`,
-);
+// Remote, a batch through D1's query API, never an import: scripts/lib/d1-apply.mjs.
+const applied = await applySqlFile({
+  address: resolveD1Address(DB_NAME, target),
+  target,
+  file: sqlFile,
+});
 if (applied.status !== 0) {
   console.error(applied.output);
   throw new Error(

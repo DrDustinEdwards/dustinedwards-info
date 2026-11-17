@@ -1,12 +1,21 @@
-import type { EntryContext, RouterContextProvider } from "react-router";
-import { ServerRouter } from "react-router";
+import type { EntryContext, HandleErrorFunction, RouterContextProvider } from "react-router";
+import { createContext, ServerRouter } from "react-router";
 import { renderToReadableStream } from "react-dom/server";
 
 import { getNonce } from "~/lib/context";
-import { errorMessage } from "@dustinedwards/site-runtime/log";
+import { isDatabaseDown } from "@dustinedwards/site-runtime/health";
+import { errorMessage, handleServerError } from "@dustinedwards/site-runtime/log";
+
+/** Set by handleError when a route failed because D1 was down for a moment; read by handleRequest. */
+const databaseDownContext = createContext(false);
 
 // React Router prints every route error, so each scanner 404 wrote a stack trace; a route 404 is counted, not logged.
-export { handleServerError as handleError } from "@dustinedwards/site-runtime/log";
+// handleError sees the error itself; by the time handleRequest runs, React Router has replaced a production route
+// error with a bare "Unexpected Server Error", so the database-down reading is taken here.
+export const handleError: HandleErrorFunction = (error, args) => {
+  if (isDatabaseDown(error)) args.context.set(databaseDownContext, true);
+  handleServerError(error, args);
+};
 
 export default async function handleRequest(
   request: Request,
@@ -17,6 +26,16 @@ export default async function handleRequest(
   loadContext: RouterContextProvider,
 ) {
   let shellRendered = false;
+
+  // A loader that failed because D1 was down for a moment (site-runtime isDatabaseDown: overloaded, reset, an import
+  // holding the database) answers 503 with Retry-After, not 500, so a crawler or a reader's retry comes back instead
+  // of recording a broken page, and no cache keeps the error (MDN, 503 Service Unavailable). The error is still
+  // logged by handleError; any other failure keeps its own status.
+  if (responseStatusCode >= 500 && loadContext.get(databaseDownContext)) {
+    responseStatusCode = 503;
+    responseHeaders.set("Retry-After", "60");
+    responseHeaders.set("Cache-Control", "no-store");
+  }
 
   // The ServerRouter prop nonces React Router's streaming scripts; without it an enforcing CSP blocks
   // the hydration payload. react-dom's own inline scripts take the nonce only from the render option.
