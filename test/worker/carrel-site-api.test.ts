@@ -53,7 +53,8 @@ const headersFor = (key: string) => ({
   "cf-connecting-ip": "203.0.113.9",
 });
 
-const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
+const argsFor = (request: Request, overrides?: object) =>
+  ({ request, context: routeContext(undefined, overrides), params: {} }) as never;
 
 function get(url: string, key: string = testEnv.CARREL_SITE_KEY): Promise<Response> {
   return carrelRequest(argsFor(new Request(url, { headers: headersFor(key) })));
@@ -1399,24 +1400,27 @@ describe("the site-api conformance suite", () => {
       (await (await get(`${PREFIX}/content?limit=1`)).json()) as { items: Array<{ id: string }> }
     ).items[0];
     if (first && !first.id.includes(".")) await putSource(postPath(first.id), post(first.id));
+    // Its own counters: the site's limiter (120 a minute, counted under the key) runs in the test's one Durable Object
+    // namespace, which every case before this one has spent from. Names get a prefix, so the suite counts alone.
+    const suite = {
+      ASK_BUDGET: {
+        idFromName: (name: string) => testEnv.ASK_BUDGET.idFromName(`conformance-suite:${name}`),
+        get: (id: DurableObjectId) => testEnv.ASK_BUDGET.get(id),
+      },
+    };
     const report = await runConformance({
       baseUrl: ORIGIN,
       key: testEnv.CARREL_SITE_KEY,
       probeWrites: true,
       fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
-        const request = new Request(input, {
-          ...init,
-          // Its own address, so the site's limiter (120 a minute per address) counts the suite alone, not the cases before it.
-          headers: {
-            ...Object.fromEntries(new Headers(init?.headers)),
-            "cf-connecting-ip": "203.0.113.10",
-          },
-        });
+        const request = new Request(input, init);
         try {
-          if (request.method === "GET") return await carrelRequest(argsFor(request));
+          if (request.method === "GET") return await carrelRequest(argsFor(request, suite));
           // The Worker puts site-runtime's in-process render on the context (workers/app.ts); a test has no app build, so
           // this stand-in renders the post the preview handed it, which is what the preview case reads.
-          const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
+          const args = argsFor(request, suite) as unknown as {
+            context: ReturnType<typeof routeContext>;
+          };
           args.context.set(
             documentHandlerContext,
             async (_request, set) =>
