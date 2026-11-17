@@ -69,9 +69,9 @@
     "app/lib/publications/search-inputs.mjs",
     "app/lib/publications/exports.mjs",
     "app/lib/publications/export-response.mjs",
-    // The publication index's listing. check:content compares its
-    // SHOWCASE_TYPES with export-response.mjs's by importing it, which a route
-    // module (React, a loader) could not be.
+    // The one definition of a paper: the index, its exports, the home count and the gates all import it.
+    "app/lib/publications/showcase.mjs",
+    // The publication index's listing, imported by the gates because a route module (React, a loader) could not be.
     "app/lib/publications/listing.mjs",
     // Imported by exports.mjs for the brace-protection allowlist, and by the
     // gate through it. The page italicizes from the same list.

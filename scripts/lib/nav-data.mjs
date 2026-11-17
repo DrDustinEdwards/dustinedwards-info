@@ -17,7 +17,7 @@ import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { recordFromData } from "../../app/lib/publications/record.mjs";
-import { SHOWCASE_TYPES } from "../../app/lib/publications/listing.mjs";
+import { SHOWCASE_TYPES } from "../../app/lib/publications/showcase.mjs";
 import { newestFirst } from "../../app/lib/post-order.mjs";
 import { frontmatterSchema } from "../../app/lib/content/pipeline.mjs";
 import { plainText } from "../../app/lib/search/records.mjs";
