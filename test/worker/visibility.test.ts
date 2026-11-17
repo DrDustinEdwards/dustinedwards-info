@@ -2,7 +2,7 @@ import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { renderAndWrite } from "~/lib/editor/publish.server";
-import { syncAskCorpus, syncAskPost } from "~/lib/search/ask.server";
+import { ASK_INDEX_QUERY } from "~/lib/search/search.server";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { tagPath } from "~/lib/tag-path.mjs";
@@ -122,11 +122,8 @@ function expectNoHidden(text: string, surface: string) {
   }
 }
 
-/** Every record the render door returned, so the Ask sync can be handed exactly what a save hands it. */
-const written: Record<string, Awaited<ReturnType<typeof renderAndWrite>>["record"]> = {};
-
 async function write(slug: string, raw: string) {
-  written[slug] = (await renderAndWrite(publishEnv(), slug, raw)).record;
+  await renderAndWrite(publishEnv(), slug, raw);
 }
 
 beforeAll(async () => {
@@ -297,42 +294,20 @@ describe("the draft and the scheduled post are on no public surface", () => {
     expect((await searchPage(`?q=${LIVE.term}`)).result.total).toBeGreaterThan(0);
   });
 
-  it("the Ask index is sent only the published post", async () => {
-    const items = new Map<string, string>();
-    const aiSearch = {
-      items: {
-        upload: async (key: string, body: string) => {
-          items.set(key, body);
-          return { id: key, key };
-        },
-        list: async () => ({
-          result: [...items.keys()].map((key) => ({ id: key, key })),
-          result_info: { total_count: items.size },
-        }),
-        delete: async (id: string) => {
-          items.delete(id);
-        },
-      },
-    };
-    const askEnv = {
-      ...env,
-      AI_SEARCH: aiSearch,
-      ASSETS: { fetch: async () => new Response("A paper's markdown twin.") },
-    } as unknown as Env;
-
-    await syncAskCorpus(askEnv);
-    for (const slug of [DRAFT.slug, SCHEDULED.slug, LIVE.slug]) {
-      await syncAskPost(askEnv, written[slug] as never);
-    }
-
-    const postKeys = [...items.keys()].filter((key) => key.startsWith("writing/"));
-    expect(postKeys.some((key) => key.includes(LIVE.slug))).toBe(true);
+  it("the Ask index's query returns only the published post", async () => {
+    // The very query AI Search runs on each sync of the instance (its D1 data source), run on this database.
+    const { results } = await env.DB.prepare(ASK_INDEX_QUERY).all<{
+      id: string;
+      content: string;
+    }>();
+    const postIds = results.map((row) => row.id).filter((id) => id.startsWith("/writing/"));
+    expect(postIds.some((id) => id.includes(LIVE.slug))).toBe(true);
     for (const hidden of HIDDEN) {
       expect(
-        postKeys.filter((key) => key.includes(hidden.slug)),
+        postIds.filter((id) => id.includes(hidden.slug)),
         hidden.slug,
       ).toEqual([]);
-      expect([...items.values()].join("\n")).not.toContain(hidden.term);
+      expect(results.map((row) => row.content).join("\n")).not.toContain(hidden.term);
     }
   });
 });

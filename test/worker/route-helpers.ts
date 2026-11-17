@@ -12,6 +12,7 @@ import {
   getEnv,
   getExecutionContext,
 } from "~/lib/context";
+import { testEnv } from "./test-env";
 
 /**
  * Driving route modules directly: the router context their loaders read, the middleware chain in
@@ -58,6 +59,28 @@ export async function carrelRequest({
     kit,
   );
   return answer ?? new Response("Not found", { status: 404 });
+}
+
+/** A GET to Carrel's API with the site key, through the gateway step. */
+export const carrelGet = (url: string) =>
+  carrelRequest({
+    request: new Request(url, { headers: carrelHeaders() }),
+    context: routeContext(),
+  });
+
+/** A JSON write to Carrel's API with the site key, through the gateway step. */
+export const carrelSend = (method: "PUT" | "POST", url: string, body: unknown) =>
+  carrelRequest({
+    request: new Request(url, { method, headers: carrelHeaders(), body: JSON.stringify(body) }),
+    context: routeContext(),
+  });
+
+function carrelHeaders() {
+  return {
+    authorization: `Bearer ${testEnv.CARREL_SITE_KEY}`,
+    "content-type": "application/json",
+    "cf-connecting-ip": "203.0.113.9",
+  };
 }
 
 /**

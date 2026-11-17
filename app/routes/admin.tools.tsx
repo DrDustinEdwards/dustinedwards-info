@@ -15,7 +15,6 @@ import { PageHead } from "capsomer/react/page-head";
 import { RouterConfirmModal } from "capsomer/react/router";
 import { confirmationSatisfied } from "@dustinedwards/site-runtime/confirm";
 import {
-  askSyncConfirmCount,
   regeneratePosts,
   resetAskBudgetAndReport,
   syncAskIndex,
@@ -24,7 +23,7 @@ import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { siteAssetTotal, rebuildSiteAssetIndex } from "~/lib/media/actions.server";
-import { askAvailable, askStatusContext } from "~/lib/search/ask.server";
+import { askAvailable, askIndexStatus } from "~/lib/search/ask.server";
 import { readAskBudget } from "~/lib/search/ask-guard.server";
 import { topZeroResults } from "~/lib/search/zero-result.server";
 import type { Route } from "./+types/admin.tools";
@@ -38,8 +37,15 @@ export async function loader({ context }: Route.LoaderArgs) {
   return timedLoader(context, async (timings) => {
     const env = getEnv(context);
     const askOn = askAvailable(env);
-    /* Uncached: the page that repairs drift must not act on the layout's cached count. */
-    const askPromise = timed(timings, "ask_status_uncached", () => context.get(askStatusContext)());
+    /* Null rather than throwing: a status read must not take the page down. */
+    const askPromise = askOn
+      ? timed(timings, "ask_status", () => askIndexStatus(env)).catch((error: unknown) => {
+          console.error(
+            JSON.stringify({ alert: "ask-index-status-failed", detail: errorMessage(error) }),
+          );
+          return null;
+        })
+      : Promise.resolve(null);
     /*
      * The catch is attached at creation: a promise that rejects before it is awaited is an unhandled
      * rejection. A failing budget read must not take the page down, and it renders as a failure.
@@ -77,21 +83,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (intent === "regenerate") return regeneratePosts(env);
 
-  // Separate from Regenerate: D1 search must not be held hostage to the AI index, and the AI index
-  // must never be repaired by touching D1.
-  if (intent === "sync-ask") {
-    if (!askAvailable(env)) {
-      return { message: "Ask is not enabled: no AI Search binding.", failed: true as const };
-    }
-    /*
-     * "Sync" reads as additive and is not: `pruneAskCorpus` deletes every record this run did not
-     * upload. The count is 1 because how many it removes cannot be known first.
-     */
-    if (!confirmationSatisfied(form, "1")) {
-      return { confirmSyncAsk: await askSyncConfirmCount(env) };
-    }
-    return syncAskIndex(env);
-  }
+  // AI Search reads D1 itself, so a sync only asks it to read now instead of on its schedule.
+  if (intent === "sync-ask") return syncAskIndex(env);
 
   if (intent === "reset-ask-budget") return resetAskBudgetAndReport(env);
 
@@ -115,13 +108,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 export default function AdminTools({ loaderData, actionData }: Route.ComponentProps) {
   const { secrets, misses, askOn, ask, budget, budgetError } = loaderData;
   const missing = secrets.filter((s) => !s.present);
-  const confirmSyncAsk =
-    actionData && "confirmSyncAsk" in actionData ? actionData.confirmSyncAsk : undefined;
   const confirmRebuild =
     actionData && "confirmRebuild" in actionData ? actionData.confirmRebuild : undefined;
   const message = actionData && "message" in actionData ? actionData.message : undefined;
   const failed = actionData && "failed" in actionData ? actionData.failed === true : false;
-  const askDrifted = ask ? ask.missing.length > 0 || ask.stale.length > 0 : false;
+  const askBehind = ask ? ask.present !== ask.expected || ask.failed > 0 : false;
+  const lastSync = ask?.lastSync?.ended_at ?? ask?.lastSync?.started_at;
 
   return (
     <div className="app-page">
@@ -137,25 +129,6 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
       <div role="status">{message && !failed ? <Banner tone="ok">{message}</Banner> : null}</div>
       {message && failed ? <Alert tone="crit">{message}</Alert> : null}
 
-      {confirmSyncAsk !== undefined ? (
-        <RouterConfirmModal
-          title="Rebuild the search answer index?"
-          lead={
-            <p>
-              Every record not in this run is removed from the index, and saved answers are dropped.
-              The site currently has <strong>{confirmSyncAsk}</strong> post(s), so that is what the
-              index will hold afterwards.
-            </p>
-          }
-          typeToConfirm="1"
-          action_label="Rebuild the index"
-          cancelHref="/admin/tools"
-        >
-          <input type="hidden" name="intent" value="sync-ask" />
-          <input type="hidden" name="confirmed" value="1" />
-        </RouterConfirmModal>
-      ) : null}
-
       <Panel
         title="Search"
         src={
@@ -163,8 +136,8 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
             <Pill variant="outline">answers off</Pill>
           ) : !ask ? (
             <Status tone="warn">status unknown</Status>
-          ) : askDrifted ? (
-            <Status tone="warn">{`${ask.missing.length + ask.stale.length} behind`}</Status>
+          ) : askBehind ? (
+            <Status tone="warn">{ask.indexing > 0 ? "indexing" : "behind"}</Status>
           ) : (
             <Status tone="ok">up to date</Status>
           )
@@ -176,9 +149,9 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
                 type="submit"
                 name="intent"
                 value="sync-ask"
-                variant={askDrifted ? "primary" : undefined}
+                variant={askBehind ? "primary" : undefined}
               >
-                Rebuild the answer index
+                Sync the answer index now
               </Button>
             ) : null}
             <Button type="submit" name="intent" value="regenerate">
@@ -197,10 +170,15 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
             ? "Answers are not enabled: this deployment has no AI Search binding. Site search still works."
             : !ask
               ? "The answer index status could not be read, so whether answers are up to date is unknown."
-              : askDrifted
-                ? `${ask.missing.length} post(s) are missing from the answer index and ${ask.stale.length} ` +
-                  "record(s) in it no longer match the site, so an answer may quote text that has changed."
-                : `The answer index has all ${ask.expected} posts.`}
+              : askBehind
+                ? `The answer index holds ${ask.present} of the ${ask.expected} post sections and paper parts` +
+                  (ask.failed > 0 ? `, and refused ${ask.failed}` : "") +
+                  (ask.indexing > 0 ? `; ${ask.indexing} are being indexed now.` : ".")
+                : `The answer index has all ${ask.expected} post sections and paper parts.`}
+          {ask
+            ? " It reads them from the site's database by itself every 15 minutes and whenever a post or paper is published or withdrawn" +
+              (lastSync ? `; the last sync was ${lastSync} UTC.` : ".")
+            : null}
           {budget
             ? ` ${budget.count} of ${budget.limit} answers used on ${budget.day} (UTC); cached answers do not count.`
             : null}

@@ -52,9 +52,9 @@ export const TOOL_DESCRIPTORS: Readonly<
   sync_ask: {
     args: {},
     returns:
-      "Uploads the full corpus to the Ask index and prunes strays. Idempotent. " +
-      "expected, present, drift and a converged verdict, all read back after " +
-      "the writes rather than taken from the upload's own counters.",
+      "Asks the Ask index, which AI Search reads from D1 itself, to sync now, and waits for the sync to end. " +
+      "Idempotent. The sync's id, whether it ended, expected (rows the corpus query returns), present " +
+      "(items indexed), refused, and a converged verdict, read back after the sync.",
   },
   sync_media: {
     args: {},

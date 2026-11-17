@@ -14,6 +14,8 @@ import {
 import { clampTitle } from "@dustinedwards/site-runtime/share-card";
 import { MARK_CLOSE, MARK_OPEN } from "capsomer/behavior/search-results";
 import { SEARCH_BASES, baseOfUrl, basePrefix } from "~/kb/search-bases.mjs";
+import { PAPER_PART } from "./ask-citations.mjs";
+import { PUBLICATIONS_PATH } from "~/lib/publications/paths.mjs";
 
 /** The operators a search accepts: tag:, type: and base: (app/kb/search-bases.mjs). */
 function parseQuery(input: string) {
@@ -139,12 +141,13 @@ function toHit(row: RawRow, snippet: string, why: MatchReason[], score: number):
 
 /**
  * The SQL twin of publiclyVisible() in app/db/client.ts: they cannot be one function, so
- * test/visibility-invariants.test.mjs asserts they admit the same rows.
+ * test/visibility-invariants.test.mjs asserts they admit the same rows. `now` is the bound seconds by
+ * default; the Ask index's query may bind nothing, so it passes the database's own clock.
  * @public read by that test
  */
-export function visibilityClause(alias = "d"): string {
+export function visibilityClause(alias = "d", now = "?"): string {
   const q = alias ? `${alias}.` : "";
-  return `${q}status = '${PUBLISHED_STATUS}' AND (${q}publish_at IS NULL OR ${q}publish_at <= ?)`;
+  return `${q}status = '${PUBLISHED_STATUS}' AND (${q}publish_at IS NULL OR ${q}publish_at <= ${now})`;
 }
 
 /** Named, not a bare "": an empty literal between SQL literals misleads the raw-SQL scans. DO NOT INLINE. */
@@ -454,30 +457,40 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
   };
 }
 
-export async function askCorpusRecords(
-  env: Env,
-  now = new Date(),
-): Promise<Array<{ url: string; title: string; body: string }>> {
-  const nowSeconds = Math.floor(now.getTime() / 1000);
-  const rows = await env.DB.prepare(
-    // CONCATENATED, not interpolated, for the reason stated at NO_ALIAS.
-    `SELECT url, title, body FROM search_docs WHERE type = 'post' AND ` +
-      visibilityClause(NO_ALIAS),
-  )
-    .bind(nowSeconds)
-    .all<{ url: string; title: string; body: string }>();
-  return rows.results ?? [];
-}
+/**
+ * The Ask index's corpus: the SQL AI Search runs on every sync of the dustinedwards-ask instance, whose data source
+ * is this database (https://developers.cloudflare.com/ai-search/configuration/data-source/d1/). One row per published
+ * post section, then each published paper's markdown twin. Papers come from their twins, not their search_docs rows:
+ * indexing both would let the shorter win questions the longer answers. A rendered row may take 64 KiB
+ * (d1_document_too_large), and the longest twin was 113,814 bytes on 2026-11-14, so a twin is indexed in parts of
+ * PAPER_PART_CHARS characters, leaving room for multibyte text. AI Search puts each row's id on every chunk of it as
+ * `row_id`, so the id is the URL a citation links to (ask-citations.mjs).
+ *
+ * The query binds nothing and may not hold a semicolon, two hyphens, slash-star, ORDER BY, LIMIT or replace(), even
+ * in a literal. Concatenated, not interpolated, for the reason stated at NO_ALIAS.
+ */
+const PAPER_PART_CHARS = 50_000;
+const PAPER_PART_ID = PAPER_PART.replace("#", "");
+export const ASK_INDEX_QUERY =
+  `WITH RECURSIVE paper(slug, part, rest) AS (\n` +
+  `  SELECT slug, 1, markdown FROM publications WHERE status = '${PUBLISHED_STATUS}'\n` +
+  `  UNION ALL\n` +
+  `  SELECT slug, part + 1, substr(rest, ${PAPER_PART_CHARS + 1}) FROM paper WHERE length(rest) > ${PAPER_PART_CHARS}\n` +
+  `)\n` +
+  `SELECT url AS id, title, body AS content FROM search_docs\n` +
+  `WHERE type = 'post' AND ` +
+  visibilityClause(NO_ALIAS, "unixepoch()") +
+  `\nUNION ALL\n` +
+  `SELECT '${PUBLICATIONS_PATH}/' || slug || '/' || ` +
+  `CASE WHEN part = 1 THEN '' ELSE '#${PAPER_PART_ID}' || part END AS id,\n` +
+  `  NULL AS title, substr(rest, 1, ${PAPER_PART_CHARS}) AS content FROM paper`;
 
-export async function askExpectedUrls(env: Env, now = new Date()): Promise<string[]> {
-  const nowSeconds = Math.floor(now.getTime() / 1000);
-  const rows = await env.DB.prepare(
-    // Concatenated, not interpolated (see NO_ALIAS). Posts only: pages are never uploaded to Ask.
-    `SELECT url FROM search_docs WHERE type = 'post' AND ` + visibilityClause(NO_ALIAS),
-  )
-    .bind(nowSeconds)
-    .all<{ url: string }>();
-  return (rows.results ?? []).map((r) => r.url);
+/** How many rows the Ask index should hold: what ASK_INDEX_QUERY returns now. */
+export async function askIndexExpected(env: Env): Promise<number> {
+  const row = await env.DB.prepare(`SELECT count(*) AS n FROM (` + ASK_INDEX_QUERY + `)`).first<{
+    n: number;
+  }>();
+  return row?.n ?? 0;
 }
 
 export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date()) {

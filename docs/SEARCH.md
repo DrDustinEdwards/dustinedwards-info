@@ -32,9 +32,9 @@ A query with filters but no text (a bare year, `tag:x`) takes the browse path: t
 
 ## Ask
 
-AI Search with built-in storage and uploaded markdown, not the crawler, so citations reach heading anchors and indexing is immediate. Created hybrid with reranking; it fuses by RRF and stems with porter, like the classic layer. No credential is needed at runtime.
+An AI Search instance (`dustinedwards-ask`) whose data source is the site's own D1 (the D1 data source, beta since 2026-11-12: https://developers.cloudflare.com/ai-search/configuration/data-source/d1/). AI Search runs `ASK_INDEX_QUERY` (`app/lib/search/search.server.ts`) itself on each sync and indexes each returned row as one item: one row per published post section from `search_docs`, then each published paper's markdown twin from `publications.markdown`, in parts of 50,000 characters because a rendered row may take 64 KiB. Created hybrid with reranking; it fuses by RRF and stems with porter, like the classic layer. No credential is needed at runtime.
 
-`ask-keys.mjs` owns the key-to-URL mapping for both uploader and client: `writing/<slug>.md`, `writing/<slug>__<anchor>.md`, `research/publications/<slug>.md`. Ask holds posts and papers only. The separator is a double underscore, and an upload fails closed if a URL contains one.
+A row's id is its URL, and AI Search puts it on every chunk as `row_id`, so a citation is the row id (`ask-citations.mjs`, for both the client and the server's leak check): a post or a section cites itself, and every part of a paper (`<page>#part-2` and on) cites the paper's page. Ask holds posts and papers only. Never read `item.key`: a key is a sanitized prefix plus a hash for any id holding `/` or `#`.
 
 The two layers fail on opposite inputs: single tokens naming a heading return no AI chunks under the 0.4 score threshold, and long questions return no classic rows under AND matching. Neither subsumes the other, which is why classic stays first.
 
@@ -46,9 +46,11 @@ Counters are a Durable Object on the synchronous SQLite API (`ASK_BUDGET`, now t
 
 ### Sync and the draft rule
 
-Every save uploads that post's section records and drops cached answers; the sync cannot fail the save. Ship converges Ask last and Capsid's watcher repairs drift, so a row written outside a save does not leave Ask stale. AI Search cannot filter by status at query time, so drafts are excluded at upload: `publishableForAsk()` must agree with `publiclyVisible()`, and a draft actively removes anything it already has. `items.list()` is paged (max 50); `listAllAskItems()` is the only listing path. Test with a phrase unique to a draft.
+AI Search reads the corpus itself: on each sync it indexes new rows, re-indexes changed ones, skips unchanged ones, and removes a row's item once the query no longer returns it (a draft, a post set back to draft, a rename, a delete). Nothing is uploaded or pruned by the site. A sync runs every 15 minutes on the instance's schedule, when a post or paper is saved, deleted or renamed (`askSyncAfterWrite`, which cannot fail the write), when the number of visible rows changes, which is a scheduled post going live (the per-minute `ask-index` cron job, `askIndexTick`), and on every deploy (`sync_ask`, which waits for the sync to end and reads the index back). A sync that was already running answers a request with itself and may have read D1 before the change, so one is asked for again when it ends. Cached answers are dropped when a sync the site asked for ends, since they were written against the index before it.
 
-The corpus sync (`sync_ask`) uploads only what changed. AI Search reports no usable checksum (every item reads `"0"`), so the D1 table `ask_uploads` keeps the sha-256 of the body last uploaded for each key, written only after AI Search accepts the upload. An item is sent again when its hash differs, when it is missing from the index, or when its status is not `completed`, `queued` or `running` (`askUploadsNeeded`). A key whose upload outlives four tries is reported in `failed` and stops convergence, but it never fails the whole sync. A full re-upload on every deploy drew "You are being rate limited" (2026-11-11), and from 2026-12-01 it would also cost ingestion tokens.
+AI Search cannot filter by status at query time, so drafts are excluded by the query: its posts take the shared `visibilityClause` on the database's own clock (`unixepoch()`, since the query binds nothing). `check:ask-guards` reads that composition and `test/worker/visibility.test.ts` runs the query on a database holding a draft and a scheduled post. The query may not hold a semicolon, two hyphens, slash-star, `ORDER BY`, `LIMIT` or `replace()`, even in a literal. The tick sends a changed query to the instance, which starts a sync.
+
+`ask-index-drift` on /health compares the rows the query returns with the items indexed (`stats().completed`) and fails on any row the index refused; a refused row is named in the AI Search job's logs.
 
 ## Machine endpoints
 

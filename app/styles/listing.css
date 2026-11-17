@@ -52,7 +52,7 @@
   max-width: 54ch;
   color: var(--text);
   font-family: var(--font-prose);
-  font-size: 1.25rem;
+  font-size: var(--title-4);
   line-height: 1.45;
 }
 
@@ -70,8 +70,8 @@
   margin-block-start: var(--space-6);
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1.7;
+  font-size: var(--fs-small);
+  line-height: var(--leading-loose);
 }
 
 /* Inside the "Subscribe:" line, so the global link weight from app.css stays: color alone fails
@@ -86,11 +86,11 @@
 
 @media (max-width: 47.99rem) {
   .list-label {
-    font-size: 2.25rem;
+    font-size: var(--title-1);
     letter-spacing: -0.028em;
   }
   .list-dek {
     max-width: none;
-    font-size: 1.0625rem;
+    font-size: var(--fs-page);
   }
 }

@@ -4,7 +4,7 @@
 import { imageSize } from "image-size";
 
 import { purgePosts, type PurgeOutcome } from "~/lib/cache-purge.server";
-import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.server";
+import { askSyncAfterWrite } from "~/lib/search/ask.server";
 
 import { postPath } from "~/lib/content/slug.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
@@ -403,8 +403,7 @@ export async function savePost(
 
   const neighbors = await refreshNeighborsAfterSave(env, record.slug);
 
-  // The Ask index must not fail a save: the commit has landed, and a failure here would split repo and D1.
-  const askSync = await syncAskForPost(env, record);
+  const askSync = await askSyncAfterWrite(env, `post saved: ${record.slug}`);
 
   return {
     commitSha,
@@ -420,28 +419,6 @@ export async function savePost(
     outcome: decision.outcome,
     unchanged,
   };
-}
-
-async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
-  if (!askAvailable(env)) return null;
-  try {
-    const result = await syncAskPost(env, record);
-    if (result.failed.length > 0) {
-      return {
-        ok: false as const,
-        message:
-          `${result.failed.length} of ${result.failed.length + result.uploaded} Ask ` +
-          `record(s) failed to upload after a retry: ${result.failed.join(", ")}. ` +
-          `The post saved. Rebuild the answer index from /admin/tools to finish indexing it.`,
-      };
-    }
-    return { ok: true as const, ...result };
-  } catch (error) {
-    console.error(
-      JSON.stringify({ alert: "ask-sync-failed-after-save", detail: errorMessage(error) }),
-    );
-    return { ok: false as const, message: errorMessage(error) };
-  }
 }
 
 export async function deletePost(
@@ -473,7 +450,11 @@ export async function deletePost(
 
   const { purged } = await deletePostFromD1(env, options.slug);
 
-  return { commitSha, purged, askRemoval: await removeAskForPost(env, options.slug) };
+  return {
+    commitSha,
+    purged,
+    askRemoval: await askSyncAfterWrite(env, `post deleted: ${options.slug}`),
+  };
 }
 
 /**
@@ -482,28 +463,7 @@ export async function deletePost(
  */
 export async function forgetPostRows(env: PublishEnv, slug: string) {
   const { purged } = await deletePostFromD1(env, slug);
-  return { purged, askRemoval: await removeAskForPost(env, slug) };
-}
-
-/**
- * The Ask index cannot fail the delete, but a post still answerable through Ask is reported, not
- * swallowed. Null means Ask is not configured; a failure is `ok: false`, never the same null.
- */
-async function removeAskForPost(env: PublishEnv, slug: string) {
-  if (!askAvailable(env)) return null;
-  try {
-    return { ok: true as const, removed: await removeAskPost(env, slug) };
-  } catch (error) {
-    console.error(
-      JSON.stringify({ alert: "ask-removal-failed-after-delete", detail: errorMessage(error) }),
-    );
-    return {
-      ok: false as const,
-      message:
-        `The post was deleted but its Ask records were not removed, so Ask can still quote it: ` +
-        `${errorMessage(error)}. Re-run the Ask sync to prune them.`,
-    };
-  }
+  return { purged, askRemoval: await askSyncAfterWrite(env, `post renamed from ${slug}`) };
 }
 
 /** Every row arrives through renderAndWrite, the same door a save uses, with the blob sha to prove its bytes. */

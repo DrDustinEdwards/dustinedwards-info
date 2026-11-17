@@ -213,8 +213,9 @@ export function libraryCsv(rows) {
  */
 export function libraryMarkdown(items, origin) {
   const head = ["Protocol", "Method", "Organism", "Target", "Course", "Steps", "Updated"];
-  const rows = items.map((p) =>
-    [
+  return libraryTable(
+    head,
+    items.map((p) => [
       `[${mdCell(p.title)}](${origin}${p.path})`,
       p.methods.map(methodLabel).join(", "),
       p.organisms.map(organismLabel).join(", "),
@@ -222,12 +223,21 @@ export function libraryMarkdown(items, origin) {
       p.courses.map(courseLabel).join(", "),
       String(p.steps),
       p.updated,
-    ].map((c, i) => (i === 0 ? c : mdCell(c))),
+    ]),
   );
+}
+
+/**
+ * A library twin's Markdown table. Each row leads with its link, already escaped; every other cell is escaped here.
+ *
+ * @param {string[]} head
+ * @param {string[][]} rows
+ */
+export function libraryTable(head, rows) {
   return [
     `| ${head.join(" | ")} |`,
     `| ${head.map(() => "---").join(" | ")} |`,
-    ...rows.map((r) => `| ${r.join(" | ")} |`),
+    ...rows.map((r) => `| ${r.map((c, i) => (i === 0 ? c : mdCell(c))).join(" | ")} |`),
   ].join("\n");
 }
 

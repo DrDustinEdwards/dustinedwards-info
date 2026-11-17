@@ -12,7 +12,7 @@ import privacy from "../../content/pages/privacy.md?raw";
 import terms from "../../content/pages/terms.md?raw";
 
 import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { routeContext, carrelRequest } from "./route-helpers";
+import { routeContext, carrelSend } from "./route-helpers";
 import { seedPages, seedProcedures } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -26,22 +26,7 @@ const TERMS_FILE = pageSourcePath("terms");
 const TERMS_ID = "page.terms";
 const PRIVACY_FILE = pageSourcePath("privacy");
 
-const headersFor = (key: string) => ({
-  authorization: `Bearer ${key}`,
-  "content-type": "application/json",
-  "cf-connecting-ip": "203.0.113.9",
-});
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
-const send = (method: "PUT" | "POST", url: string, body: unknown) =>
-  carrelRequest(
-    argsFor(
-      new Request(url, {
-        method,
-        headers: headersFor(testEnv.CARREL_SITE_KEY),
-        body: JSON.stringify(body),
-      }),
-    ),
-  );
 const pageData = (path: string) => pageLoader(argsFor(new Request(`${ORIGIN}${path}`)));
 const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const termsRow = () =>
@@ -65,7 +50,7 @@ afterEach(async () => {
 describe("/terms can never be unpublished or deleted", () => {
   it("REFUSES an unpublish through site-api, names the reason, and changes nothing", async () => {
     const before = await source(TERMS_FILE);
-    const response = await send("POST", `${PREFIX}/content/${TERMS_ID}/unpublish`, {
+    const response = await carrelSend("POST", `${PREFIX}/content/${TERMS_ID}/unpublish`, {
       expectedVersion: await versionOf(TERMS_FILE),
       changeId: "chg-unpublish-terms",
     });
@@ -80,7 +65,7 @@ describe("/terms can never be unpublished or deleted", () => {
   });
 
   it("keeps it published when a save's source says draft: true: a save keeps the stored status", async () => {
-    const response = await send("PUT", `${PREFIX}/content/${TERMS_ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${TERMS_ID}/draft`, {
       source: terms.replace(/^---\n/, "---\ndraft: true\n"),
       expectedVersion: await versionOf(TERMS_FILE),
       changeId: "chg-draft-terms",

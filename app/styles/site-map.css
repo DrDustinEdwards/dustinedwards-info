@@ -9,7 +9,7 @@
 .site-map-heading {
   margin: 0 0 var(--space-4);
   font-family: var(--font-sans);
-  font-size: 1.125rem;
+  font-size: var(--fs-h3);
   font-weight: var(--weight-heading);
   color: var(--text-heading);
 }
@@ -19,8 +19,8 @@
   padding: 0;
   list-style: none;
   font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  line-height: 1.5;
+  font-size: var(--fs-lead);
+  line-height: var(--leading-normal);
 }
 
 .site-map-list li + li {
@@ -30,7 +30,7 @@
 .site-map-list a {
   display: inline-block;
   min-block-size: var(--control-min-dense);
-  padding-block: 2px;
+  padding-block: var(--space-1);
   color: var(--brand);
 }
 
@@ -45,6 +45,6 @@
 /* A count with no index page of its own (Tags): text, not a link. */
 .site-map-plain {
   display: inline-block;
-  padding-block: 2px;
+  padding-block: var(--space-1);
   color: var(--text);
 }

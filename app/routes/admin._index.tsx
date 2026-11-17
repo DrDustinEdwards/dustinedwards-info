@@ -15,7 +15,6 @@ import { humanCheck, statusSentence } from "~/lib/admin/check-copy.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { syncStatus } from "~/lib/operator/api.server";
 import { getEnv } from "~/lib/context";
-import { askStatusContext } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin._index";
 import { plural } from "@drdustinedwards/site-helpers/text";
 
@@ -29,10 +28,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     const env = getEnv(context);
 
     const [health, stores] = await Promise.all([
-      /* The same memoized Ask listing the layout's badge uses, so the page lists the index once, not twice. */
-      timed(timings, "overview_health", () =>
-        runHealthChecks(env, { timings, askStatus: context.get(askStatusContext) }),
-      ),
+      timed(timings, "overview_health", () => runHealthChecks(env, { timings })),
       timed(timings, "overview_stores", () => syncStatus(env)),
     ]);
 

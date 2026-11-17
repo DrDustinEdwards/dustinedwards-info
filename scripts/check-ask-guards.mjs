@@ -10,8 +10,6 @@ import { stripComments } from "./lib/strip-comments.mjs";
 import { functionBody } from "./lib/source-body.mjs";
 
 import { originVerdict } from "@dustinedwards/site-runtime/origin";
-import { isPubliclyVisible } from "@drdustinedwards/site-helpers/search";
-import { statusForDraft } from "../app/lib/search/visibility.mjs";
 import { assertFloor } from "@dustinedwards/devkit/node";
 import { createTally } from "@dustinedwards/devkit/node";
 
@@ -174,164 +172,42 @@ const { eq } = tally;
   );
 }
 
-/** Drafts must never reach the AI index: Ask cannot filter at query time, so exclude at upload. */
+/*
+ * Drafts must never reach the AI index: Ask cannot filter at query time, so the corpus query AI Search runs excludes
+ * them. Its visibility is the shared SQL rule (visibilityClause, whose equivalence to publiclyVisible
+ * test/visibility-invariants.test.mjs proves) with the database's clock, since the query binds nothing;
+ * test/worker/visibility.test.ts runs it on a database holding a draft and a scheduled post.
+ */
 {
-  const now = Date.parse("2026-07-29T12:00:00.000Z");
-  /*
-   * The composition publishableForAsk is asserted below to be, run on the shared owners of the rule,
-   * so these cases exercise the production predicate rather than a copy defined here.
-   */
-  /** @param {{draft?: boolean, publishAt?: string|null}} p */
-  const publishable = (p) =>
-    isPubliclyVisible({ status: statusForDraft(p.draft), publishAt: p.publishAt }, now);
-
-  eq("a draft is not Ask-publishable", publishable({ draft: true }), false);
-  eq("a published post is Ask-publishable", publishable({ draft: false }), true);
-  eq(
-    "a future-dated post is not Ask-publishable",
-    publishable({ draft: false, publishAt: "2099-01-01T00:00:00.000Z" }),
-    false,
-  );
-  eq(
-    "a past-dated post is Ask-publishable",
-    publishable({ draft: false, publishAt: "2020-01-01T00:00:00.000Z" }),
-    true,
-  );
-  // The withdrawn case leaks silently: an indexed post set back to draft must be REMOVED.
-  eq(
-    "a withdrawn post is not Ask-publishable",
-    publishable({ draft: true, publishAt: "2020-01-01T00:00:00.000Z" }),
-    false,
-  );
-
-  const askRaw = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), "..", "app", "lib", "search", "ask.server.ts"),
-    "utf8",
-  );
-  const searchRaw = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), "..", "app", "lib", "search", "search.server.ts"),
-    "utf8",
-  );
-
-  /* Comments stripped before matching: a comment describing a removed filter would satisfy the count. */
-  const askSource = stripComments(askRaw);
+  const searchRaw = readFileSync(join(root, "app/lib/search/search.server.ts"), "utf8");
+  /* Comments stripped before matching: a comment describing a removed filter would satisfy it. */
   const searchSource = stripComments(searchRaw);
+  const queryAt = searchSource.indexOf("export const ASK_INDEX_QUERY =");
+  const query =
+    queryAt === -1 ? "" : searchSource.slice(queryAt, searchSource.indexOf(";", queryAt));
 
+  eq("ask index: ASK_INDEX_QUERY was found in search.server.ts", query.length > 200, true);
   eq(
-    "stripping comments left the module's code behind",
-    askSource.length > askRaw.length / 4 && /export async function syncAskCorpus/.test(askSource),
-    true,
-  );
-
-  eq(
-    "syncAskCorpus sources its records from askCorpusRecords",
-    // The first of the reads syncAskCorpus runs together, destructured as `records`.
-    /const \[records,[^\]]*\] = await Promise\.all\(\[\s*askCorpusRecords\(env\),/.test(askSource),
-    true,
-  );
-  eq(
-    "askCorpusRecords composes visibilityClause beside type='post'",
-    /SELECT url, title, body FROM search_docs WHERE type = 'post' AND\s*`\s*\+\s*visibilityClause\(\s*NO_ALIAS\s*\)/.test(
-      searchSource,
+    "ask index: its posts are type 'post' with the shared visibility rule on the database's clock",
+    /WHERE type = 'post' AND `\s*\+\s*visibilityClause\(\s*NO_ALIAS\s*,\s*"unixepoch\(\)"\s*\)/.test(
+      query,
     ),
     true,
   );
   eq(
-    "syncAskPost refuses a non-publishable post",
-    /askPublishable\(post\)\s*\?\s*recordsForPosts\(\[post\]\)\s*:\s*\[\]/.test(askSource),
-    true,
-  );
-
-  const askAt = askSource.search(/function publishableForAsk\b/);
-  eq("publishableForAsk exists in ask.server.ts", askAt !== -1, true);
-
-  const askBody = functionBody(askSource, /function publishableForAsk\b/);
-  eq("publishableForAsk's body was extracted", askBody.length > 40, true);
-
-  eq(
-    "publishableForAsk composes isPubliclyVisible, the shared owner of the rule",
-    /isPubliclyVisible\s*\(/.test(askBody),
+    "ask index: its papers are the published ones only",
+    /FROM publications WHERE status = '\$\{PUBLISHED_STATUS\}'/.test(query),
     true,
   );
   eq(
-    "publishableForAsk maps draft to status rather than testing draft itself",
-    /statusForDraft\s*\(/.test(askBody) && !/\.draft\s*===/.test(askBody),
-    true,
-  );
-  eq(
-    "publishableForAsk does not restate the publish-date rule",
-    !/Date\.parse\s*\([^)]*publishAt/.test(askBody),
-    true,
-  );
-
-  const bodyOf = (/** @type {string} */ src, /** @type {string} */ name) => {
-    const start = src.indexOf(`export async function ${name}(`);
-    if (start === -1) return "";
-    // To the first line that is exactly a closing brace, which is where a
-    // top-level function ends in this codebase's formatting.
-    const end = src.indexOf("\n}", start);
-    return end === -1 ? src.slice(start) : src.slice(start, end + 2);
-  };
-
-  const statusBody = bodyOf(askSource, "askIndexStatus");
-
-  eq(
-    "the askIndexStatus body was extracted, and it is that function alone",
-    statusBody.length > 80 &&
-      statusBody.length < askSource.length / 4 &&
-      !statusBody.includes("export function askStatusReader"),
-    true,
-  );
-
-  eq(
-    "askIndexStatus takes its expected set from askExpectedUrls",
-    /askExpectedUrls\(env\)/.test(statusBody) &&
-      /const expected = new Set\([\s\S]{0,200}\.map\(\(u\) => keyForUrl\(u\)\)/.test(statusBody),
-    true,
-  );
-  eq(
-    "askIndexStatus adds the published papers from the publications table through paperItemKeys, not from search_docs",
-    /paperItemKeys\(env\)/.test(statusBody) &&
-      /const expected = new Set\([\s\S]{0,200}\.\.\.paperKeys/.test(statusBody) &&
-      !/DB\.prepare|search_docs/.test(statusBody),
-    true,
-  );
-
-  eq(
-    "askIndexStatus builds its expected set from no other producer",
-    !/recordsForPosts\(/.test(statusBody),
-    true,
-  );
-  /* Scoped to the function body: zeroState sits below and composes visibilityClause itself. */
-  const expectedUrlsBody = bodyOf(searchSource, "askExpectedUrls");
-
-  eq(
-    "the askExpectedUrls body was extracted, and it is that function alone",
-    expectedUrlsBody.length > 80 &&
-      expectedUrlsBody.length < searchSource.length / 4 &&
-      !expectedUrlsBody.includes("export async function zeroState"),
-    true,
-  );
-
-  eq(
-    "askExpectedUrls composes visibilityClause rather than hand-copying it",
-    expectedUrlsBody.includes("visibilityClause(NO_ALIAS)"),
-    true,
-  );
-  eq(
-    "askExpectedUrls stays posts-only, or every page record reads as stale",
-    expectedUrlsBody.includes("type = 'post'"),
-    true,
-  );
-  eq(
-    "askExpectedUrls binds seconds, the unit publish_at is stored in",
-    expectedUrlsBody.includes("Math.floor(now.getTime() / 1000)"),
-    true,
+    "ask index: nothing else selects into it (search_docs, publications and the paper parts twice)",
+    (query.match(/\bFROM\b/g) ?? []).length,
+    4,
   );
 }
 
 /* Measured by running this gate, and it moves with the measurement: slack is the defect. */
-const MINIMUM_CHECKS = 55;
+const MINIMUM_CHECKS = 37;
 const floorBreach = assertFloor("check:ask-guards", "checks", tally.checks, MINIMUM_CHECKS);
 if (floorBreach) tally.fail(floorBreach);
 

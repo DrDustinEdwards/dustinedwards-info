@@ -5,13 +5,13 @@
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { gitBlobSha } from "../content/hashes.mjs";
-import { keyForUrl, urlForKey } from "../search/ask-keys.mjs";
+import { urlForRowId } from "../search/ask-citations.mjs";
 import { citationTags, REQUIRED_CITATION_TAGS } from "@drdustinedwards/site-helpers/scholar";
 import { citedByFetchedAt, citedByFor } from "./cited-by.mjs";
 import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { organismsIn, paperBibtex, paperRis } from "./exports.mjs";
 import { parsePublication, publicationPath } from "./parse.mjs";
-import { paperAskUrl, paperMarkdownPath, paperPath, paperPdfPath } from "./paths.mjs";
+import { paperAskUrl, paperPath, paperPdfPath } from "./paths.mjs";
 import { recordFromData } from "./record.mjs";
 import { paperSearchInputs } from "./search-inputs.mjs";
 import { paperTwin } from "./twin.mjs";
@@ -87,12 +87,9 @@ function derivedProblems(record, built) {
     );
   }
 
-  const key = keyForUrl(paperPath(slug));
-  if (key !== `research/publications/${slug}.md` || urlForKey(key) !== paperPath(slug)) {
-    errors.push(`Ask key: ${key} does not map back to ${paperPath(slug)}`);
-  }
-  if (`/${key}` !== paperMarkdownPath(slug))
-    errors.push(`Ask key: ${key} is not the twin's path ${paperMarkdownPath(slug)}`);
+  // The Ask index's id for a paper is its page (ASK_INDEX_QUERY), and a citation is that id read back.
+  if (urlForRowId(paperPath(slug)) !== paperPath(slug))
+    errors.push(`Ask citation: ${paperPath(slug)} does not cite its own page`);
   const askUrl = paperAskUrl(unescapeHtml(record.title));
   if (!askUrl.startsWith("/search?q=") || askUrl.length > ASK_URL_MAX)
     errors.push("Ask link: the quoted title does not build a /search URL");

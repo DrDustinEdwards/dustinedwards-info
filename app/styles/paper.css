@@ -15,13 +15,13 @@
   font-size: clamp(1.625rem, 1.2rem + 1.4vw, 2.125rem);
   font-weight: var(--weight-heading);
   letter-spacing: -0.008em;
-  line-height: 1.2;
+  line-height: var(--leading-tight);
 }
 
 /* Capsomer's author list (capsomer/author-list.css) under the title, at the head's 15px. */
 .paper-head .cap-author-list {
   margin: var(--space-5) 0 0;
-  font-size: 0.9375rem;
+  font-size: var(--fs-lead);
 }
 
 /* Capsomer's citation count (capsomer/cited-by.css) under the paper's links. */
@@ -34,8 +34,8 @@
   max-width: 54ch;
   color: var(--text);
   font-family: var(--font-serif);
-  font-size: 1.125rem;
-  line-height: 1.6;
+  font-size: var(--fs-h3);
+  line-height: var(--leading-relaxed);
 }
 
 .paper-abstract,
@@ -48,20 +48,20 @@
 .paper-abstract h2,
 .paper-data h2,
 .paper-text .cap-cited-by-title {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--space-3);
   color: var(--text-secondary);
   font-family: var(--font-serif);
-  font-size: 1.0625rem;
+  font-size: var(--fs-page);
   font-weight: var(--weight-heading);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 .paper-abstract p {
   margin: 0;
   max-width: 64ch;
   font-family: var(--font-serif);
-  font-size: 1.0625rem;
-  line-height: 1.7;
+  font-size: var(--fs-page);
+  line-height: var(--leading-loose);
 }
 
 /* The topic chips (capsomer/chips.css); this sets only their place under the paper. */
@@ -73,12 +73,12 @@
   margin: var(--space-6) 0 0;
   max-width: 54ch;
   border: var(--line-w) solid var(--border-warning);
-  padding: 0.75rem 1rem;
+  padding: var(--space-4) var(--space-5);
   background: var(--tint-warning);
   color: var(--on-tint-warning);
   font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  line-height: 1.6;
+  font-size: var(--fs-lead);
+  line-height: var(--leading-relaxed);
 }
 
 /* --rail is 0 below 48rem, and a child left in a zero-width track paints over what follows. */

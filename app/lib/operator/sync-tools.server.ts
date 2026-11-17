@@ -9,12 +9,7 @@ import { listDivergences } from "~/lib/editor/divergence.server";
 import { EditorError, currentHead, renderAndWrite } from "~/lib/editor/publish.server";
 import { deletePostFromD1 } from "~/lib/editor/post-rows.server";
 import { listPostFiles, readFile } from "~/lib/source/store.server";
-import {
-  askAvailable,
-  askIndexStatus,
-  pruneAskCorpus,
-  syncAskCorpus,
-} from "~/lib/search/ask.server";
+import { askAvailable, syncAskAndWait } from "~/lib/search/ask.server";
 import { siteAssetStatus, rebuildSiteAssets } from "~/lib/media/rebuild.server";
 import { dropHealthVerdicts } from "~/lib/health/verdict-cache.server";
 import {
@@ -102,29 +97,23 @@ import type { OperatorEnv } from "./auth.server";
 import type { ToolResult } from "./descriptors";
 import { askSyncReport, mediaSyncReport } from "./sync-report.mjs";
 
-// Posts published by COMMIT never pass through `savePost`, so this keeps Ask in step for them.
+// Posts published by COMMIT never pass through `savePost`, so a deploy asks for a sync and waits for it to end.
 export async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
   if (!askAvailable(env)) {
     // An absent binding means the feature is not here, rather than here and broken.
     return { ok: false, status: 404, error: "Ask is not enabled on this deployment." };
   }
 
-  const { uploaded, keys, failed, cacheDropped } = await syncAskCorpus(env);
-  const removed = await pruneAskCorpus(env, keys);
-
-  // The index is eventually consistent, so drift here may be a moment behind. A key in `failed` was
-  // never written, and the report refuses convergence on it.
-  const status = await askIndexStatus(env);
-
+  const { job, ended, status } = await syncAskAndWait(env, "sync_ask");
   return {
     ok: true,
     data: askSyncReport({
-      uploaded,
-      removed: removed.length,
-      cacheDropped,
+      job: job.id,
+      ended,
       expected: status.expected,
       present: status.present,
-      failed,
+      refused: status.failed,
+      indexing: status.indexing,
     }),
   };
 }

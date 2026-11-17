@@ -42,7 +42,7 @@ import "~/styles/search-page.css";
 import "~/styles/search-form.css";
 import "capsomer/field.css";
 import "capsomer/button.css";
-import "~/styles/ask.css";
+import "capsomer/ask-panel.css";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 const PAGE_SIZE = 10;

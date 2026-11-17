@@ -8,12 +8,16 @@ import { BASE, ok } from "../harness.mjs";
  * @param {{ postForShape: string | null, enhanceStems: Set<string>, publicConsoleErrors: string[] }} carried
  */
 export async function run({ page }, { postForShape, enhanceStems, publicConsoleErrors }) {
-  /* Never clicked: clicking bills. `data-ask-bound` is the bundle's own idempotence marker. */
+  /* Never clicked: clicking bills. `data-cap-ready` on the mount is the Ask panel's own idempotence marker. */
   await page.goto(`${BASE}/search?q=how+does+search+work`, { waitUntil: "networkidle0" });
   const askState = await page.evaluate(() => {
     const trigger = document.querySelector("[data-ask-trigger]");
     if (!(trigger instanceof HTMLElement)) return { present: false, visible: false, bound: false };
-    return { present: true, visible: !trigger.hidden, bound: trigger.dataset.askBound === "true" };
+    return {
+      present: true,
+      visible: !trigger.hidden,
+      bound: trigger.closest("[data-cap='ask']")?.hasAttribute("data-cap-ready") === true,
+    };
   });
   ok(
     "the Ask trigger is server-rendered, unhidden and bound",

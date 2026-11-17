@@ -21,7 +21,7 @@ import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
-import { thing } from "@drdustinedwards/site-helpers/schema";
+import { itemList, thing } from "@drdustinedwards/site-helpers/schema";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import {
   LIBRARY,
@@ -52,7 +52,6 @@ import "capsomer/catalog.css";
 import "capsomer/tabs.css";
 import "capsomer/step-indicator.css";
 import "~/styles/prose.css";
-import "~/styles/site-catalog.css";
 import "~/styles/library.css";
 import { RENDERED } from "~/lib/content/render-version";
 import { PROSE } from "~/lib/prose-context";
@@ -135,16 +134,11 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
     name: page.title,
     description: page.description,
     url: `${SITE_ORIGIN}${LIBRARY_PATH}`,
-    mainEntity: {
-      "@type": "ItemList",
-      numberOfItems: items.length,
-      itemListElement: items.map((item, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        name: item.title,
-        url: `${SITE_ORIGIN}${item.path}`,
-      })),
-    },
+    mainEntity: itemList(
+      SITE_ORIGIN,
+      page.title,
+      items.map((item) => ({ name: item.title, path: item.path })),
+    ),
   });
   return (
     <PageShell trail={<JsonLd data={collection} />}>
@@ -155,7 +149,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       <DraftNotice show={draft} />
       <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(intro)} />
       <LibraryOverview overview={libraryOverview(items)} />
-      <div className="library site-catalog site-catalog-wide">
+      <div className="library page-wide">
         <TabsNav aria-label="Protocols by kind of work" variant="line">
           {libraryTabs(items, result.state.filters.method ?? [], registry).map((tab) => (
             <TabLink key={tab.id} href={tab.href} current={tab.current} count={tab.count}>

@@ -20,10 +20,9 @@ import { refreshCvSearch } from "~/lib/cv/save.server";
 import { publicFileEntry, fileHistory, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
-import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
-import { askAvailable, syncAskPaper } from "~/lib/search/ask.server";
+import { askSyncAfterWrite } from "~/lib/search/ask.server";
 
 import { citationSeedsFrom } from "./cited-by.mjs";
 import { compilePublication } from "./compile.mjs";
@@ -176,32 +175,6 @@ async function rowIsCurrent(env: PublicationEnv, slug: string, blobSha: string) 
   return row?.source_blob_sha === blobSha;
 }
 
-/** The Ask index must not fail a save: the commit has landed. A failure is returned, never dropped. */
-async function syncAsk(env: PublicationEnv, compiled: Compiled) {
-  if (!askAvailable(env)) return null;
-  try {
-    const result = await syncAskPaper(
-      env,
-      compiled.record.slug,
-      compiled.draft ? null : compiled.twin,
-    );
-    return { ok: true as const, ...result };
-  } catch (error) {
-    console.error(
-      JSON.stringify({
-        alert: "ask-sync-failed-after-publication-save",
-        detail: errorMessage(error),
-      }),
-    );
-    return {
-      ok: false as const,
-      message:
-        `The publication saved, but its Ask record did not update: ${errorMessage(error)}. ` +
-        `The next ship's Ask sync converges it from the source.`,
-    };
-  }
-}
-
 /**
  * What the CV (content/cv/publications.md) makes of this save. The CV cites a paper by DOI and is joined to the
  * publications at read time, so a paper that stops being published, or whose DOI changes, would leave the CV
@@ -238,7 +211,7 @@ export type SavedPublication = {
   created: boolean;
   draft: boolean;
   purged: PurgeOutcome;
-  askSync: Awaited<ReturnType<typeof syncAsk>>;
+  askSync: Awaited<ReturnType<typeof askSyncAfterWrite>>;
   note?: string;
 };
 
@@ -327,6 +300,6 @@ export async function savePublication(
     created: options.isNew,
     draft: compiled.draft,
     purged,
-    askSync: await syncAsk(env, compiled),
+    askSync: await askSyncAfterWrite(env, `paper saved: ${compiled.record.slug}`),
   };
 }
