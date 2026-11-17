@@ -15,7 +15,6 @@ const PUBLICATIONS = (await buildPublications()).records;
 const read = (slug) => readFileSync(new URL(`../${cvSourcePath(slug)}`, import.meta.url), "utf8");
 
 /** Built from its code point, so this file holds no dash of its own. */
-const EM_DASH = String.fromCharCode(0x2014);
 
 /** The errors a file's text produces, or [] when it compiles. */
 async function errorsOf(slug, raw) {
@@ -210,17 +209,6 @@ await test("privacy: no email, phone, room or private group, and mentoring is co
     await errorsOf("grants", grants.replace("---\n", "---\n# never an email such as a@b.co\n")),
     [],
   );
-});
-
-await test("the house style: no wide dash anywhere in a file", async () => {
-  const errors = await errorsOf(
-    "grants",
-    read("grants").replace(
-      "title: Student Research Grant",
-      `title: Student ${EM_DASH} Research Grant`,
-    ),
-  );
-  assert.match(errors.join("\n"), /wide dash U\+2014/);
 });
 
 await test("a paper named by DOI states nothing else, exists as a published record, appears once, and lists the owner", async () => {

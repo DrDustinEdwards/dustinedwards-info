@@ -2,34 +2,6 @@
 // the roster photos read as orphans beside a delete button. "Unattached" is an ABSENCE of evidence, not
 // "unused". A file both cited and referenced reports USED, the claim that can name a post.
 
-export const USAGE_STATES = {
-  used: {
-    id: "used",
-    label: "used",
-    title: "Referenced by a post",
-    note: "The usage tracker found this address in published content.",
-  },
-  template: {
-    id: "template",
-    label: "in template",
-    title: "Placed by page code",
-    note:
-      "Found by scanning the repository, not the post index. A post-level " +
-      "tracker will always report this file as unreferenced.",
-  },
-  unattached: {
-    id: "unattached",
-    label: "unattached",
-    title: "No reference found",
-    note:
-      "Not found in posts or in repository code. Unattached is not the same as " +
-      "unused: a file can still be linked from outside the site, and a path the " +
-      "code builds at runtime is invisible to the scan. Verify before deleting.",
-  },
-};
-
-export const USAGE_ORDER = ["used", "template", "unattached"];
-
 /**
  * @param {{ postRefs: number, citations: number, templateRefs: number }} evidence
  * @returns {"used"|"template"|"unattached"}
@@ -38,26 +10,6 @@ export function usageStateOf(evidence) {
   if (evidence.postRefs > 0 || evidence.citations > 0) return "used";
   if (evidence.templateRefs > 0) return "template";
   return "unattached";
-}
-
-/**
- * @param {string} state
- * @returns {{ id: string, label: string, title: string, note: string }}
- */
-export function usageDescriptor(state) {
-  return (
-    /** @type {Record<string, typeof USAGE_STATES.used>} */ (USAGE_STATES)[state] ??
-    USAGE_STATES.unattached
-  );
-}
-
-/**
- * @param {string} state
- * @returns {number}
- */
-export function usageRank(state) {
-  const at = USAGE_ORDER.indexOf(state);
-  return at < 0 ? USAGE_ORDER.length : at;
 }
 
 export const LARGE_FILE_BYTES = 1024 * 1024;
@@ -96,24 +48,13 @@ export function tileFlagFor(row) {
   return null;
 }
 
-export const LENS_NOTES = {
-  unattached:
-    "No reference was found in posts or in repository code. That is not proof a " +
-    "file is unused: check before deleting.",
-  duplicates:
-    "These files share a content hash with another file. Both addresses serve " + "the same bytes.",
-  "no-alt":
-    "Images published without alt text. Documents are not listed; they do not " + "take alt text.",
-  large: "Large files slow the pages that embed them. Consider a smaller derivative.",
-};
-
 /**
  * Offered, never applied: alt text nobody read is worse than a visibly empty field.
  *
  * @param {string} base a filename, no directory
  * @returns {string}
  */
-export function suggestedAlt(base) {
+function suggestedAlt(base) {
   return base
     .replace(/\.[a-z0-9]+$/i, "")
     .replace(/[-_]+/g, " ")

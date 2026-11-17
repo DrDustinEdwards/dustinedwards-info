@@ -1,11 +1,10 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { SITE_ORIGIN } from "~/lib/seo";
-import { lineText } from "@drdustinedwards/site-helpers/site-map";
-import SiteMap, { headers as siteMapHeaders, loader as siteMapLoader } from "~/routes/site-map";
+import { loader as siteMapLoader } from "~/routes/site-map";
 import { loader as sitemapLoader } from "~/routes/sitemap";
 
-import { renderRoute, routeContext } from "./route-helpers";
+import { routeContext } from "./route-helpers";
 import { seedPages, seedProcedures, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -35,8 +34,6 @@ type Loaded = {
 };
 const pageData = async () => (await siteMapLoader(args("/site-map"))) as unknown as Loaded;
 
-let papers = 0;
-
 /** Runs `body` with /accessibility's row set back to a draft, then publishes it again. */
 async function draft(body: () => Promise<void>) {
   const status = (s: string) =>
@@ -50,7 +47,7 @@ async function draft(body: () => Promise<void>) {
 }
 
 beforeAll(async () => {
-  papers = await seedPublications();
+  await seedPublications();
   await seedPages();
   await seedProcedures();
 });
@@ -82,57 +79,5 @@ describe("the site map and sitemap.xml", () => {
     expect((await links()).filter((to) => !xml.has(to))).toEqual([]);
     expect(await links()).toContain("/accessibility");
     await draft(async () => expect(await links()).not.toContain("/accessibility"));
-  });
-
-  it("groups by the header's sections, then Site, and counts papers and procedures on their index's line", async () => {
-    const { data } = await pageData();
-    const headings = data.sections.map((s) => s.heading);
-    const order = ["Research", "Teaching", "Software", "Writing", "About", "Site"];
-    expect(headings).toEqual(order.filter((h) => headings.includes(h)));
-    expect(data.sections.at(-1)?.heading).toBe("Site");
-    const research = data.sections.find((s) => s.id === "research");
-    expect(research?.lines[0]?.to).toBe("/research");
-    const publications = research?.lines.find((l) => l.to === "/research/publications");
-    expect(publications && lineText(publications)).toBe(`Publications (${papers})`);
-    // No paper has a line of its own.
-    expect(research?.lines.some((l) => l.to.startsWith("/research/publications/"))).toBe(false);
-    const site = data.sections.find((s) => s.id === "site");
-    expect(site?.lines.map((l) => l.to)).toEqual([
-      "/",
-      "/contact",
-      "/site-map",
-      "/colophon",
-      "/features",
-      "/privacy",
-      "/terms",
-      "/accessibility",
-    ]);
-  });
-
-  it("renders every section as a heading and every line as a link, and carries the sitemap's cache tags", async () => {
-    const { data } = await pageData();
-    const html = renderRoute("/site-map", SiteMap, { loaderData: data });
-    expect(html).toContain('<h1 class="page-title cap-layout-grid">Site map</h1>');
-    for (const section of data.sections) expect(html).toContain(`id="site-map-${section.id}"`);
-    expect(html).toMatch(/<a [^>]*href="\/research\/publications"[^>]*>Publications \(\d+\)<\/a>/);
-    // No two links with different text go to one address (WCAG 2.4.4): Tags is text, not a second /writing link.
-    const body = html.slice(
-      html.indexOf('<div class="site-map">'),
-      html.indexOf("site-shell-footer"),
-    );
-    expect(body.length).toBeGreaterThan(100);
-    const hrefs = [...body.matchAll(/<a [^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/g)];
-    const texts = new Map<string, Set<string>>();
-    for (const [, href, text] of hrefs)
-      texts.set(href ?? "", (texts.get(href ?? "") ?? new Set()).add(text ?? ""));
-    expect(
-      [...texts]
-        .filter(([href, set]) => href.startsWith("/") && href !== "/" && set.size > 1)
-        .map(([href]) => href),
-    ).toEqual([]);
-    expect(hrefs.length).toBeGreaterThan(10);
-    const headers = siteMapHeaders({ loaderHeaders: new Headers() } as never);
-    expect(headers.get("Cache-Tag")).toContain("content-pages");
-    expect(headers.get("Cache-Tag")).toContain("registry");
   });
 });

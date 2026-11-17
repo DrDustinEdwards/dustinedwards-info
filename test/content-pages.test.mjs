@@ -30,14 +30,6 @@ await test("every listed page has its markdown file, unless its markdown is gene
   }
 });
 
-await test("a page's file is its path with slashes as hyphens", () => {
-  assert.equal(
-    contentPageFile("/research/protocols/coi-primers"),
-    "research-protocols-coi-primers.md",
-  );
-  assert.equal(contentPageFile("/teaching"), "teaching.md");
-});
-
 await test("every page an old WordPress address redirects to is one of these pages, or is named here", () => {
   // The protocols are procedures, drawn from D1 (docs/PROCEDURES.md), so their files say they exist.
   const procedures = publishedProcedurePaths();

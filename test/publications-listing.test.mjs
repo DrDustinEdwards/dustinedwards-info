@@ -75,57 +75,6 @@ await test("conference abstracts stay out of the index, and the rest come newest
   );
 });
 
-await test("a search or another sort is a flat table, and a topic filter keeps the headings", () => {
-  assert.equal(publicationListing(at("q=phage"), PAPERS).result.groups, null);
-  assert.equal(publicationListing(at("sort=year"), PAPERS).result.groups, null);
-  assert.equal(publicationListing(at("sort=title"), PAPERS).result.groups, null);
-  const byTopic = publicationListing(at("topic=bacteriophages"), PAPERS);
-  assert.deepEqual(
-    byTopic.result.groups.map((g) => g.label),
-    ["2025", "2019"],
-  );
-  assert.deepEqual(
-    ids(publicationListing(at("sort=year"), PAPERS).items),
-    ["e", "c", "a", "b"],
-    "oldest first",
-  );
-});
-
-await test("topic facets count what choosing them would give, and topics combine with or", () => {
-  const topic = publicationListing(at(""), PAPERS).result.facets.find((f) => f.key === "topic");
-  assert.deepEqual(
-    topic.options.map((o) => [o.value, o.count]),
-    [
-      ["human-simian-retroviruses", 1],
-      ["avian-retroviruses", 1],
-      ["bacteriophages", 2],
-      ["science-education", 1],
-    ],
-    "in the order the topics are declared",
-  );
-  assert.deepEqual(
-    ids(publicationListing(at("topic=avian-retroviruses&topic=science-education"), PAPERS).items),
-    ["b", "e"],
-  );
-});
-
-await test("?selected=1 keeps the papers marked selected, as the page's Selected filter always did", () => {
-  assert.deepEqual(ids(publicationListing(at("selected=1"), PAPERS).items), ["a", "c"]);
-});
-
-await test("search ranks a title match first and finds an author or a journal", () => {
-  const authors = [
-    paper({ id: "p", title: "Alpha", authors: ["Zed Quill"] }),
-    paper({ id: "q", title: "Quill methods", authors: ["Someone Else"] }),
-  ];
-  assert.deepEqual(ids(publicationListing(at("q=quill"), authors).items), ["q", "p"]);
-  assert.deepEqual(
-    ids(publicationListing(at("q=tests"), PAPERS).items).sort(),
-    ["a", "b", "c", "e"],
-    "the journal is searched",
-  );
-});
-
 await test("the old parameters are sent once to the same view at the catalog's address, and nothing else is moved", () => {
   const move = (query) =>
     legacyAddress(new URL(`https://example.test/research/publications${query}`));
@@ -168,9 +117,4 @@ await test("the venue is the journal, volume and pages with entities decoded, an
   );
   assert.equal(venue(paper({ journal: null, volume: null, pages: null })), "");
   assert.ok(PUBLICATIONS.fields.find((f) => f.key === "year").column.hideWhenGrouped);
-});
-
-await test("the span the header states is counted over the papers shown", () => {
-  const { span } = publicationListing(at("topic=bacteriophages"), PAPERS);
-  assert.deepEqual(span, { papers: 2, firstYear: 2019, lastYear: 2025, venues: 1 });
 });

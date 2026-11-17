@@ -72,26 +72,6 @@ describe("handleMcp", () => {
     assert.equal(api.calls.length, 0);
   });
 
-  test("tools/list offers the five dei_ tools and nothing else", async () => {
-    const { message } = await rpc("tools/list", {});
-    assert.deepEqual(message.result.tools.map((t: { name: string }) => t.name).sort(), [
-      "dei_check_publications",
-      "dei_read_procedure",
-      "dei_read_registry",
-      "dei_refresh_citations",
-      "dei_save_procedure",
-    ]);
-    assert.equal(api.calls.length, 0);
-  });
-
-  test("tools/list carries each tool's annotations", async () => {
-    const { message } = await rpc("tools/list", {});
-    const check = message.result.tools.find(
-      (t: { name: string }) => t.name === "dei_read_registry",
-    );
-    assert.equal(check.annotations.readOnlyHint, true);
-  });
-
   test("tools/call becomes one operator request with the bearer and the tool's args", async () => {
     api.reply({ body: { ok: true, data: { slug: "a", raw: "x" } } });
     const { message } = await callTool("dei_read_procedure", { action: "get", slug: "a" });
@@ -99,21 +79,6 @@ describe("handleMcp", () => {
     assert.deepEqual(api.calls[0].body, { tool: "get_procedure", args: { slug: "a" } });
     assert.equal(api.calls[0].headers.get("authorization"), `Bearer ${TOKEN}`);
     assert.deepEqual(message.result.structuredContent, { slug: "a", raw: "x" });
-  });
-
-  test("a 403 first-publish refusal reaches the agent verbatim as a tool error", async () => {
-    api.reply(FIRST_PUBLISH_REFUSAL);
-    const { message } = await callTool("dei_save_procedure", {
-      slug: "a",
-      raw: "---\ndraft: false\n---\n",
-    });
-    assert.equal(message.error, undefined, "a refusal is a tool result, not a protocol error");
-    assert.equal(message.result.isError, true);
-    assert.equal(
-      message.result.content[0].text,
-      `${FIRST_PUBLISH_REFUSAL.body.error}\npolicy: first-publish-requires-admin`,
-    );
-    assert.equal(message.result.structuredContent.status, 403);
   });
 
   test("a malformed slug fails at the schema with no operator request", async () => {

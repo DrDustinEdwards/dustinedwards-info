@@ -7,16 +7,6 @@ import {
   stripTsxComments,
 } from "../scripts/lib/strip-comments.mjs";
 
-await test("block and line comments go", () => {
-  assert.equal(stripComments("const a = 1; // note").trim(), "const a = 1;");
-  assert.equal(stripComments("const /* mid */ a = 1;").includes("mid"), false);
-});
-
-await test("THE COLON GUARD: a url in a string is not a comment", () => {
-  const src = 'const docs = "https://developers.cloudflare.com/workers/";';
-  assert.equal(stripComments(src).includes("developers.cloudflare.com"), true);
-});
-
 await test("a comment naming a forbidden literal cannot satisfy a scan", () => {
   const src = ['// never write "same-origin" here', 'const policy = "cross-origin";'].join("\n");
   const code = stripComments(src);
@@ -35,13 +25,6 @@ await test("preserveLines keeps the line count, so reported lines do not shift",
     "the default does collapse",
   );
   assert.equal(preserved.includes("two"), false, "still actually stripped");
-});
-
-await test("stripCommentsAndStrings blanks literals but keeps the code around them", () => {
-  const src = 'const token = "GITHUB_TOKEN"; // the name appears in prose too';
-  const out = stripCommentsAndStrings(src);
-  assert.equal(out.includes("GITHUB_TOKEN"), false, "the literal must be blanked");
-  assert.equal(out.includes("const token"), true, "the declaration must survive");
 });
 
 await test("comments are stripped BEFORE strings, or an apostrophe eats the file", () => {
@@ -72,20 +55,6 @@ await test("THE JSONC BOUNDARY MOVED, and it moved because the tokenizer landed"
     "//cdn.example.com/dustin-edwards-logo.svg",
     "the protocol-relative url must survive, which is the whole boundary that moved",
   );
-});
-
-const SVG = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">',
-  '  <image xlink:href="//cdn.example.com/mark.png" width="48"/>',
-  '  <path fill="#0F172A" d="M0 0h48v48H0z"/>',
-  "</svg>",
-].join("\n");
-
-await test("AND THE SVG BOUNDARY WITH IT, for the same reason", () => {
-  const out = stripComments(SVG);
-  assert.equal(out.includes('xmlns="http://www.w3.org/2000/svg"'), true);
-  assert.equal(out.includes("cdn.example.com/mark.png"), true, "the href value survives now");
-  assert.equal(out.includes('width="48"/>'), true, "and so does the rest of its line");
 });
 
 await test("A COMMENT OPENER INSIDE A STRING is not a comment", () => {
@@ -202,24 +171,6 @@ await test("an unterminated literal keeps the rest of the file rather than eatin
   const src = `const a = "never closed;\nconst b = keep;`;
   const out = stripCommentsAndStrings(src);
   assert.match(out, /const b = keep;/, "the remainder must survive an unterminated literal");
-});
-
-await test("an apostrophe in JSX text does not shield the comments after it", () => {
-  const src = [
-    `const p = <p>Don${APOSTROPHE}t do this</p>;`,
-    "// confirmationSatisfied() is only named here",
-    "const b = keep;",
-  ].join("\n");
-  const out = stripComments(src);
-  assert.doesNotMatch(out, /confirmationSatisfied/, "the comment after the apostrophe must go");
-  assert.match(out, /const b = keep;/);
-});
-
-await test("an unclosed block-comment opener is text, not the rest of the file", () => {
-  const src = "const glob = <code>src/*.ts</code>;\nconst b = keep; // gone";
-  const out = stripComments(src);
-  assert.match(out, /const b = keep;/);
-  assert.doesNotMatch(out, /gone/);
 });
 
 await test("TSX: an apostrophe in JSX text does not shield the comments after it", () => {

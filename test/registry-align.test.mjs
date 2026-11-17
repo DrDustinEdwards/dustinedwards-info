@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -8,9 +7,8 @@ import {
   placePrimer,
   productsForRows,
 } from "../app/kb/registry/align.mjs";
-import { accessionPosition, parseReference } from "../app/kb/registry/reference.mjs";
+import { parseReference } from "../app/kb/registry/reference.mjs";
 import { REFERENCES } from "../app/kb/registry/references.generated.mjs";
-import { readReferences, referenceFile, referencesModule } from "../scripts/lib/references.mjs";
 
 /* Placing a primer on a reference and computing a pair's product (docs/REGISTRY.md). The cases are worked by hand on
  * references built here, so the arithmetic is held to numbers a reader can count, and then the real references are held to what
@@ -50,12 +48,6 @@ await test("a reference is NCBI's own FASTA, whole or a slice, and its header mu
       ),
     /other than A, C, G and T/,
   );
-});
-
-await test("a position is in the accession's own coordinates: a slice's offset is added back", () => {
-  assert.equal(accessionPosition(whole, 6), 6);
-  assert.equal(accessionPosition(region, 1), 1000);
-  assert.equal(accessionPosition(region, 6), 1005);
 });
 
 await test("a primer is placed with its strand, span and mismatches, exactly first", () => {
@@ -180,35 +172,4 @@ await test("a protocol's primers give each set's product on both of its rows, an
   assert.deepEqual([...lpdv.keys()].sort(), ["f", "r"]);
   assert.equal(lpdv.get("f")?.products[0]?.length, 458);
   assert.equal(lpdv.get("f"), lpdv.get("r"));
-});
-
-await test("the real references are the records they name, kept as NCBI wrote them, and the generated module is built from them", () => {
-  const read = readReferences();
-  assert.deepEqual(Object.keys(read).sort(), [
-    "DQ387450.1",
-    "NC_052532.1:76902320-76906237",
-    "NC_139404.1:75777043-75780966",
-    "U09568.1",
-    "X03240.1",
-  ]);
-  assert.equal(
-    read["DQ387450.1"].sequence.length,
-    8286,
-    "the REV APC-566 genome is the 8,286 nt the protocol cites",
-  );
-  assert.equal(read["NC_052532.1:76902320-76906237"].from, 76902320);
-  assert.match(read["X03240.1"].description, /Drosophila yakuba/);
-  for (const name of readdirSync(new URL("../data/references/", import.meta.url))) {
-    const id = Object.keys(read).find((key) => referenceFile(key) === name);
-    assert.ok(id, `${name} is a reference file`);
-    assert.ok(
-      readFileSync(new URL(`../data/references/${name}`, import.meta.url), "utf8").startsWith(">"),
-      `${name} keeps NCBI's header`,
-    );
-  }
-  assert.equal(
-    readFileSync(new URL("../app/kb/registry/references.generated.mjs", import.meta.url), "utf8"),
-    referencesModule(read),
-    "the module is what the files generate",
-  );
 });

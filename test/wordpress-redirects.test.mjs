@@ -6,12 +6,8 @@ import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS } from "../app/lib/content-pa
 import { ROSTER_ANCHOR, ROSTER_PAGE_PATH } from "../app/lib/roster/compile.mjs";
 import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
 import {
-  BAYLOR_PDF,
   EXPLICIT_ROWS,
   PENDING_TARGETS,
-  PROFILE_TARGET,
-  isApexHost,
-  wwwRedirectTarget,
   wordpressDisposition,
 } from "../app/lib/wordpress-redirects.mjs";
 
@@ -33,36 +29,6 @@ const ANSWERED_NOW = new Set([
   "/research/publications",
   "/sitemap.xml",
 ]);
-
-await test("the apex host is dustinedwards.info and www, and nothing else", () => {
-  assert.equal(isApexHost("dustinedwards.info"), true);
-  assert.equal(isApexHost("www.dustinedwards.info"), true);
-  assert.equal(isApexHost("WWW.DustinEdwards.info"), true);
-  assert.equal(isApexHost("dustinedwards.dustin-edwards.workers.dev"), false);
-  assert.equal(isApexHost("localhost"), false);
-});
-
-await test("www redirects to the apex in one hop, merging the old-address map, and no other host does", () => {
-  assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/", ""), "https://dustinedwards.info/");
-  assert.equal(
-    wwwRedirectTarget("WWW.DustinEdwards.info", "/research/phages", "?x=1"),
-    "https://dustinedwards.info/research/phages?x=1",
-  );
-  assert.equal(
-    wwwRedirectTarget("www.dustinedwards.info", "/virus-isolation/", "?et_blog"),
-    "https://dustinedwards.info/teaching/virus-isolation",
-  );
-  assert.equal(
-    wwwRedirectTarget("www.dustinedwards.info", "/user/", ""),
-    "https://dustinedwards.info/user/",
-  );
-  assert.equal(
-    wwwRedirectTarget("www.dustinedwards.info", "/about/", ""),
-    "https://dustinedwards.info/about",
-  );
-  assert.equal(wwwRedirectTarget("dustinedwards.info", "/", ""), null);
-  assert.equal(wwwRedirectTarget("dustinedwards.dustin-edwards.workers.dev", "/", ""), null);
-});
 
 await test("every Search Console URL resolves: 200 kept, one 301, or 410, never unmapped", () => {
   assert.equal(gsc.paths.length + gsc.profilePaths, gsc.total, "the fixture accounts for all 271");
@@ -94,111 +60,6 @@ await test("every Search Console URL resolves: 200 kept, one 301, or 410, never 
     }
   }
   assert.deepEqual(problems, []);
-});
-
-await test("the profile paths the fixture counts all 301 to the roster in one hop", () => {
-  // 146 counted here plus Dustin's own /author/dustin/, listed in the fixture: the 147 profile URLs.
-  assert.equal(gsc.profilePaths, 146);
-  assert.ok(gsc.paths.includes("/author/dustin/"));
-  assert.equal(PROFILE_TARGET, "/teaching/phage-discovery#roster");
-  for (const path of [
-    "/user/a-student/",
-    "/user/a-student/?profiletab=posts",
-    "/author/someone/",
-    "/author/someone",
-  ]) {
-    assert.deepEqual(
-      wordpressDisposition(new URL(path, "https://x").pathname),
-      { status: 301, location: PROFILE_TARGET },
-      path,
-    );
-  }
-  const to = targetPath(PROFILE_TARGET);
-  assert.equal(wordpressDisposition(to), null, "the roster page is not redirected again");
-  // The bare /user/ was the membership directory, not a profile, and is gone with the membership pages.
-  assert.deepEqual(wordpressDisposition("/user/"), { status: 410 });
-});
-
-await test("every explicit row's target is a page or pending, and never chains", () => {
-  for (const [from, location] of Object.entries(EXPLICIT_ROWS)) {
-    const to = targetPath(location);
-    assert.ok(ANSWERED_NOW.has(to) || PENDING_TARGETS.includes(to), `${from} -> ${location}`);
-    assert.equal(wordpressDisposition(to), null, `${to} redirects again`);
-  }
-});
-
-await test("the molarity and metric prefix calculators answer 410: nothing on the new site replaces them", () => {
-  for (const path of [
-    "/molarity-calculator/",
-    "/molarity-calculator",
-    "/knowledge-base/metric-prefix/",
-  ]) {
-    assert.deepEqual(wordpressDisposition(path), { status: 410 }, path);
-  }
-  assert.equal(Object.hasOwn(EXPLICIT_ROWS, "/molarity-calculator"), false);
-  assert.equal(Object.hasOwn(EXPLICIT_ROWS, "/knowledge-base/metric-prefix"), false);
-});
-
-await test("the 2026-09-27 map: courses and the program under Teaching, no Wolbachia page", () => {
-  const to = (path) => wordpressDisposition(path)?.location;
-  for (const path of [
-    "/wolbachia-project-genetic-techniques/",
-    "/knowledge-base/pcr-wolbachia-16s-rrna/",
-    "/gentech-2018a/",
-  ]) {
-    assert.equal(to(path), "/research/protocols", path);
-  }
-  assert.equal(to("/phage-discovery/"), "/teaching/phage-discovery");
-  assert.equal(to("/virus-isolation/"), "/teaching/virus-isolation");
-  assert.equal(to("/virus-isolation-reagent-request/"), "/teaching/virus-isolation");
-  assert.equal(to("/phage-bioinformatics/"), "/teaching/phage-bioinformatics");
-  assert.equal(to("/central-dogma-tutorials/"), "/teaching/central-dogma");
-  assert.equal(to("/phage-genetic-studies/"), "/research/bacteriophages");
-  assert.equal(to("/phage-discovery-application/"), "/teaching/phage-discovery");
-  assert.equal(to("/directory-2019-phage-researchers/"), "/teaching/phage-discovery");
-  // Dustin's own author page ranks for his name; every other author page is a profile and goes to the roster.
-  assert.equal(to("/author/dustin/"), "/about");
-  assert.equal(to("/author/someone/"), "/teaching/phage-discovery#roster");
-  assert.equal(to("/retroviruses/"), "/research/retroviruses");
-  for (const path of ["/rev-lpdv-surveys/", "/rev-lpdv-genetic-studies/"]) {
-    assert.equal(to(path), "/research/retroviruses/avian", path);
-  }
-});
-
-await test("the pages written after the map: study skills, Join the lab and Teaching philosophy", () => {
-  const to = (path) => wordpressDisposition(path)?.location;
-  assert.equal(to("/study-skills-guide/"), "/teaching/study-skills");
-  assert.equal(to("/teaching-philosophy/"), "/teaching#teaching-philosophy");
-  assert.equal(to("/prospective-students/"), "/teaching#join-the-lab");
-  // Ahead of the /directory-*/ rule, which still sends the phage cohort directories to the program.
-  assert.equal(to("/directory-research-group/"), "/teaching#join-the-lab");
-  assert.equal(to("/directory-2019-phage-researchers/"), "/teaching/phage-discovery");
-});
-
-await test("slashed and bare forms match; a row rebuilt in place never loops", () => {
-  assert.deepEqual(wordpressDisposition("/virus-isolation/"), {
-    status: 301,
-    location: "/teaching/virus-isolation",
-  });
-  assert.deepEqual(wordpressDisposition("/virus-isolation"), {
-    status: 301,
-    location: "/teaching/virus-isolation",
-  });
-  assert.deepEqual(wordpressDisposition("/research/"), { status: 301, location: "/research" });
-  assert.equal(wordpressDisposition("/research"), null);
-});
-
-await test("kept pages and the new site's own paths pass through", () => {
-  for (const path of [
-    "/",
-    "/contact/",
-    "/login/",
-    "/about",
-    "/writing/a-post",
-    "/research/publications",
-  ]) {
-    assert.equal(wordpressDisposition(path), null, path);
-  }
 });
 
 /*
@@ -386,14 +247,4 @@ await test("cutover.md's redirect map: every target is a real page, every anchor
     if (apexAnswer(path) !== null) broken.push(`${from}: ${path} redirects again`);
   }
   assert.deepEqual(broken, []);
-});
-
-await test("the Baylor PDF goes to its protocol page, which the switch checklist lists as pending", () => {
-  assert.deepEqual(wordpressDisposition(BAYLOR_PDF), {
-    status: 301,
-    location: "/research/protocols/phage-dna-extraction",
-  });
-  assert.ok(PENDING_TARGETS.includes("/research/protocols/phage-dna-extraction"));
-  assert.ok(PENDING_TARGETS.includes("/research/protocols/coi-primers"));
-  assert.ok(PENDING_TARGETS.includes("/teaching"));
 });

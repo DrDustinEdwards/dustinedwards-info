@@ -376,7 +376,8 @@ function photoObject(origin: string, photo: { key: string; width: number; height
 const GERMOMICS_URL = "https://germomics.com/";
 export const GERMOMICS_X_URL = "https://x.com/Germomics";
 
-// The footer's `rel="me"` profiles, in order. `check:machine-readable` reads this list.
+// The footer's `rel="me"` profiles, in order.
+/** @public read by check:machine-readable (scripts/machine-readable/microformats.mjs) from a bundle Knip cannot follow */
 export const OWNER_PROFILES = [OWNER_SCHOLAR, OWNER_ORCID, OWNER_PUBMED] as const;
 
 const OWNER_SAME_AS = [

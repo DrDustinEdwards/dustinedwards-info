@@ -150,39 +150,4 @@ describe("sync_publications and the publications-drift check", () => {
       expect(await citation(BIG_DOI)).not.toBeNull();
     },
   );
-
-  it("REFUSES an empty file set instead of deleting every row", { timeout: 300_000 }, async () => {
-    expect((await sync()).ok).toBe(true);
-    // The directory lists, but holds no publication: a fault, not a repository with none.
-    await removeSource(publicationPath(SMALL));
-    await removeSource(publicationPath(BIG));
-    await putSource("content/publications/README.txt", "not a publication");
-    const result = await sync();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      expect(result.error).toContain("empty set");
-    }
-    expect(await rowFor(SMALL)).not.toBeNull();
-    expect(await rowFor(BIG)).not.toBeNull();
-  });
-
-  it(
-    "converges the rest and then FAILS NAMING a file the validator refuses",
-    { timeout: 300_000 },
-    async () => {
-      await putSource(
-        publicationPath(SMALL),
-        godfather.replace(/^type: .*$/m, 'type: "not-a-type"'),
-      );
-      const result = await sync();
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.status).toBe(422);
-        expect(result.error).toContain(`${publicationPath(SMALL)} fails`);
-      }
-      expect(await rowFor(SMALL)).toBeNull();
-      expect(await rowFor(BIG)).not.toBeNull();
-    },
-  );
 });

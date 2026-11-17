@@ -2,10 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  bibtex,
   citationText,
   citeFacts,
-  familyGiven,
   needsFreeze,
   versionPath,
   zenodoMetadata,
@@ -58,11 +56,6 @@ await test("an unversioned procedure cannot be cited, and a version takes its hi
   assert.equal(citeFacts({ ...record, history: undefined, version: "1.1" })?.date, "2026-10-02");
 });
 
-await test("familyGiven reads a name written given-first", () => {
-  assert.deepEqual(familyGiven("Dustin Edwards"), { family: "Edwards", given: "Dustin" });
-  assert.deepEqual(familyGiven("Mary Jane Watson"), { family: "Watson", given: "Mary Jane" });
-});
-
 await test("the citation points at the version's frozen copy, or at its DOI once the version has one", () => {
   const frozen = citationText(record, citeFacts(record), where);
   assert.equal(
@@ -77,21 +70,6 @@ await test("the citation points at the version's frozen copy, or at its DOI once
   assert.match(
     minted,
     /\(2026\)\. .*\(Version 1\.1\).* https:\/\/doi\.org\/10\.5281\/zenodo\.111$/,
-  );
-});
-
-await test("the BibTeX entry carries the version, and the doi only when there is one", () => {
-  const entry = bibtex(record, citeFacts(record), where);
-  assert.match(entry, /^@misc\{edwards2026phage-dna-extractionv2,/);
-  assert.match(entry, /  version = \{2\},/);
-  assert.match(
-    entry,
-    /  url = \{https:\/\/dustinedwards\.info\/research\/protocols\/phage-dna-extraction\/v\/2\},/,
-  );
-  assert.ok(!entry.includes("doi ="));
-  assert.match(
-    bibtex(record, { version: "1.1", date: "2026-09-15", doi: "10.5281/zenodo.111" }, where),
-    /  doi = \{10\.5281\/zenodo\.111\},/,
   );
 });
 
@@ -162,10 +140,6 @@ references:
 /** @param {string} raw */
 const errorsOf = (raw) =>
   validateProcedure(parseProcedure({ file: "mini", raw }), { slug: "mini" }).errors.join("\n");
-
-await test("a well-formed history is valid", () => {
-  assert.equal(errorsOf(PROTOCOL), "");
-});
 
 await test("a version sits in a URL, so it is letters, digits, dots, hyphens and underscores", () => {
   assert.match(

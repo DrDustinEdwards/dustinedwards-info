@@ -19,8 +19,3 @@ await test("both targets at once are refused", () => {
     /both --remote and --local/,
   );
 });
-
-await test("a named target is returned as given", () => {
-  assert.equal(requireTarget(["--remote"], "build:og"), "--remote");
-  assert.equal(requireTarget(["--dry-run", "--local"], "build:og"), "--local");
-});

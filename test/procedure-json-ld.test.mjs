@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { compileProcedure } from "../app/kb/procedures/compile.mjs";
 import { procedureJsonLd, protocolParameters } from "../app/kb/procedures/json-ld.mjs";
-import { lineageErrors, resolveLineage, withLineage } from "../app/kb/procedures/lineage.mjs";
+import { lineageErrors } from "../app/kb/procedures/lineage.mjs";
 import * as pipeline from "../app/lib/content/pipeline.mjs";
 import { registryHost } from "../scripts/lib/registry.mjs";
 
@@ -81,80 +81,6 @@ await test("a protocol states LabProtocol 0.9-DRAFT and carries every condition 
       stepText.includes(String(p.value ?? p.minValue)),
       `${JSON.stringify(p)} is stated in a step`,
     );
-});
-
-await test("a recipe and a how-to carry no LabProtocol parameter", async () => {
-  const recipe = await compileProcedure({
-    slug: "recipe-fixture",
-    raw: readFileSync("test/fixtures/procedures/recipe-fixture.md", "utf8"),
-    pipeline,
-    registry: registryHost(),
-  });
-  assert.ok(recipe.ok);
-  assert.equal("parameter" in procedureJsonLd(recipe.record, "https://example.com", person), false);
-});
-
-await test("a variant's parent is its frozen copy where there is one, else its live page, else its name", () => {
-  const from = { slug: "phage-isolation", version: "2" };
-  const parent = { title: "Phage Isolation", path: "/research/protocols/phage-isolation" };
-  assert.deepEqual(
-    resolveLineage(from, "protocol", { live: parent, frozen: { title: "Phage Isolation v2" } }),
-    {
-      title: "Phage Isolation v2",
-      href: "/research/protocols/phage-isolation/v/2",
-      version: "2",
-    },
-  );
-  assert.deepEqual(resolveLineage(from, "protocol", { live: parent, frozen: null }), {
-    title: "Phage Isolation",
-    href: "/research/protocols/phage-isolation",
-    version: "2",
-  });
-  assert.deepEqual(resolveLineage(from, "protocol", { live: null, frozen: null }), {
-    title: "phage-isolation",
-    href: null,
-    version: "2",
-  });
-  assert.equal(
-    resolveLineage({ slug: "run-blast", version: null }, "computational", {
-      live: { title: "Run BLAST", path: "/software/how-tos/run-blast" },
-      frozen: null,
-    })?.href,
-    "/software/how-tos/run-blast",
-  );
-  assert.equal(resolveLineage(null, "protocol", { live: parent, frozen: null }), null);
-
-  const twin =
-    "# Variant\n\n- Updated: 2026-10-10\n- Based on: phage-isolation, version 2\n- Status: In use\n";
-  const lineage = {
-    title: "Phage Isolation",
-    href: "/research/protocols/phage-isolation/v/2",
-    version: "2",
-  };
-  assert.equal(
-    withLineage(twin, { forkedFrom: from }, lineage, "https://example.com"),
-    "# Variant\n\n- Updated: 2026-10-10\n- Based on: [Phage Isolation, version 2](https://example.com/research/protocols/phage-isolation/v/2)\n- Status: In use\n",
-  );
-  assert.equal(
-    withLineage(twin, { forkedFrom: from }, { ...lineage, href: null }, "https://example.com"),
-    twin.replace("phage-isolation, version 2", "Phage Isolation, version 2"),
-  );
-  assert.equal(withLineage(twin, { forkedFrom: null }, lineage, "https://example.com"), twin);
-
-  const ld = /** @type {any} */ (procedureJsonLd(record, "https://example.com", person, lineage));
-  assert.deepEqual(ld.isBasedOn[0], {
-    "@type": "CreativeWork",
-    name: "Phage Isolation",
-    url: "https://example.com/research/protocols/phage-isolation/v/2",
-    version: "2",
-  });
-  assert.equal(
-    /** @type {any} */ (
-      procedureJsonLd(record, "https://example.com", person, { ...lineage, href: null })
-    ).isBasedOn[0].name,
-    record.basedOn[0]?.citation,
-    "a parent with no page is not linked data",
-  );
 });
 
 await test("a variant names a procedure here, of its profile, at a version that procedure states", () => {

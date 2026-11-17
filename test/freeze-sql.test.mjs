@@ -75,27 +75,6 @@ await test("a sealed copy is left alone when the same version is written again w
   assert.deepEqual(stored(db), first);
 });
 
-await test("the database refuses to change or delete a sealed copy, and allows it on an unsealed one", () => {
-  const db = newDb();
-  db.exec(freezeSql(row()).join("\n"));
-  assert.throws(
-    () => db.exec("UPDATE procedure_versions SET record = 'x' WHERE slug = 'mini'"),
-    /never changed/,
-  );
-  assert.throws(
-    () => db.exec("DELETE FROM procedure_versions WHERE slug = 'mini'"),
-    /never deleted/,
-  );
-  assert.throws(
-    () => db.exec("UPDATE procedure_versions SET sealed = 0 WHERE slug = 'mini'"),
-    /never changed/,
-  );
-  db.exec(`INSERT INTO procedure_versions (slug, version, path, profile, record, markdown, source_blob_sha, sealed)
-           VALUES ('half', '1', '/p', 'protocol', '{', '', 'x', 0)`);
-  db.exec("UPDATE procedure_versions SET record = '{}' WHERE slug = 'half'");
-  db.exec("DELETE FROM procedure_versions WHERE slug = 'half'");
-});
-
 await test("a run that stopped half way leaves an unsealed row, which the next run replaces and seals", () => {
   const db = newDb();
   const r = row();

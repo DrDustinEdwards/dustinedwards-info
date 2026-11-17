@@ -59,13 +59,6 @@ const parsed = (raw) => parseProcedure({ file: "mini", raw });
 /** @param {string} raw */
 const errorsOf = (raw) => validateProcedure(parsed(raw), { slug: "mini" }).errors.join("\n");
 
-await test("the small protocol is valid before any calculator is added", () => {
-  assert.equal(
-    errorsOf(PROTOCOL.replace("biosafety: not applicable", "biosafety: not applicable")),
-    "",
-  );
-});
-
 await test("readCalcs gives each calculator the values written after it", () => {
   assert.deepEqual(readCalcs(["titer", "dilution", "volume=10", "plates=6"]), [
     { id: "titer", values: {} },

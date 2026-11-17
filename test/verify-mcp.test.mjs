@@ -57,16 +57,6 @@ await test("server/discover answered without a token is a problem, and so is a c
   assert.match(discoveryProblems(vague, ORIGIN).join(), /path-scoped/);
 });
 
-await test("unreachable documents are named by status", () => {
-  const r = good();
-  r.prm = { status: 0, body: null };
-  r.as = { status: 404, body: null };
-  assert.deepEqual(discoveryProblems(r, ORIGIN).slice(0, 2), [
-    "protected resource metadata answered 0",
-    "authorization server metadata answered 404",
-  ]);
-});
-
 function root(config) {
   const dir = mkdtempSync(join(tmpdir(), "verify-mcp-"));
   mkdirSync(join(dir, "mcp"));

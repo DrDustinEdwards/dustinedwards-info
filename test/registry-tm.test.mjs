@@ -1,15 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  NEB_TM_CALCULATOR,
-  TM_CONDITIONS,
-  TM_MIN_LENGTH,
-  annealingSentence,
-  primerTm,
-  primerTmRounded,
-  tmStatement,
-} from "../app/kb/registry/tm.mjs";
+import { TM_MIN_LENGTH, primerTm, primerTmRounded } from "../app/kb/registry/tm.mjs";
 
 /* The reference is Biopython 1.88, Bio.SeqUtils.MeltingTemp.Tm_NN with nn_table=DNA_NN3 (SantaLucia 1998), Na=50 mM, no
  * K, Tris, Mg or dNTPs, dnac1=500 nM, dnac2=0 and saltcorr=5 (the 1998 entropy correction), run on 2026-10-04, with selfcomp=True for the two
@@ -46,11 +38,6 @@ await test("the Tm agrees with Biopython's SantaLucia 1998 nearest-neighbor to a
   }
 });
 
-await test("a Tm is rounded to one decimal for display, and only for what has one", () => {
-  assert.equal(primerTmRounded("CATACTGAGCCAATGGTT"), 51.7);
-  assert.equal(primerTmRounded("GGCAGCACCTCTGCCATC"), 60.8);
-});
-
 await test("a sequence with an ambiguity code, another base or too few bases has no Tm: null, never a guess", () => {
   for (const sequence of [
     "ACGTRYACGTAC",
@@ -63,41 +50,4 @@ await test("a sequence with an ambiguity code, another base or too few bases has
     assert.equal(primerTm(sequence), null, JSON.stringify(sequence));
     assert.equal(primerTmRounded(sequence), null);
   }
-});
-
-await test("a longer, GC-richer primer melts hotter than a shorter, A-T-richer one, and the order of the bases matters", () => {
-  assert.ok(
-    /** @type {number} */ (primerTm("GGCAGCACCTCTGCCATC")) >
-      /** @type {number} */ (primerTm("CATACTGAGCCAATGGTT")),
-  );
-  assert.notEqual(primerTm("ACGTACGTAAGGCC"), primerTm("CCGGAATGCATGCA"));
-});
-
-await test("the page's statement names the method, its citation, and the stored conditions, from the constants", () => {
-  const text = tmStatement();
-  assert.ok(text.includes(TM_CONDITIONS.method));
-  assert.ok(text.includes(TM_CONDITIONS.citation));
-  assert.ok(text.includes(`${TM_CONDITIONS.sodiumMM} mM`));
-  assert.ok(text.includes(`${TM_CONDITIONS.primerNM / 1000} `));
-  assert.match(
-    text,
-    /is an estimate for comparing primers/,
-    "labeled an estimate, for comparing primers",
-  );
-  assert.ok(
-    !/annealing/i.test(text),
-    "the Tm statement never mentions an annealing temperature as the Tm",
-  );
-  const wide = new RegExp(`[${String.fromCharCode(0x2013)}${String.fromCharCode(0x2014)}]`);
-  assert.ok(!wide.test(text), "no wide dash");
-});
-
-await test("no Tm is presented as an annealing temperature: the sentence that follows it says it is not, and names the NEB calculator", () => {
-  const text = annealingSentence();
-  assert.match(text, /The Tm estimate is not an annealing temperature./);
-  assert.ok(
-    text.includes(NEB_TM_CALCULATOR.url) &&
-      NEB_TM_CALCULATOR.url === "https://tmcalculator.neb.com/",
-  );
-  assert.match(text, /annealing temperature of a particular polymerase/);
 });

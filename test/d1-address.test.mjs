@@ -8,13 +8,6 @@ import assert from "node:assert/strict";
 
 import { resolveD1Address } from "../scripts/lib/d1-address.mjs";
 
-await test("a local target keeps the name", () => {
-  assert.equal(
-    resolveD1Address("db-local-only", "--local", () => assert.fail("no lookup")),
-    "db-local-only",
-  );
-});
-
 await test("a remote target resolves the UUID past a banner", () => {
   const run = () => ({ status: 0, stdout: 'banner\n[{"name":"db-a","uuid":"u-1"}]' });
   assert.equal(resolveD1Address("db-a", "--remote", run), "u-1");

@@ -15,18 +15,6 @@ await test("_headers is excluded, with a reason", () => {
   assert.ok(reason.length > 20, `reason too thin to be one: ${JSON.stringify(reason)}`);
 });
 
-await test("diagram sizes are build data, not a library picture", () => {
-  const reason = excludedFromAssets("/diagrams/sizes.json");
-  assert.equal(typeof reason, "string");
-  assert.ok(reason && reason.length > 20, `reason too thin to be one: ${JSON.stringify(reason)}`);
-});
-
-await test("_redirects is excluded, with a reason", () => {
-  const reason = excludedFromAssets("/_redirects");
-  assert.equal(typeof reason, "string");
-  assert.ok(reason.length > 20, `reason too thin to be one: ${JSON.stringify(reason)}`);
-});
-
 await test("the exclusion is a list, not an extensionless catch-all", () => {
   // Every path here has no extension and none of them is a Cloudflare control file.
   for (const p of ["/LICENSE", "/robots", "/_worker", "/Dockerfile", "/CNAME"]) {

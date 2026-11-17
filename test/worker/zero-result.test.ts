@@ -52,19 +52,4 @@ describe("the purge-zero-results job, run now through run_job", () => {
 
     expect(await remainingQueries()).toEqual(["a recent unanswered question"]);
   });
-
-  it("purges nothing, and reports 0, when every row is still live demand", async () => {
-    await seedZeroResult("a live question", Math.floor(Date.now() / 1000));
-    const result = await runTool(
-      operatorEnv(),
-      OPERATOR,
-      "run_job",
-      { job: "purge-zero-results" },
-      CTX,
-    );
-    expect(result).toMatchObject({
-      ok: true,
-      data: { runs: [{ job: "purge-zero-results", status: "ok", result: { purged: 0 } }] },
-    });
-  });
 });

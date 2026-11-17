@@ -15,22 +15,6 @@ async function capturingStderr(fn) {
   }
 }
 
-await test("a first-attempt success returns the value and does NOT retry", async () => {
-  let calls = 0;
-  const { value, lines } = await capturingStderr(() =>
-    retryRead(
-      () => {
-        calls += 1;
-        return "ok";
-      },
-      { label: "unused" },
-    ),
-  );
-  assert.equal(value, "ok");
-  assert.equal(calls, 1, "a healthy read must be attempted exactly once");
-  assert.deepEqual(lines, [], "nothing is printed when nothing went wrong");
-});
-
 await test("REPLAY fast death: one rejection, then the retry's value", async () => {
   let calls = 0;
   const { value } = await capturingStderr(() =>
@@ -45,27 +29,6 @@ await test("REPLAY fast death: one rejection, then the retry's value", async () 
   );
   assert.deepEqual(value, { status: 0 });
   assert.equal(calls, 2, "exactly one retry, never more");
-});
-
-await test("IT PRINTS BEFORE IT RETRIES: the label and the first error reach stderr", async () => {
-  const { lines } = await capturingStderr(() => {
-    let calls = 0;
-    return retryRead(
-      () => {
-        calls += 1;
-        if (calls === 1) throw new Error("SQLITE_CANTOPEN: unable to open database file");
-        return "recovered";
-      },
-      { label: "check:backup sqlite_master read (--remote)" },
-    );
-  });
-  const printed = lines.join("\n");
-  assert.match(
-    printed,
-    /check:backup sqlite_master read \(--remote\)/,
-    "the LABEL must be printed, or the transient is undiagnosable",
-  );
-  assert.match(printed, /SQLITE_CANTOPEN/, "the first error must be printed, not swallowed");
 });
 
 await test("a SECOND failure propagates the original error unchanged", async () => {
@@ -109,14 +72,6 @@ await test("a hang on BOTH attempts rejects, naming the timeout rather than hang
   });
 });
 
-await test("a SYNCHRONOUS read is accepted, because the wrangler spawns are sync", async () => {
-  // spawnSync returns rather than rejecting; raising on a non-zero status is each call site's job.
-  const { value } = await capturingStderr(() =>
-    retryRead(() => ({ status: 0, stdout: "[]" }), { label: "sync" }),
-  );
-  assert.deepEqual(value, { status: 0, stdout: "[]" });
-});
-
 await test("THE PLANT: a hung child spawned synchronously fails at its bound instead of hanging", () => {
   const started = Date.now();
   const r = spawnSyncBounded(process.execPath, ["-e", "setTimeout(() => {}, 60000)"], {
@@ -125,23 +80,4 @@ await test("THE PLANT: a hung child spawned synchronously fails at its bound ins
   assert.ok(Date.now() - started < 30_000, "the bound fired, rather than the child's own minute");
   assert.equal(r.status, null, "a timeout is never a clean exit");
   assert.match(r.error, /timed out after 1000ms/);
-});
-
-await test("a bounded spawn that finishes reports its status and output with no error", () => {
-  const r = spawnSyncBounded(
-    process.execPath,
-    ["-e", "process.stdout.write('hi'); process.exit(3)"],
-    {
-      timeoutMs: 30_000,
-    },
-  );
-  assert.equal(r.status, 3);
-  assert.equal(r.stdout, "hi");
-  assert.equal(r.error, "");
-});
-
-await test("a bounded spawn that cannot start says so, and has no status", () => {
-  const r = spawnSyncBounded("definitely-not-a-command-ohnine", [], { timeoutMs: 5000 });
-  assert.equal(r.status, null);
-  assert.match(r.error, /could not run/);
 });

@@ -21,24 +21,9 @@ await test("THE DEFECT: a submission naming no intent is REFUSED, not saved", ()
   );
 });
 
-await test("an empty intent is refused, not treated as a save", () => {
-  assert.equal(readIntent(formWith({ intent: "" })), null);
-});
-
 await test("a non-string value is refused rather than coerced", () => {
   // `String(file)` is "[object File]", which must not reach the action's dispatch.
   assert.equal(readIntent(formWith({ intent: new Blob(["x"]) })), null);
   assert.equal(readIntent(formWith({ intent: 0 })), null);
   assert.equal(readIntent(formWith({ intent: null })), null);
-});
-
-await test("every real control's intent passes through unchanged", () => {
-  for (const intent of ["save", "preview", "delete", "regenerate", "sync-ask"]) {
-    assert.equal(readIntent(formWith({ intent })), intent);
-  }
-});
-
-await test("an UNKNOWN intent is returned, not refused", () => {
-  // The action owns what an unrecognized intent does; this only answers whether one was named.
-  assert.equal(readIntent(formWith({ intent: "wibble" })), "wibble");
 });

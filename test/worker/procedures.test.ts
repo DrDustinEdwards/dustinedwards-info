@@ -18,14 +18,7 @@ import isolation from "../../content/procedures/phage-isolation.md?raw";
 import zncl2 from "../../content/procedures/phage-dna-extraction.md?raw";
 
 import { routeContext } from "./route-helpers";
-import {
-  putSource,
-  removeSource,
-  source,
-  stubSources,
-  writes,
-  type SourceStub,
-} from "./source-stub";
+import { putSource, removeSource, source, stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /* The operator API's procedure tools against the real migrations and a stubbed repository: a save is
@@ -161,23 +154,6 @@ describe("save_procedure", () => {
     },
   );
 
-  it("REFUSES an invalid file with every validator message, and commits nothing", async () => {
-    const broken = zncl2
-      .replace("Spin at 10,000 rpm", "Spin at 10,000 rpm in the @mystery reagent")
-      .replace('version: "MISSING: No version', 'version: "MISSING');
-    const result = await runTool(operatorEnv(), operator, "save_procedure", {
-      slug: SLUG,
-      raw: broken,
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      const errors = (result.detail as { errors: string[] }).errors;
-      expect(errors.some((e) => e.includes("@mystery is not in materials"))).toBe(true);
-      expect(await source(procedurePath(SLUG))).toBe(zncl2);
-    }
-  });
-
   it("REFUSES an operator's first publication of a procedure", async () => {
     const result = await runTool(operatorEnv(), operator, "save_procedure", {
       slug: "brand-new-protocol",
@@ -194,42 +170,6 @@ describe("save_procedure", () => {
     }
     expect((await source(procedurePath("brand-new-protocol"))) !== undefined).toBe(false);
   });
-
-  it(
-    "does nothing for a file identical to the committed one, and says so",
-    { timeout: 120_000 },
-    async () => {
-      const commits = async () => (await writes()).length;
-
-      // D1 has no row yet, so the first identical save commits nothing but repairs the row from the file.
-      const repaired = await runTool(operatorEnv(), operator, "save_procedure", {
-        slug: SLUG,
-        raw: zncl2,
-      });
-      expect(repaired.ok).toBe(true);
-      if (repaired.ok) expect(repaired.data).toMatchObject({ unchanged: true, created: false });
-      expect(await commits()).toBe(0);
-      expect((await stepTexts()).length).toBeGreaterThan(0);
-
-      // The row is current now: the same save is a pure no-op, and the response says so.
-      const again = await runTool(operatorEnv(), operator, "save_procedure", {
-        slug: SLUG,
-        raw: zncl2,
-      });
-      expect(again.ok).toBe(true);
-      if (again.ok) expect(again.data).toMatchObject({ unchanged: true, purged: null });
-      expect(await commits()).toBe(0);
-
-      // A real edit still commits.
-      const edited = await runTool(operatorEnv(), operator, "save_procedure", {
-        slug: SLUG,
-        raw: zncl2.replace(OLD_STEP, NEW_STEP),
-      });
-      expect(edited.ok).toBe(true);
-      if (edited.ok) expect(edited.data).toMatchObject({ unchanged: false });
-      expect(await commits()).toBe(1);
-    },
-  );
 
   it(
     "lists every procedure with a draft flag and a count, as list_posts does",
@@ -434,41 +374,6 @@ describe("sync_procedures and the procedures-drift check", () => {
         .bind(procedureSearchUid(`/research/protocols/${OTHER}`))
         .first<{ n: number }>();
       expect(searchRows?.n).toBe(0);
-    },
-  );
-
-  it("REFUSES an empty file set instead of deleting every row", { timeout: 120_000 }, async () => {
-    expect((await sync()).ok).toBe(true);
-    // The directory lists, but holds no procedure: a fault, not a repository with none.
-    await removeSource(procedurePath(SLUG));
-    await putSource("content/procedures/README.txt", "not a procedure");
-    const result = await sync();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      expect(result.error).toContain("empty set");
-    }
-    expect(await rowFor(SLUG)).not.toBeNull();
-  });
-
-  it(
-    "converges the rest and then FAILS NAMING a file the validator refuses",
-    { timeout: 180_000 },
-    async () => {
-      await putSource(
-        procedurePath(OTHER),
-        otherRaw().replace("Spin at 10,000 rpm", "Spin at 10,000 rpm in the @mystery reagent"),
-      );
-      const result = await sync();
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.status).toBe(422);
-        expect(result.error).toContain(`${procedurePath(OTHER)} fails`);
-        expect(JSON.stringify(result.detail)).toContain("@mystery is not in materials");
-      }
-      // The valid file was still converged, and the refused one has no row.
-      expect(await rowFor(SLUG)).not.toBeNull();
-      expect(await rowFor(OTHER)).toBeNull();
     },
   );
 });

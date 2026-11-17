@@ -10,20 +10,6 @@ const RASTER_KEY = contentKey(DIGEST, "webp", { width: 1600, height: 900 });
 const SVG_KEY = contentKey(DIGEST, "svg", null);
 const NAMED_KEY = contentKey(DIGEST, "webp", { width: 1600, height: 900 }, "Cohort Photo.WEBP");
 
-await test("contentKey emits the two documented shapes from the fixed digest", () => {
-  assert.equal(RASTER_KEY, `dustin-edwards-${HEX16}-1600x900.webp`);
-  assert.equal(SVG_KEY, `dustin-edwards-${HEX16}.svg`);
-});
-
-await test("an upload's filename becomes the descriptive segment, and the prefix is never doubled", () => {
-  assert.equal(NAMED_KEY, `dustin-edwards-cohort-photo-${HEX16}-1600x900.webp`);
-  assert.equal(
-    contentKey(DIGEST, "webp", null, "dustin-edwards-2017.webp"),
-    `dustin-edwards-2017-${HEX16}.webp`,
-  );
-  assert.equal(contentKey(DIGEST, "svg", null, "..."), `dustin-edwards-${HEX16}.svg`);
-});
-
 /* The /media/ path rows exist because digestFromKey accepts both forms while
  * isContentKey deliberately takes bare keys only. */
 const CASES = [

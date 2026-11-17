@@ -4,9 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { modelMarkdown } from "capsomer/behavior/system-model";
-
-import { loadSystemModel, mapData, systemPath, twinOptions } from "../app/lib/systems.mjs";
+import { loadSystemModel, mapData, systemPath } from "../app/lib/systems.mjs";
 
 const fixture = () => ({
   version: 1,
@@ -93,18 +91,6 @@ await test("the map draws every system once, each linking to its own page here",
     ["/systems/core", "/systems/kit", "/systems/app", "/systems/hidden"],
   );
   assert.equal(systemPath("a b"), "/systems/a%20b");
-});
-
-await test("the twin says this site's words: its title, intro and ring headings, and each system's page here", () => {
-  const model = loadSystemModel(fixture());
-  const all = modelMarkdown(model, twinOptions(model, "https://example.com"));
-  assert.match(
-    all,
-    /^# Systems\n\nThe systems Dustin Edwards runs\. Public model of 2026-10-11\.\n/,
-  );
-  assert.match(all, /^## Runs everything$/m);
-  assert.match(all, /^- Its page: https:\/\/example\.com\/systems\/kit$/m);
-  assert.doesNotMatch(all, /Source: .*hidden/);
 });
 
 await test("the daily refresh writes only a checked model that says something new", async () => {

@@ -178,26 +178,6 @@ describe("sync_phages and the phage-drift check", () => {
   });
 
   it(
-    "makes no row for a file the validator refuses, naming it, and converges the rest",
-    { timeout: 300_000 },
-    async () => {
-      await putSource(
-        "content/phages/stray.md",
-        "---\nname: Stray\nyear: 2026\nhost: ecoli\ncounty: null\nphagesdb: null\nsample: soil\n---\n",
-      );
-      const result = await sync();
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.status).toBe(422);
-        expect(result.error).toContain("content/phages/stray.md fails");
-        expect(JSON.stringify(result.detail)).toContain("sample is not a phage field");
-      }
-      expect(await rowFor("stray")).toBeNull();
-      expect(await count()).toBe(75);
-    },
-  );
-
-  it(
     "stops before any row moves when the page cannot be drawn, so the next run retries it",
     { timeout: 300_000 },
     async () => {

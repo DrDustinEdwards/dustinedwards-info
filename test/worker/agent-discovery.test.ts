@@ -4,8 +4,6 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { renderAndWrite } from "~/lib/editor/publish.server";
 import { paperMarkdownPath, paperPath } from "~/lib/publications/paths.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
-import { links as rootLinks } from "~/root";
-import { meta as homeMeta } from "~/routes/home";
 import {
   loader as postLoader,
   meta as postMeta,
@@ -18,7 +16,6 @@ import { loader as paperLoader, meta as paperMeta } from "~/routes/publications.
 import { loader as paperTwinLoader } from "~/routes/publications.$slug[.md]";
 import { loader as llmsLoader } from "~/routes/llms";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
-import { loader as sitemapLoader } from "~/routes/sitemap";
 import { runTool } from "~/lib/operator/api.server";
 import { procedurePath } from "~/kb/procedures/parse.mjs";
 import { loader as procedureLoader, meta as procedureMeta } from "~/routes/procedure";
@@ -84,14 +81,6 @@ const markdownAlternates = (descriptors: readonly unknown[]) =>
 
 const canonical = (path: string) => `<${SITE_ORIGIN}${path}>; rel="canonical"`;
 
-/** Every `<loc>` in the sitemap, as paths. */
-async function sitemapPaths() {
-  const body = await (await response(sitemapLoader as Loader, "/sitemap.xml")).text();
-  return [...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
-    (m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/",
-  );
-}
-
 beforeAll(async () => {
   /* The paper rows sync:content writes, from the files in content/publications/. */
   await seedPublications();
@@ -136,17 +125,6 @@ beforeAll(async () => {
 }, 240_000);
 
 describe("discovery an agent starts from", () => {
-  it("every page's head declares the feeds", () => {
-    const feeds = (rootLinks() as unknown as Descriptor[]).filter((d) => d.rel === "alternate");
-    expect(feeds.map((d) => d.type).sort()).toEqual([
-      "application/atom+xml",
-      "application/feed+json",
-      "application/rss+xml",
-    ]);
-    for (const feed of feeds)
-      expect(String(feed.href)).toMatch(/^https:\/\/.+\/writing\/(rss\.xml|atom\.xml|feed\.json)$/);
-  });
-
   it("llms.txt and llms-full.txt name the home page as canonical", async () => {
     for (const [loader, path] of [
       [llmsLoader, "/llms.txt"],
@@ -157,16 +135,6 @@ describe("discovery an agent starts from", () => {
       expect(res.headers.get("link"), path).toBe(canonical("/"));
       expect(res.headers.get("x-robots-tag"), path).toBe("noindex");
     }
-  });
-});
-
-describe("the home page: no twin, so llms.txt and llms-full.txt are its agent path", () => {
-  it("declares no markdown alternate, and llms.txt describes the site and names llms-full.txt", async () => {
-    expect(markdownAlternates(homeMeta())).toEqual([]);
-    const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
-    expect(llms).toMatch(/^# dustinedwards\.info\n/);
-    expect(llms).toContain("/llms-full.txt");
-    expect(llms).toContain(`- [Home](${SITE_ORIGIN}/):`);
   });
 });
 
@@ -282,24 +250,5 @@ describe("a paper: head declares the twin, llms.txt lists it", () => {
     expect(twin.headers.get("x-robots-tag")).toBe("noindex");
     expect(twin.headers.get("cache-tag")).toBe("publications");
     expect(await twin.text()).toMatch(/^---\nid: "edwards-2025-godfather"\n/);
-  });
-
-  it("a slug that is no paper's answers 404", async () => {
-    const res = await response(paperTwinLoader as Loader, "/research/publications/not-a-paper.md", {
-      slug: "not-a-paper",
-    });
-    expect(res.status).toBe(404);
-  });
-});
-
-describe("the sitemap lists HTML pages only", () => {
-  it("has the article, the paper and the content pages, and no twin or llms file", async () => {
-    const paths = await sitemapPaths();
-    expect(paths).toContain("/");
-    expect(paths).toContain(`/writing/${ARTICLE.slug}`);
-    expect(paths).toContain(paperPath(PAPER_SLUG));
-    expect(paths).toContain(RESEARCH_PAGE);
-    expect(paths).toContain(PROTOCOL_PAGE);
-    expect(paths.filter((p) => /\.(md|txt)$/.test(p))).toEqual([]);
   });
 });

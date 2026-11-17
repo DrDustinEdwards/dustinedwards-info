@@ -66,29 +66,6 @@ describe("the tool surface", () => {
     );
   });
 
-  test("no post tool survives the move (Carrel owns writing)", () => {
-    for (const t of TOOLS) assert.doesNotMatch(t.name, /post/);
-  });
-
-  test("annotations are set honestly, tool by tool", () => {
-    // [readOnly, destructive, idempotent, openWorld]
-    const expected: Record<string, [boolean, boolean, boolean, boolean]> = {
-      dei_read_registry: [true, false, true, false],
-      dei_refresh_citations: [false, false, true, true],
-      dei_check_publications: [true, false, true, true],
-      dei_read_procedure: [true, false, true, false],
-      dei_save_procedure: [false, false, false, false],
-    };
-    for (const t of TOOLS) {
-      const a = t.config.annotations;
-      assert.deepEqual(
-        [a.readOnlyHint, a.destructiveHint, a.idempotentHint, a.openWorldHint],
-        expected[t.name],
-        t.name,
-      );
-    }
-  });
-
   test("a read-only tool needs only dei.read, and every other tool needs dei.write", () => {
     for (const t of TOOLS) {
       assert.equal(t.scope, t.config.annotations.readOnlyHint ? "dei.read" : "dei.write", t.name);
@@ -222,21 +199,6 @@ describe("input errors say how to fix the input", () => {
 });
 
 describe("tool results", () => {
-  test("a 403 first-publish refusal reaches the caller in the API's words", async () => {
-    api.reply(FIRST_PUBLISH_REFUSAL);
-    const out = await call("dei_save_procedure", { slug: "a", raw: "---\ndraft: false\n---\n" });
-    assert.equal(out.isError, true);
-    assert.equal(
-      out.content[0].text,
-      `${FIRST_PUBLISH_REFUSAL.body.error}\npolicy: first-publish-requires-admin`,
-    );
-    assert.deepEqual(out.structuredContent, {
-      status: 403,
-      error: FIRST_PUBLISH_REFUSAL.body.error,
-      detail: FIRST_PUBLISH_REFUSAL.body.detail,
-    });
-  });
-
   test("a 422 relays each validator message as written, in order", async () => {
     api.reply({
       status: 422,

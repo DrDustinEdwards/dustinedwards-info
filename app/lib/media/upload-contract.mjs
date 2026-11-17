@@ -35,25 +35,6 @@ export const ACCEPT_ATTRIBUTE = [...ALLOWED.keys()].join(",");
 
 export const MAX_BYTES = 10 * 1024 * 1024;
 
-export const UPLOAD_FORM_INTENT = "upload-form";
-
-export const UPLOAD_RETURN_PATH = "/admin/media";
-
-/**
- * @param {unknown} intent the submitted `intent` field, whatever arrived
- * @returns {boolean}
- */
-export function isFormUpload(intent) {
-  return intent === UPLOAD_FORM_INTENT;
-}
-
-/**
- * @param {string} message
- */
-export function uploadErrorBody(message) {
-  return { error: message };
-}
-
 // A code in the URL, not the message, so the address bar never carries prose someone can edit.
 const UPLOAD_ERRORS = {
   "no-file": "No file was chosen.",
@@ -113,16 +94,4 @@ export function uploadErrorSentence(code) {
   return Object.prototype.hasOwnProperty.call(UPLOAD_ERRORS, code)
     ? UPLOAD_ERRORS[/** @type {keyof typeof UPLOAD_ERRORS} */ (code)]
     : null;
-}
-
-/**
- * Success carries the key, so a reload repeats a harmless read rather than a second upload.
- *
- * @param {{ ok: true, key: string } | { ok: false, code: string }} result
- */
-export function uploadRedirectTo(result) {
-  const params = result.ok
-    ? `uploaded=${encodeURIComponent(result.key)}`
-    : `upload-error=${encodeURIComponent(result.code)}`;
-  return `${UPLOAD_RETURN_PATH}?${params}`;
 }

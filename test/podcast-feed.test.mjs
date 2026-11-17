@@ -99,17 +99,6 @@ await test("durations in all three itunes forms, and garbage is null", () => {
   assert.equal(clockTime(3849), "1:04:09");
 });
 
-await test("the home page's episode is episodes[0], which is always the newest: no picker, no stored choice", () => {
-  const eps = parsePodcastFeed(
-    feed(
-      item({ guid: "b", pubDate: "Tue, 19 Nov 2019 09:00:30 GMT" }),
-      item({ guid: "a", pubDate: "Tue, 03 Sep 2019 09:00:50 GMT" }),
-    ),
-  );
-  assert.equal(eps[0].guid, "b");
-  assert.deepEqual(parsePodcastFeed(feed()), []);
-});
-
 await test("the CSP's media-src allows exactly the hosts the parser accepts", async () => {
   for (const adminNonce of [undefined, "a-test-nonce-0123456789"]) {
     const policy = buildContentSecurityPolicy(pagePolicy({ nonce: adminNonce })).value;

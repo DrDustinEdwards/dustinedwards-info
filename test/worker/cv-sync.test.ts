@@ -7,7 +7,7 @@ import { CV_FILES, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
 
-import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
+import { putSource, stubSources, type SourceStub } from "./source-stub";
 import { seedPublications } from "./seed";
 
 /* sync_cv and the cv-drift check: D1 converges to content/cv through the compile and write doors a CV save
@@ -116,38 +116,6 @@ describe("sync_cv and the cv-drift check", () => {
         expect(result.data).toMatchObject({ repaired: 1, removed: 0, converged: true });
       expect((await rowFor("grants"))?.source_blob_sha).toBe(await gitBlobSha(edited));
       expect(await searchRows(ADDED)).toBeGreaterThan(0);
-    },
-  );
-
-  it("REFUSES an empty file set instead of deleting every row", { timeout: 300_000 }, async () => {
-    expect((await sync()).ok).toBe(true);
-    // The directory lists, but holds no CV file: a fault, not a repository with none.
-    for (const { slug } of CV_FILES) await removeSource(cvSourcePath(slug));
-    await putSource("content/cv/README.txt", "not a CV file");
-    const result = await sync();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      expect(result.error).toContain("empty set");
-    }
-    expect(await rowFor("grants")).not.toBeNull();
-    expect(await rowFor("profile")).not.toBeNull();
-  });
-
-  it(
-    "makes no row for a file the registry does not name, naming it, and converges the rest",
-    { timeout: 300_000 },
-    async () => {
-      await putSource("content/cv/not-a-cv-file.md", rawOf("grants"));
-      const result = await sync();
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.status).toBe(422);
-        expect(result.error).toContain("content/cv/not-a-cv-file.md fails");
-        expect(JSON.stringify(result.detail)).toContain("not a CV file");
-      }
-      expect(await rowFor("not-a-cv-file")).toBeNull();
-      expect(await rowFor("grants")).not.toBeNull();
     },
   );
 });

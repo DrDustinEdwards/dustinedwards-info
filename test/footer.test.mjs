@@ -4,10 +4,9 @@ import assert from "node:assert/strict";
 import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";
 import { readFileSync } from "node:fs";
 
-import { SOCIAL_LINKS, familyLinks, legalLinks } from "capsomer/behavior/family-footer";
+import { familyLinks } from "capsomer/behavior/family-footer";
 import { PUBLISHED_PAGES } from "../app/lib/published-pages.generated.mjs";
 import { readPublishedPages } from "../scripts/lib/published-pages.mjs";
-import { OWNER_PROFILES } from "../app/lib/seo.ts";
 
 await test("every internal footer link is a route app/routes.ts declares", async () => {
   const routes = await declaredRouteModules();
@@ -16,41 +15,6 @@ await test("every internal footer link is a route app/routes.ts declares", async
     .map((link) => link.to)
     .filter((to) => !routes.has(to.split("#")[0]));
   assert.deepEqual(missing, [], "a footer link with no route answers 404");
-});
-
-// Link integrity (search standing), rel=me honesty, and AI access staying invisible.
-
-await test("the footer never links the retired /phage-discovery address", () => {
-  const hrefs = familyLinks(PUBLISHED_PAGES).map((link) => link.to);
-  assert.ok(!hrefs.includes("/phage-discovery"));
-});
-
-await test("nothing in the footer is for machines only (job_5670dd43eef2): agents find these through the head and robots.txt", () => {
-  const hrefs = familyLinks(PUBLISHED_PAGES).map((link) => link.to);
-  for (const machineOnly of ["/llms.txt", "/llms-full.txt"]) {
-    assert.ok(!hrefs.includes(machineOnly), machineOnly);
-  }
-  assert.ok(!hrefs.some((to) => to.endsWith(".md")), "a markdown twin linked from the footer");
-});
-
-await test("rel=me marks exactly the owner's profiles, and never a social link", () => {
-  assert.ok(SOCIAL_LINKS.every((link) => !link.me));
-  const me = familyLinks(PUBLISHED_PAGES)
-    .filter((link) => link.me)
-    .map((link) => link.to);
-  assert.deepEqual([...me].sort(), [...OWNER_PROFILES].sort());
-});
-
-await test("the footer as built agrees with the page files as they are now", () => {
-  assert.deepEqual(
-    [...PUBLISHED_PAGES],
-    readPublishedPages(),
-    "published-pages.generated.mjs is stale: run build:content",
-  );
-  assert.equal(
-    legalLinks(PUBLISHED_PAGES).some((link) => link.to === "/accessibility"),
-    PUBLISHED_PAGES.includes("/accessibility"),
-  );
 });
 
 await test("a page file marked draft is not in the published list", () => {

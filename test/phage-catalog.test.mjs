@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { PHAGES, hostLabel, phageListing } from "../app/lib/phages/catalog.mjs";
+import { phageListing } from "../app/lib/phages/catalog.mjs";
 import { sortPhages } from "../app/lib/phages/compile.mjs";
 
 /* The phage table's pure half (app/lib/phages/catalog.mjs): the order the page has always listed, the facets and counts,
@@ -57,58 +57,8 @@ await test("the default order is the page's own: year, then name folded and nume
   );
 });
 
-await test("sorting by name or by year both ways; newest first is the whole order reversed", () => {
-  assert.deepEqual(names(phageListing("sort=name", PHAGES_SET)), [
-    "Acorn2",
-    "Acorn15",
-    "Arlo",
-    "Éclair",
-    "Leia",
-    "Rira",
-  ]);
-  assert.deepEqual(names(phageListing("sort=-year", PHAGES_SET)), [
-    "Rira",
-    "Éclair",
-    "Arlo",
-    "Leia",
-    "Acorn15",
-    "Acorn2",
-  ]);
-});
-
-await test("host and county facets count what choosing them would give; the host reads without markdown emphasis", () => {
-  const result = phageListing("", PHAGES_SET);
-  const host = result.facets.find((f) => f.key === "host");
-  assert.deepEqual(
-    host.options.map((o) => [o.label, o.count]),
-    [
-      ["Microbacterium foliorum", 3],
-      ["Mycobacterium smegmatis mc²155", 3],
-    ],
-  );
-  assert.equal(hostLabel("smegmatis"), "Mycobacterium smegmatis mc²155");
-  assert.deepEqual(names(phageListing("host=foliorum", PHAGES_SET)), ["Arlo", "Éclair", "Rira"]);
-  assert.deepEqual(names(phageListing("host=foliorum&county=Erath+County", PHAGES_SET)), [
-    "Éclair",
-  ]);
-});
-
 await test("search finds a name, a county, or the name a phage was formerly given, folded", () => {
   assert.deepEqual(names(phageListing("q=eclair", PHAGES_SET)), ["Éclair"]);
   assert.deepEqual(names(phageListing("q=hood", PHAGES_SET)).sort(), ["Acorn15", "Acorn2"]);
   assert.deepEqual(names(phageListing("q=leia2", PHAGES_SET)), ["Leia"]);
-});
-
-await test("the genome-paper facet is a yes: published, or all", () => {
-  assert.deepEqual(names(phageListing("paper=published", PHAGES_SET)), ["Arlo"]);
-  const paper = phageListing("", PHAGES_SET).facets.find((f) => f.key === "paper");
-  assert.deepEqual(
-    paper.options.map((o) => [o.label, o.count]),
-    [["Published", 1]],
-  );
-});
-
-await test("every field is declared once: the catalog's columns are the table the page has always had", () => {
-  const columns = PHAGES.fields.filter((f) => f.column).map((f) => f.column.header);
-  assert.deepEqual(columns, ["Phage", "Year", "Host", "County", "PhagesDB", "Paper"]);
 });

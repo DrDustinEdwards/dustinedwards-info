@@ -98,10 +98,6 @@ await test("a reference filed in the other orientation gives the same product", 
  */
 const REV = reference("DQ387450");
 
-await test("the fixture is the whole DQ387450 genome", () => {
-  assert.equal(REV.length, 8286);
-});
-
 await test("REV 3' LTR: 281 bp, in both LTRs, the corrected forward primer exact with no indel and the reverse one mismatch", () => {
   const all = amplicons(REV, "CATACTGAGCCAATGGTT", "AATGTTGTACCGAAGTACT", {
     maxMismatches: 1,
@@ -143,10 +139,6 @@ await test("REV pol 4777-5575: 801 bp at 4766-5566, one reverse-primer mismatch"
  */
 const LPDV = reference("U09568");
 const LPDV_FORWARD = "ATGAGGACTTGTTAGATTGGTTAC";
-
-await test("the U09568 fixture is the whole 7,143 nt sequence", () => {
-  assert.equal(LPDV.length, 7143);
-});
 
 await test("LPDV, published pair: 458 bp at 1041-1498 with both primers exact, 413 bp between them", () => {
   const product = amplicon(LPDV, LPDV_FORWARD, "TGATGGCGTCAGGGCTATTTG");

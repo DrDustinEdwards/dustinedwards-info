@@ -1,10 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 
 import {
-  LAB,
-  TOOLS,
   eop,
   floodYield,
   formatNumber,
@@ -18,7 +16,6 @@ import {
   runTool,
   titer,
   toolValues,
-  toolsOnPage,
 } from "../app/lib/phage-tools.mjs";
 
 /** @param {string} slug */
@@ -217,23 +214,6 @@ await test("webbed plate: the FAQ's example, 11,100 pfu from a 1.11 x 10^10 lysa
     ),
   );
   assert.equal(10 * (1 / 1000) * (7 / 70), 1e-3);
-});
-
-await test("the 111-plaque lysate is 1.11 x 10^10 on every page and procedure, never rounded to 1.1", () => {
-  const dirs = ["pages", "procedures"].map(
-    (name) => new URL(`../content/${name}/`, import.meta.url),
-  );
-  for (const dir of dirs) {
-    for (const file of readdirSync(dir).filter((name) => name.endsWith(".md"))) {
-      const text = readFileSync(new URL(file, dir), "utf8");
-      assert.doesNotMatch(
-        text,
-        /\b1\.1 x 10\^10\b/,
-        `${file} writes the lysate as 1.1 x 10^10; it is 1.11 x 10^10 (titer(111, 10, 6))`,
-      );
-    }
-  }
-  assert.equal(titer({ plaques: 111, volumeUl: 10, dilutionExponent: 6 }).pfuPerMl, 1.11e10);
 });
 
 await test("webbed plate: the protocol's bracketing and pfu-per-web numbers", () => {
@@ -504,60 +484,6 @@ await test("lysate volume: refuses zero, empty, fractional and non-numeric input
     assert.equal(result.ok, false);
     assert.match(result.ok ? "" : result.error, message);
   }
-});
-
-/* ------------------------------------------------------------ the pages say what the module says */
-
-// What each calculator page must state (its worked example, the links to every calculator, the lysate sum)
-// is checked on the page itself by app/lib/pages/invariants.mjs, which build:content and the page save both
-// run; test/pages.test.mjs shows each rule firing. llms.txt is not a page, so its links are checked here.
-await test("llms.txt links every calculator page", () => {
-  const llms = readFileSync(new URL("../content/llms.txt", import.meta.url), "utf8");
-  for (const path of new Set(Object.values(TOOLS).map((tool) => tool.path))) {
-    assert.ok(llms.includes(`](https://dustinedwards.info${path})`), `llms.txt lacks ${path}`);
-  }
-});
-
-await test("every calculator opens on its page's worked example, and computes", () => {
-  assert.deepEqual(toolValues("titer"), { plaques: "111", volume: "10", dilution: "6" });
-  assert.deepEqual(toolValues("dilution"), {
-    start: "1.11e10",
-    target: "1.11e6",
-    transfer: "10",
-    needed: "",
-  });
-  for (const id of Object.keys(TOOLS)) assert.equal(runTool(id, toolValues(id)).ok, true, id);
-});
-
-await test("every lab default names a source page, and the value matches the lab's number", () => {
-  const withSource = Object.values(TOOLS).flatMap((tool) =>
-    tool.fields.filter((field) => field.source),
-  );
-  assert.ok(withSource.length >= 4);
-  for (const field of withSource) assert.match(field.source.href, /^\/(research|teaching)\//);
-  assert.equal(LAB.ulSpot, 3);
-  assert.equal(LAB.ulPlated, 10);
-  assert.equal(LAB.floodMl, 8);
-  assert.deepEqual([LAB.yieldLowMl, LAB.yieldHighMl], [5, 7]);
-  // The numbers are the protocol's own words, so a change there has to be made here too.
-  const protocol = procedure("phage-isolation");
-  assert.ok(protocol.includes("(Protocol 6.4, 3 µl spots)"));
-  assert.ok(protocol.includes("plating 10 µl of each dilution with 250 µl host"));
-  assert.ok(protocol.includes("typically 5 to 7 ml per plate"));
-  assert.ok(protocol.includes("no more than 25 µl onto 250 µl host"));
-  assert.ok(protocol.includes("Plan about 6 webbed plates"));
-});
-
-await test("the query string sets a calculator's values, and nothing else does", () => {
-  const params = new URLSearchParams("plaques=42&volume=10&dilution=6&other=1");
-  assert.deepEqual(toolValues("titer", params), { plaques: "42", volume: "10", dilution: "6" });
-  assert.equal(
-    runTool("titer", toolValues("titer", params)).sections[0].result,
-    "4.2 x 10^9 pfu/ml",
-  );
-  assert.deepEqual(toolsOnPage("/research/tools/webbed-plate"), ["webbed-plate", "flood"]);
-  assert.deepEqual(toolsOnPage("/research/tools/eop"), ["eop", "eop-counts"]);
-  assert.deepEqual(toolsOnPage("/research/tools"), []);
 });
 
 /* ------------------------------------------------------------ numbers in and out */

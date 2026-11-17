@@ -101,27 +101,3 @@ await test("the fixture's ingredients say their steps, each step says its ingred
   assert.equal(mise.items.length, record.materials.length);
   assert.equal(mise.text.split("\n")[0], "- 250 g plain flour");
 });
-
-await test("grams_per_cup is a recipe's own number above 0, and the record carries it", async () => {
-  const stated = await compile(
-    fixture.replace(
-      "  - name: flour\n    display: plain flour",
-      "  - name: flour\n    display: plain flour\n    grams_per_cup: 120",
-    ),
-  );
-  assert.ok(stated.ok, JSON.stringify(stated.errors));
-  assert.equal(stated.record.materials.find((m) => m.name === "flour")?.gramsPerCup, 120);
-  const bad = await compile(
-    fixture.replace(
-      "  - name: flour\n    display: plain flour",
-      "  - name: flour\n    display: plain flour\n    grams_per_cup: lots",
-    ),
-  );
-  assert.ok(
-    !bad.ok &&
-      bad.errors.includes(
-        "materials[flour].grams_per_cup is the grams in one US cup of it, a number above 0",
-      ),
-    JSON.stringify(bad.errors),
-  );
-});

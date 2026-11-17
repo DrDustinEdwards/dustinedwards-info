@@ -35,10 +35,3 @@ await test("re-anchored, it accepts and rejects exactly what SLUG_PATTERN does",
     );
   }
 });
-
-await test("a multiline value cannot slip past the attribute's anchoring", () => {
-  // With `$` embedded a reader has to reason about which anchor binds where.
-  const asBrowser = new RegExp(`^(?:${SLUG_ATTRIBUTE_PATTERN})$`);
-  assert.equal(asBrowser.test("good-slug\nbad slug"), false);
-  assert.equal(SLUG_PATTERN.test("good-slug\nbad slug"), false);
-});

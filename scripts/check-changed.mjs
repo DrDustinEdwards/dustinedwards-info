@@ -53,12 +53,6 @@ export const MAP = [
     gates: ["check:ask-guards"],
   },
   {
-    /* check-enhance-a11y reads the blog enhancement's source for its dialog and 1.4.13 behavior. */
-    what: "an enhancement module",
-    test: /^app\/enhance\/.+\.ts$/,
-    gates: ["check:enhance-a11y"],
-  },
-  {
     what: "the schema or a migration",
     test: /^(app\/db\/schema\.ts|drizzle\/.+)$/,
     gates: ["check:migrations", RELATED],

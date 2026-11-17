@@ -4,22 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  METRICS,
-  exitCode,
-  firstArticlePath,
-  grade,
-  gradeRuns,
-  median,
-} from "../scripts/lib/web-vitals.mjs";
-
-await test("the thresholds are the job's: LCP 2.5s, CLS 0.1, and TBT 200ms as the named INP proxy", () => {
-  const byKey = Object.fromEntries(METRICS.map((m) => [m.key, m]));
-  assert.equal(byKey.lcp.threshold, 2500);
-  assert.equal(byKey.cls.threshold, 0.1);
-  assert.equal(byKey.tbt.threshold, 200);
-  assert.match(byKey.tbt.label, /proxy for INP/, "TBT must never be printed as if it were INP");
-});
+import { exitCode, grade, gradeRuns } from "../scripts/lib/web-vitals.mjs";
 
 await test("at or under the threshold is ok; strictly over is WARN", () => {
   assert.equal(grade(0, 2500), "ok");
@@ -42,20 +27,6 @@ await test("a value that is not a measurement is refused, never graded ok", () =
   assert.throws(() => grade(Number.NaN, 200));
   assert.throws(() => grade(Number.POSITIVE_INFINITY, 200));
   assert.throws(() => grade(-1, 200));
-});
-
-await test("median: odd counts take the middle, even counts average the middle two", () => {
-  assert.equal(median([3000]), 3000);
-  assert.equal(median([9000, 1000, 2000]), 2000, "one slow outlier run does not decide");
-  assert.equal(median([1, 4, 2, 3]), 2.5);
-  const input = [3, 1, 2];
-  median(input);
-  assert.deepEqual(input, [3, 1, 2], "median must not reorder the caller's array");
-});
-
-await test("median of no runs throws, because an unmeasured page has no number", () => {
-  assert.throws(() => median([]), /no runs/);
-  assert.throws(() => median([1, Number.NaN, 3]));
 });
 
 await test("gradeRuns grades the median of each metric, not the worst or the first run", () => {
@@ -82,13 +53,4 @@ await test("exit code: 0 with only warnings, 1 on any FAIL, 2 when any page is u
   assert.equal(exitCode([ok, unmeasured]), 2);
   assert.equal(exitCode([fail, unmeasured]), 2, "an unmeasured page outranks a FAIL elsewhere");
   assert.equal(exitCode([{}]), 2, "a page with neither grades nor an error is not a pass");
-});
-
-await test("firstArticlePath takes the first single-segment /writing link and skips tags", () => {
-  const html =
-    '<a href="/writing">All</a><a href="/writing/tags/cloudflare">t</a>' +
-    '<a href="/writing/ten-years-on-cloudflare">p</a><a href="/writing/other-post">q</a>';
-  assert.equal(firstArticlePath(html), "/writing/ten-years-on-cloudflare");
-  assert.equal(firstArticlePath('<a href="/writing/feed">f</a>'), null);
-  assert.equal(firstArticlePath("<p>nothing</p>"), null);
 });

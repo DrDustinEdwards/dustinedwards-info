@@ -2,11 +2,7 @@
 // and a test drives it with a real retracted DOI. The paper carries updated-by (the notice carries
 // update-to), so the DOI here is the notice's.
 
-export const UPDATE_TYPES = /** @type {const} */ ([
-  "retraction",
-  "correction",
-  "expression-of-concern",
-]);
+const UPDATE_TYPES = /** @type {const} */ (["retraction", "correction", "expression-of-concern"]);
 
 const LABEL = {
   retraction: "Retracted",

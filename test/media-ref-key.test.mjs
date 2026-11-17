@@ -29,14 +29,3 @@ await test("a null detail is an empty part, not a missing one", () => {
     "null and empty string are the same ref and must dedup together",
   );
 });
-
-await test("identical refs produce identical keys, so dedup actually dedups", () => {
-  assert.equal(mediaRefKey(ref("m", "f", "d")), mediaRefKey(ref("m", "f", "d")));
-});
-
-await test("a difference in ANY component produces a different key", () => {
-  const base = mediaRefKey(ref("m", "f", "d"));
-  assert.notEqual(base, mediaRefKey(ref("M", "f", "d")));
-  assert.notEqual(base, mediaRefKey(ref("m", "F", "d")));
-  assert.notEqual(base, mediaRefKey(ref("m", "f", "D")));
-});

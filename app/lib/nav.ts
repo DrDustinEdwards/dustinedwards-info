@@ -401,7 +401,7 @@ function aboutMenu(): Menu {
  * The pages outside the markdown set that a panel links to. test/nav.test.mjs holds each against
  * app/routes.ts, so a route removed there cannot leave a panel link behind.
  */
-export const ROUTED_PATHS: readonly string[] = [
+const ROUTED_PATHS: readonly string[] = [
   "/research/publications",
   "/research/lab",
   "/systems",

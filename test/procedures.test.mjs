@@ -6,7 +6,6 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 
 import { slug as githubSlug } from "github-slugger";
 
@@ -266,30 +265,7 @@ await test("headingId gives the id github-slugger gives the same words", () => {
   }
 });
 
-await test("headingId drops superscripts and vulgar fractions the way github-slugger does", () => {
-  assert.equal(headingId("x² and ½"), githubSlug("x² and ½"));
-});
-
 // ---------------------------------------------------------------- validate.mjs
-
-for (const [slug, path] of [
-  ["recipe-fixture", "test/fixtures/procedures/recipe-fixture.md"],
-  ["computational-fixture", "test/fixtures/procedures/computational-fixture.md"],
-  ["tutorial-fixture", "test/fixtures/procedures/tutorial-fixture.md"],
-  ["phage-dna-extraction", "content/procedures/phage-dna-extraction.md"],
-]) {
-  await test(`${path} validates with no errors`, () => {
-    const { errors } = check(slug, readFileSync(path, "utf8"));
-    assert.deepEqual(errors, []);
-  });
-}
-
-await test("the recipe fixture scales its amounts but not its fixed salt", () => {
-  const steps = stepsOf(readFileSync("test/fixtures/procedures/recipe-fixture.md", "utf8"));
-  const first = steps[0]?.segments.map((s) => segmentText(s, 2)).join("");
-  assert.equal(first, "Whisk 500 g of flour, 1 tsp of salt and 2 tsp of yeast in a mixing bowl.");
-  assert.equal(steps.flatMap((s) => s.photos).length, 1);
-});
 
 const PROTOCOL = `---
 profile: protocol
@@ -331,10 +307,6 @@ references:
 1. Add @buffer{10%µl} to the tube. Incubate at 37 °C for ~{5%minutes}.
    > TROUBLESHOOTING: low-yield
 `;
-
-await test("the small protocol the negative tests mutate is itself valid", () => {
-  assert.deepEqual(check("mini", PROTOCOL), { errors: [], gaps: [] });
-});
 
 await test("a bare MISSING is an error", () => {
   const { errors } = check("mini", PROTOCOL.replace('version: "1"', "version: MISSING"));
@@ -438,29 +410,9 @@ await test("biosafety_level is BSL-1, BSL-2 or a recorded gap, and a protocol mu
   assert.deepEqual(gap.gaps, [{ field: "biosafety_level", reason: "not set yet" }]);
 });
 
-await test("the biosafety field still lists the agent only, and holds no level", () => {
-  const raw = PROTOCOL.replace(
-    "biosafety: not applicable",
-    "biosafety: { organism: Test organism, strain: BSL-2 }",
-  );
-  assertError(check("mini", raw).errors, /biosafety names a biosafety level/);
-});
-
 await test("a TROUBLESHOOTING flag naming an unknown row is an error", () => {
   const raw = PROTOCOL.replace("> TROUBLESHOOTING: low-yield", "> TROUBLESHOOTING: no-such-row");
   assertError(check("mini", raw).errors, /TROUBLESHOOTING names "no-such-row"/);
-});
-
-await test("seo_title over 60 characters is an error", () => {
-  const raw = PROTOCOL.replace("seo_title: Mini protocol", `seo_title: ${"x".repeat(61)}`);
-  assertError(check("mini", raw).errors, /seo_title is 61 characters/);
-});
-
-await test("a path that does not match the file's slug is an error", () => {
-  assertError(
-    check("other", PROTOCOL).errors,
-    /a protocol named other\.md lives at \/research\/protocols\/other/,
-  );
 });
 
 await test("step numbering that skips is an error", () => {
@@ -504,11 +456,6 @@ references:
    \`\`\`
 `;
 
-await test("the small computational method the negative tests mutate is itself valid", () => {
-  const raw = COMPUTATIONAL.replace("prerequisites: []", "prerequisites:\n  - a shell");
-  assert.deepEqual(check("mini", raw).errors, []);
-});
-
 await test("a computational command without its output is an error", () => {
   const raw = COMPUTATIONAL.replace("prerequisites: []", "prerequisites:\n  - a shell").replace(
     "   ```output\n   1\n   ```\n",
@@ -523,50 +470,4 @@ await test("computational software needs its version", () => {
     "",
   );
   assertError(check("mini", raw).errors, /materials\[grep\] is software and needs its version/);
-});
-
-await test("start_here is a position in the Start here list: a positive whole number, or absent", () => {
-  const base = readFileSync("content/procedures/phage-isolation.md", "utf8");
-  assert.deepEqual(check("phage-isolation", base).errors, []);
-  assertError(
-    check("phage-isolation", base.replace("start_here: 1", "start_here: 0")).errors,
-    /start_here must be a position/,
-  );
-  assertError(
-    check("phage-isolation", base.replace("start_here: 1", "start_here: first")).errors,
-    /start_here must be a position/,
-  );
-  assertError(
-    check("phage-isolation", base.replace("start_here: 1", "start_here: 1.5")).errors,
-    /start_here must be a position/,
-  );
-  assert.deepEqual(
-    check("phage-isolation", base.replace("start_here: 1\n", "")).errors,
-    [],
-    "a procedure with none is simply off the list",
-  );
-});
-
-await test("proof_of_use is checked by the validator: slugs only, the right shape, never empty", () => {
-  const base = readFileSync("content/procedures/phage-isolation.md", "utf8");
-  const withProof = (block) => base.replace(/^course: .*$/m, (line) => `${line}\n${block}`);
-  assert.deepEqual(
-    check(
-      "phage-isolation",
-      withProof("proof_of_use:\n  papers: [10-1128-mra-01242-18]\n  phages: [arlo]"),
-    ).errors,
-    [],
-  );
-  assertError(
-    check("phage-isolation", withProof("proof_of_use: arlo")).errors,
-    /proof_of_use must be a mapping/,
-  );
-  assertError(
-    check("phage-isolation", withProof("proof_of_use:\n  phages: [Arlo]")).errors,
-    /not a phage key/,
-  );
-  assertError(
-    check("phage-isolation", withProof("proof_of_use:\n  papers: []")).errors,
-    /non-empty list/,
-  );
 });

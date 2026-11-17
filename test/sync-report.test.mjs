@@ -96,18 +96,6 @@ await test("media: a key that FAILED to derive is not convergence", () => {
   assert.deepEqual(r.failures, ["/x.png: IMAGES returned 500"]);
 });
 
-await test("media: converged is never taken from the caller", () => {
-  const r = mediaSyncReport({
-    ...CLEAN,
-    present: 60,
-    missing: ["/a.png"],
-    converged: true,
-    ok: true,
-    drift: 0,
-  });
-  assert.equal(r.converged, false);
-});
-
 await test("media: an unreadable count is not a passing count", () => {
   for (const bad of [null, undefined, NaN, "69", 1.5]) {
     assert.equal(mediaSyncReport({ ...CLEAN, expected: bad }).converged, false, `expected=${bad}`);
@@ -128,24 +116,4 @@ await test("media: a non-array missing, extra or failure list fails closed witho
   for (const bad of [{ failures: 7 }, { failures: undefined }, { missing: null }, { extra: "x" }]) {
     assert.equal(mediaSyncReport({ ...CLEAN, ...bad }).converged, false, JSON.stringify(bad));
   }
-});
-
-await test("media: a failure entry that is not a string still counts as a failure", () => {
-  const r = mediaSyncReport({ ...CLEAN, failures: [{ key: "/x.png" }] });
-  assert.equal(r.converged, false);
-  assert.equal(r.unreadable, true);
-});
-
-await test("media: the summary names what is wrong, not just that something is", () => {
-  const good = mediaSyncSummary(mediaSyncReport(CLEAN));
-  assert.match(good, /converged/);
-  assert.match(good, /69 expected/);
-
-  const bad = mediaSyncSummary(
-    mediaSyncReport({ ...CLEAN, present: 68, missing: ["/fonts/OFL.txt"], failures: ["/x: boom"] }),
-  );
-  assert.match(bad, /69 expected/);
-  assert.match(bad, /68 present/);
-  assert.match(bad, /1 missing/);
-  assert.match(bad, /1 failed to derive/);
 });

@@ -12,7 +12,7 @@ export const LLMS_SETTING_KEY = "llms.txt";
 export const LLMS_CACHE_TAG = "llms";
 
 /** The file's whole size, far above today's and far below anything a crawler would read to the end. */
-export const LLMS_MAX_BYTES = 65_536;
+const LLMS_MAX_BYTES = 65_536;
 
 /** A file shorter than this is the retired 247-byte virology seed, not the real document. */
 const LLMS_MIN_BYTES = 200;
@@ -21,7 +21,7 @@ const LLMS_MIN_BYTES = 200;
  * What the file must document, as the exact text an agent is told. Each is a URL pattern or a header an
  * agent acts on, so a rewrite that drops one has taken a capability away from every agent that read it.
  */
-export const LLMS_REQUIRED_MENTIONS = [
+const LLMS_REQUIRED_MENTIONS = [
   "/llms-full.txt",
   "/writing/rss.xml",
   "/writing/feed.json",

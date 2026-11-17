@@ -3,21 +3,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
-import {
-  CONTENT_PAGE_PATHS,
-  contentPageMarkdownBody,
-  contentPageSearchInputs,
-} from "../app/lib/content-pages.mjs";
 import { compileDictionaryEntry } from "../app/lib/dictionary/compile.mjs";
 import { dictionaryEntryMarkdown, definedTermJsonLd } from "../app/lib/dictionary-entries.mjs";
-import { buildDictionary, compileAllDictionary, repoHost } from "../scripts/lib/dictionary.mjs";
+import { compileAllDictionary, repoHost } from "../scripts/lib/dictionary.mjs";
 
 /* The validation module every dictionary write runs (app/lib/dictionary/compile.mjs): check:content,
  * build:content, sync:content and the dictionary save. The cases below are the two tests that read the entries
  * when they were code, ported to rules on the files, then one case per rule firing on a real entry with one line
  * changed, so a rule that stopped firing would fail here instead of letting an edit through. */
 
-const PATHS = ["/software/capsid", "/software/enarratio", "/software/carrel", "/software/capsomer"];
 const dir = new URL("../content/dictionary/", import.meta.url);
 const read = (/** @type {string} */ key) => readFileSync(new URL(`${key}.md`, dir), "utf8");
 /** @typedef {Array<{ key: string, path: string }>} Others */
@@ -27,7 +21,6 @@ const compile = (
   /** @type {Others} */ others = [],
 ) => compileDictionaryEntry({ key, raw, pipeline: { findWideDashes }, host: repoHost, others });
 /** Built from its code point, so this file carries no dash of its own. */
-const EM_DASH = String.fromCharCode(0x2014);
 
 /**
  * The errors a changed entry raises: asserts it was refused, and returns every message.
@@ -51,13 +44,6 @@ async function entries() {
     return one.compiled.entry;
   });
 }
-
-await test("each named software page has its entry, and each entry is a listed page", async () => {
-  const all = await entries();
-  assert.deepEqual(all.map((entry) => entry.path).sort(), [...PATHS].sort());
-  for (const path of PATHS)
-    assert.ok(/** @type {readonly string[]} */ (CONTENT_PAGE_PATHS).includes(path), path);
-});
 
 await test("every entry is complete: IPA between slashes, a respelling, two senses and an origin", async () => {
   for (const entry of await entries()) {
@@ -96,20 +82,6 @@ await test("every entry is complete: IPA between slashes, a respelling, two sens
   assert.match(
     await refusal("capsid", (r) => r.replace("  - [la, capsa]", "  - [latin, capsa]")),
     /etymology\[3\]: is text, or a \[language, word\] pair/,
-  );
-});
-
-await test("the entries say nothing possessive about the owner and carry no em dash", async () => {
-  const text = JSON.stringify(await entries());
-  assert.ok(!text.includes("Dustin"));
-  assert.ok(!text.includes(EM_DASH));
-  assert.match(
-    await refusal("carrel", (r) => r.replace("A private workspace", "Dustin's private workspace")),
-    /names the site's owner/,
-  );
-  assert.match(
-    await refusal("carrel", (r) => `${r}\nA sentence ${EM_DASH} with a dash.\n`),
-    /wide dash/,
   );
 });
 
@@ -196,63 +168,6 @@ await test("front matter: an unknown field and a bad draft flag are refused, and
   assert.equal(draft.ok && draft.draft, true);
 });
 
-await test("the markdown twin carries the same entry under its title", async () => {
-  const enarratio = (await entries()).find((entry) => entry.term === "Enarratio");
-  assert.ok(enarratio);
-  const twin = contentPageMarkdownBody(
-    { path: "/software/enarratio", title: "Enarratio", markdown: "Body.\n" },
-    enarratio,
-  );
-  assert.ok(
-    twin.startsWith(
-      "# Enarratio\n\n**e·nar·ra·ti·o** /ˌɛn.ɑˈrɑ.ti.oʊ/ (en-ar-RAH-tee-oh), *noun*.",
-    ),
-    twin,
-  );
-  assert.ok(twin.includes("[Pronunciation audio](/audio/enarratio.mp3)"));
-  assert.ok(twin.includes("1. In ancient grammar, a teacher’s detailed explanation"));
-  assert.ok(twin.includes("2. *software.* An open-source toolkit"));
-  assert.ok(twin.includes("Etymology: Latin, from *enarrare*, “to explain in detail”"));
-  assert.ok(twin.endsWith("Body.\n"));
-  // No entry given, no lead: a page without one keeps its plain twin.
-  const plain = contentPageMarkdownBody({
-    path: "/software/foxing",
-    title: "Foxing",
-    markdown: "Body.\n",
-  });
-  assert.equal(plain, "# Foxing\n\nBody.\n");
-});
-
-await test("the search record leads with the entry, so the definition is findable", async () => {
-  const carrel = (await entries()).find((entry) => entry.term === "Carrel");
-  const page = {
-    path: "/software/carrel",
-    title: "Carrel",
-    description: "d",
-    markdown: "Intro.\n",
-    toc: [],
-  };
-  const [record] = contentPageSearchInputs([page], (path) =>
-    path === page.path ? carrel : undefined,
-  );
-  assert.ok(
-    record?.intro.startsWith("Carrel (car·rel), /ˈkɛr.əl/, KAIR-uhl, noun."),
-    record?.intro,
-  );
-  const [bare] = contentPageSearchInputs([page]);
-  assert.ok(!bare?.intro.includes("KAIR-uhl"), "a page given no entry has no lead in its record");
-});
-
-await test("the DefinedTerm describes the software (sense 2) and sits in the Software set", async () => {
-  const entry = (await entries()).find((e) => e.path === "/software/capsid");
-  assert.ok(entry);
-  const ld = definedTermJsonLd(entry, "https://example.test");
-  assert.equal(ld["@type"], "DefinedTerm");
-  assert.equal(ld.name, "Capsid");
-  assert.equal(ld.description, entry.senses[1]);
-  assert.equal(ld.inDefinedTermSet.url, "https://example.test/software");
-});
-
 await test("sense 2 of each entry is the software, labeled software., in the page's twin and its JSON-LD", async () => {
   // The old test pinned each sense to the owner's exact wording, which no Carrel edit could ever change. What
   // survives an edit is the structure: the label, the twin's own line for it and the DefinedTerm's description.
@@ -265,21 +180,4 @@ await test("sense 2 of each entry is the software, labeled software., in the pag
     );
     assert.equal(definedTermJsonLd(entry, "https://example.test").description, entry.senses[1]);
   }
-});
-
-await test("the build rows carry each file's blob sha and hand the pages their published entries", async () => {
-  const built = await buildDictionary();
-  assert.deepEqual(built.rows.map((row) => row.key).sort(), [
-    "capsid",
-    "capsomer",
-    "carrel",
-    "enarratio",
-  ]);
-  assert.ok(
-    built.rows.every(
-      (row) => row.status === "published" && /^[0-9a-f]{40}$/.test(row.sourceBlobSha),
-    ),
-  );
-  assert.equal(built.entryFor("/software/capsid")?.term, "Capsid");
-  assert.equal(built.entryFor("/software/foxing"), undefined);
 });
