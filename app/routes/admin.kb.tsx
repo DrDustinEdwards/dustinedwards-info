@@ -3,6 +3,7 @@ import { Form, Link, data } from "react-router";
 
 import { Empty } from "capsomer/react/empty";
 import { SearchField } from "capsomer/react/field";
+import { ButtonLink } from "capsomer/react/link";
 import { Panel } from "capsomer/react/panel";
 import { Row, RowList, type RowLinkProps } from "capsomer/react/row-list";
 import { Status } from "capsomer/react/status";
@@ -87,16 +88,15 @@ function AdminLink({ href, children, ...rest }: RowLinkProps) {
 /** The public page, a document navigation since the public pages bring their own stylesheets; named for its row. */
 function ViewLink({ href, what }: { href: string; what: string }) {
   return (
-    <Link
+    <ButtonLink
       to={href}
       reloadDocument
-      className="cap-btn"
-      data-variant="quiet"
-      data-size="sm"
+      variant="quiet"
+      size="sm"
       aria-label={`View the page for ${what}`}
     >
       View page
-    </Link>
+    </ButtonLink>
   );
 }
 

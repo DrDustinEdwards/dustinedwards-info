@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
 import { compileDictionaryEntry } from "../../app/lib/dictionary/compile.mjs";
 import { DICTIONARY_DIR, parseDictionaryEntry } from "../../app/lib/dictionary/parse.mjs";
+import { throwOnCompileErrors } from "./content-source.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The D1 rows sync:content writes. */
@@ -78,14 +79,7 @@ export async function compileAllDictionary(options = {}) {
  */
 export async function buildDictionary() {
   const compiled = await compileAllDictionary();
-  const failed = compiled.filter((c) => !c.compiled.ok);
-  if (failed.length > 0) {
-    throw new Error(
-      failed
-        .map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`)
-        .join("\n"),
-    );
-  }
+  throwOnCompileErrors(compiled);
   const ok = compiled.flatMap((c) => (c.compiled.ok ? [c.compiled] : []));
   const rows = ok.map((c) => ({
     key: c.key,

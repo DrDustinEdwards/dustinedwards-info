@@ -64,7 +64,7 @@ export async function run({ page }, mathPreviewSeeded) {
         `React "precedence" attribute on the math link puts it above the meta.`,
     );
 
-    const scan = await page.evaluate(overflowScan);
+    const scan = await overflowScan(page);
     const colors = await page.evaluate(readMathColors);
     const sheets = await page.evaluate(stylesheetHrefs);
     const rendered = await page.evaluate(() => {

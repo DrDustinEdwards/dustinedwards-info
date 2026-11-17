@@ -2,7 +2,7 @@
 
 import { pageEnvelope } from "capsomer/behavior/pagination";
 import { POSTS_PER_PAGE, pageForPosition } from "../../../app/lib/blog-listing.mjs";
-import { ownsAskKey } from "../../../app/lib/search/ask-keys.mjs";
+import { rowIdOf, slugForRowId, urlForRowId } from "../../../app/lib/search/ask-citations.mjs";
 import { readArtifact } from "../artifact.mjs";
 import { ASK_TIMEOUT_MS, check, get, ORIGIN, UA } from "./client.mjs";
 
@@ -198,30 +198,32 @@ export async function run() {
     }
 
     /**
-     * A citation is `item.key` (`writing/<slug>[__<anchor>].md`), not a URL.
+     * A citation is the chunk's row id, the URL it was indexed under (ask-citations.mjs).
      * @param {string} label @param {string} q
-     * @returns {Promise<{keys: string[], status: number} | null>}
+     * @returns {Promise<{ids: string[], status: number} | null>}
      */
-    async function askKeys(label, q) {
+    async function askIds(label, q) {
       const asked = await postAsk(q, label);
       if (!asked) return null;
       const { res, body } = asked;
       const m = body.match(/event: chunks\ndata: (.*)/);
       check(`ask: ${label} returned a parseable chunks event`, Boolean(m), `status ${res.status}`);
-      if (!m) return { keys: [], status: res.status };
-      /** @type {any[]} */
+      if (!m) return { ids: [], status: res.status };
+      /** @type {unknown[]} */
       const chunks = JSON.parse(m[1]);
-      return { keys: chunks.map((c) => String(c?.item?.key ?? "")), status: res.status };
+      return { ids: chunks.map(rowIdOf), status: res.status };
     }
 
     /** Positive control, so an empty draft probe means no leak. Repick it if it stops. */
-    const positive = await askKeys("positive control", "d1");
+    const positive = await askIds("positive control", "d1");
     if (positive) {
-      check("ask: the positive control retrieves at least one chunk", positive.keys.length > 0);
-      for (const key of positive.keys) {
+      check("ask: the positive control retrieves at least one chunk", positive.ids.length > 0);
+      for (const id of positive.ids) {
+        const slug = slugForRowId(id);
         check(
-          `ask: retrieved key ${key} belongs to a published post`,
-          live.some((/** @type {any} */ p) => ownsAskKey(p.slug)(key)),
+          `ask: retrieved ${id} cites a published post or a paper`,
+          urlForRowId(id) !== null &&
+            (slug === null || live.some((/** @type {any} */ p) => p.slug === slug)),
         );
       }
     }
@@ -278,10 +280,10 @@ export async function run() {
     // limit rather than improving coverage.
     const probes = drafts.slice(0, ASK_PROBE_LIMIT);
     for (const p of probes) {
-      const got = await askKeys(`draft ${p.slug}`, p.title);
+      const got = await askIds(`draft ${p.slug}`, p.title);
       if (!got) continue;
-      // The app's own matcher: the old `blog/` prefix outlived the /writing move and matched nothing.
-      const leaked = got.keys.filter(ownsAskKey(p.slug));
+      // The app's own reader of a citation, so the probe cannot disagree with what a reader is shown.
+      const leaked = got.ids.filter((id) => slugForRowId(id) === p.slug);
       check(`draft ${p.slug}: Ask cites nothing from it`, leaked.length === 0, leaked.join(", "));
     }
     console.log(

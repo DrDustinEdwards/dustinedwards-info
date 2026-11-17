@@ -62,8 +62,7 @@ export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
   return {
     kind: "dictionary",
 
-    async list(query) {
-      const needle = query.q?.toLowerCase();
+    async list() {
       const summaries: ContentSummary[] = (await listDictionaryRows(env)).map((row) => {
         const status: ContentStatus = row.draft ? "draft" : "published";
         return {
@@ -77,9 +76,7 @@ export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
           updatedAt: row.syncedAt.toISOString(),
         };
       });
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return summaries;
     },
 
     async get(key) {

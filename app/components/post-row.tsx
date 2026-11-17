@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 
+import "capsomer/eyebrow.css";
 import { formatDate } from "capsomer/behavior/time";
 import { tagPath } from "~/lib/tag-path.mjs";
 
@@ -36,7 +37,7 @@ export function PostRow({ post, mark }: { post: RowPost; mark?: string }) {
           </Link>
         </h2>
         {post.series && (
-          <p className="entry-series">
+          <p className="cap-eyebrow entry-series" data-variant="mono">
             {post.series}, part {post.part}
           </p>
         )}

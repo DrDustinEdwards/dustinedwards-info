@@ -1,4 +1,5 @@
 import { env } from "cloudflare:test";
+import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readCv } from "~/db/cv";
@@ -359,7 +360,7 @@ describe("/dustin-edwards-cv.pdf", () => {
   it("answers 404 with a message that says why, and is not cached", async () => {
     const res = await request();
     expect(res.status).toBe(404);
-    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("cache-control")).toBe(UNCACHED);
     expect(await res.text()).toMatch(/not been rendered yet.*sync_cv_pdf/);
     expect((await request({ method: "HEAD" })).status).toBe(404);
   });

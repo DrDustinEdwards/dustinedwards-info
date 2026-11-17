@@ -2,7 +2,7 @@
 // the old feed addresses keep answering with the feed, because a feed reader may never follow a
 // redirect. Plain fetches, not the browser page, because the status is what is being read and a page
 // would follow a redirect.
-import { sitemapLocs } from "@drdustinedwards/site-helpers/markdown-copy";
+import { sitemapLocs } from "@dustinedwards/site-runtime/html";
 import { BASE, ok } from "../harness.mjs";
 
 /** @param {string} path */

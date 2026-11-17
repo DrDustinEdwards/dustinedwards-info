@@ -16,9 +16,10 @@ import {
   registryDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
-  withTimeout,
 } from "~/lib/health/verdicts.mjs";
-import { askIndexStatus, type AskIndexStatus } from "~/lib/search/ask.server";
+import { askIndexStatus } from "~/lib/search/ask.server";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
+import { withTimeout } from "@dustinedwards/site-runtime/time";
 import { timed } from "@dustinedwards/site-runtime/server-timing";
 import { type Timings } from "~/lib/timing";
 import { SourceError, listDirectory, listPostFiles } from "~/lib/source/store.server";
@@ -189,18 +190,9 @@ export interface HealthCheck {
   counts?: { expected: number; present: number };
 }
 
-/** What a caller may share with the run: the request's timing marks, and a memoized read of the Ask index. */
+/** What a caller may share with the run: the request's timing marks. */
 export interface HealthOptions {
   timings?: Timings;
-  askStatus?: () => Promise<AskIndexStatus | null>;
-}
-
-/** The Ask index's status: the caller's shared read when it has one, else a fresh listing. Unreadable is a failed check. */
-async function askStatusOf(env: Env, options: HealthOptions): Promise<AskIndexStatus> {
-  if (!options.askStatus) return askIndexStatus(env);
-  const status = await options.askStatus();
-  if (!status) throw new Error("the Ask index could not be listed");
-  return status;
 }
 
 interface HealthRun {
@@ -237,9 +229,7 @@ export async function runHealthChecks(env: Env, options: HealthOptions = {}): Pr
   const guard = (name: string, run: Parameters<typeof guardOne>[1]) =>
     timed(options.timings, `health_${name}`, () => guardOne(name, run));
 
-  pending.push(
-    guard("ask-index-drift", async () => askDriftVerdict(await askStatusOf(env, options))),
-  );
+  pending.push(guard("ask-index-drift", async () => askDriftVerdict(await askIndexStatus(env))));
 
   pending.push(
     guard("media-index-drift", () =>
@@ -368,6 +358,21 @@ async function guardOne(
 ): Promise<HealthCheck> {
   // The async wrapper turns a SYNCHRONOUS throw in run into a rejection withTimeout can guard.
   const started = (async () => run())();
-  const { ok, detail, counts } = await withTimeout(started, CHECK_TIMEOUT_MS, name);
-  return counts ? { name, ok, detail, counts } : { name, ok, detail };
+  let timeout: Error | undefined;
+  try {
+    const { ok, detail, counts } = await withTimeout(
+      started,
+      CHECK_TIMEOUT_MS,
+      `check ${name} did not answer within ${CHECK_TIMEOUT_MS}ms and is reported failed`,
+      (error) => (timeout = error),
+    );
+    return counts ? { name, ok, detail, counts } : { name, ok, detail };
+  } catch (error) {
+    // A timeout and a throw are both a failed check, never a failed response.
+    return {
+      name,
+      ok: false,
+      detail: timeout ? timeout.message : `check threw: ${errorMessage(error)}`,
+    };
+  }
 }

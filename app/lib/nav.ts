@@ -9,7 +9,7 @@ import { seriesPath, seriesSlug } from "./series-path.mjs";
 import { tagPath } from "./tag-path.mjs";
 import { BASES } from "../kb/bases.mjs";
 import { paperPath } from "./publications/paths.mjs";
-import { EXPLORER_ORIGIN } from "./systems.mjs";
+import { EXPLORER_ORIGIN } from "capsomer/behavior/system-model";
 
 /*
  * The header's five destinations and the panels that hang from them ("structured panels", decided

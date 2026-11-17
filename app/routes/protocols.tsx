@@ -2,7 +2,12 @@ import { JsonLd } from "capsomer/react/json-ld";
 import { DraftNotice } from "capsomer/react/draft-notice";
 import { Catalog } from "capsomer/react/catalog";
 import { TabLink, TabsNav } from "capsomer/react/tabs";
-import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
+import {
+  catalogDownloads,
+  catalogRedirect,
+  parseCatalogParams,
+  queryCatalog,
+} from "capsomer/behavior/catalog";
 import { redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -16,16 +21,14 @@ import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
-import { thing } from "@drdustinedwards/site-helpers/schema";
+import { itemList, thing } from "@drdustinedwards/site-helpers/schema";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import {
   LIBRARY,
   LIBRARY_PATH,
   libraryCitation,
-  libraryDownloads,
   libraryItems,
   libraryOverview,
-  libraryRedirect,
   libraryTabs,
   type LibraryItem,
 } from "~/kb/procedures/library.mjs";
@@ -47,8 +50,8 @@ import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
 import "capsomer/tabs.css";
+import "capsomer/step-indicator.css";
 import "~/styles/prose.css";
-import "~/styles/site-catalog.css";
 import "~/styles/library.css";
 import { RENDERED } from "~/lib/content/render-version";
 import { PROSE } from "~/lib/prose-context";
@@ -73,7 +76,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     isAdminViewer(env, request),
   );
   // A state written in another order, or with a default spelled out, goes to its one address.
-  const canonical = libraryRedirect(url);
+  const canonical = catalogRedirect(LIBRARY, url, { keepUnknown: true });
   if (canonical) throw redirect(canonical, 301);
   const items = libraryItems(await listPublishedRecordsOfProfile(env, "protocol"));
   // The registry's kinds are tabs beside the calculators, counted from its rows (docs/REGISTRY.md).
@@ -131,16 +134,11 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
     name: page.title,
     description: page.description,
     url: `${SITE_ORIGIN}${LIBRARY_PATH}`,
-    mainEntity: {
-      "@type": "ItemList",
-      numberOfItems: items.length,
-      itemListElement: items.map((item, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        name: item.title,
-        url: `${SITE_ORIGIN}${item.path}`,
-      })),
-    },
+    mainEntity: itemList(
+      SITE_ORIGIN,
+      page.title,
+      items.map((item) => ({ name: item.title, path: item.path })),
+    ),
   });
   return (
     <PageShell trail={<JsonLd data={collection} />}>
@@ -151,7 +149,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       <DraftNotice show={draft} />
       <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(intro)} />
       <LibraryOverview overview={libraryOverview(items)} />
-      <div className="library site-catalog site-catalog-wide">
+      <div className="library page-wide">
         <TabsNav aria-label="Protocols by kind of work" variant="line">
           {libraryTabs(items, result.state.filters.method ?? [], registry).map((tab) => (
             <TabLink key={tab.id} href={tab.href} current={tab.current} count={tab.count}>
@@ -173,7 +171,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       </div>
       <LibraryCite
         count={result.count}
-        downloads={libraryDownloads(result)}
+        downloads={catalogDownloads(LIBRARY, result)}
         citation={libraryCitation({
           name: SITE.name,
           affiliation: SITE.affiliation,

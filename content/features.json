@@ -229,7 +229,7 @@
     {
       "component": "Ask",
       "name": "Drafts can never reach the AI index",
-      "what": "The classic index filters drafts at query time. The AI index cannot, because it has no per-item status a query can filter on, so exclusion happens at upload time. A draft uploads nothing and actively removes anything the post already had, because skipping the upload alone would leak on the unpublish path: a post published, indexed, then withdrawn would stay answerable forever.",
+      "what": "The AI index has no per-item status a search can filter on, so exclusion happens where it reads. AI Search reads the site's database itself, through one query that selects only published posts whose time has come and published papers, with the same visibility rule the classic index applies. A sync removes every row the query no longer returns, so a post published, indexed, then withdrawn leaves the index on the next sync, which a withdrawal asks for at once.",
       "anchors": [
         {
           "kind": "gate",
@@ -238,7 +238,7 @@
         {
           "kind": "assertion",
           "gate": "check:ask-guards",
-          "text": "a withdrawn post is not Ask-publishable"
+          "text": "ask index: its posts are type 'post' with the shared visibility rule on the database's clock"
         }
       ]
     },

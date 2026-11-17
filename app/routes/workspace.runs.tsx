@@ -6,7 +6,8 @@ import { can } from "@dustinedwards/site-runtime/members";
 import { Panel } from "capsomer/react/panel";
 
 import { PageHead } from "capsomer/react/page-head";
-import { LabTable, Result } from "~/components/lab/lab-ui";
+import { Table } from "capsomer/react/table";
+import { LabStatus } from "~/components/lab/lab-ui";
 import { RunForm } from "~/components/lab/run-form";
 import { labActorContext } from "~/lab/actor.server";
 import { recordRun, runsPage } from "~/lab/runs.server";
@@ -55,29 +56,40 @@ export default function LabRuns({ loaderData, actionData }: Route.ComponentProps
         title="Runs"
         lead={`${all ? "Every run recorded in the lab" : "The runs you recorded"}, with the lots each used. A saved run is never changed: a correction is a new run that names it.`}
       />
-      <Result result={actionData} />
+      <LabStatus result={actionData} />
       {runs.length === 0 ? (
         <p className="cap-muted">No runs recorded yet.</p>
       ) : (
-        <LabTable label="Runs" head={["Run", "Protocol", "Day", "Outcome", ...(all ? ["By"] : [])]}>
-          {runs.map((r) => (
-            <tr key={r.id}>
-              <th scope="row">
-                <Link to={`${LAB_BENCH_PATH}/runs/${r.id}`}>Run {r.id}</Link>
-                {r.replaced_by ? (
-                  <span className="cap-muted">, corrected by run {r.replaced_by}</span>
-                ) : null}
-                {r.replaces_run_id ? (
-                  <span className="cap-muted">, corrects run {r.replaces_run_id}</span>
-                ) : null}
-              </th>
-              <td>{r.title}</td>
-              <td>{r.run_on}</td>
-              <td>{r.outcome}</td>
-              {all ? <td>{r.actor}</td> : null}
+        <Table caption="Runs" captionHidden>
+          <thead>
+            <tr>
+              <th scope="col">Run</th>
+              <th scope="col">Protocol</th>
+              <th scope="col">Day</th>
+              <th scope="col">Outcome</th>
+              {all ? <th scope="col">By</th> : null}
             </tr>
-          ))}
-        </LabTable>
+          </thead>
+          <tbody>
+            {runs.map((r) => (
+              <tr key={r.id}>
+                <th scope="row">
+                  <Link to={`${LAB_BENCH_PATH}/runs/${r.id}`}>Run {r.id}</Link>
+                  {r.replaced_by ? (
+                    <span className="cap-muted">, corrected by run {r.replaced_by}</span>
+                  ) : null}
+                  {r.replaces_run_id ? (
+                    <span className="cap-muted">, corrects run {r.replaces_run_id}</span>
+                  ) : null}
+                </th>
+                <td>{r.title}</td>
+                <td>{r.run_on}</td>
+                <td>{r.outcome}</td>
+                {all ? <td>{r.actor}</td> : null}
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       )}
       <Panel title="Record a run">
         <RunForm procedures={procedures} lots={lots} lotRows={lotRows} />

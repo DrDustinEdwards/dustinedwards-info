@@ -4,18 +4,17 @@
 // byte for byte: a front-matter field whose value is unchanged keeps the text it was written in, and a step keeps its
 // lines, so a save from the form changes only what was changed. formToFile(fileToForm(raw)) === raw for every file.
 
-import matter from "gray-matter";
+import { matter, stringifyMatter } from "@drdustinedwards/site-helpers/matter";
 
 import { yamlPlain } from "../lib/yaml-plain.mjs";
 
-/** YAML through gray-matter, the reader every content file is parsed with, so the form reads a field as the compile does. */
+/** YAML through Prelum's matter, the reader every content file is parsed with, so the form reads a field as the compile does. */
 const yaml = {
   /** @param {string} text */
   load: (text) => /** @type {Record<string, unknown>} */ (matter(`---\n${text}\n---\n`).data),
   /** @param {Record<string, unknown>} value */
   dump: (value) =>
-    matter
-      .stringify("", value)
+    stringifyMatter("", value)
       .replace(/^---\n/, "")
       .replace(/\n---\n*$/, "\n"),
 };

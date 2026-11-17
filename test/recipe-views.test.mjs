@@ -8,7 +8,6 @@ import {
   ingredientNames,
   ingredientSteps,
   miseEnPlace,
-  readUnits,
   showQuantity,
   showTemperatures,
   stepIngredients,
@@ -35,8 +34,6 @@ const q = (amount, unit, extra = {}) => ({
 });
 
 await test("an amount converts between metric and imperial; spoons, unknown units and the recipe's own units stay as written", () => {
-  assert.equal(readUnits("imperial"), "imperial");
-  assert.equal(readUnits("kelvin"), null);
   assert.equal(showQuantity(q(250, "g"), 1, null), "250 g");
   assert.equal(showQuantity(q(250, "g"), 1, "imperial"), "8.75 oz");
   assert.equal(showQuantity(q(500, "g"), 1, "imperial"), "1.1 lb");

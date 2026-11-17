@@ -61,7 +61,6 @@ import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
 import "~/styles/prose.css";
-import "~/styles/site-catalog.css";
 import "~/styles/library.css";
 import "~/styles/registry.css";
 

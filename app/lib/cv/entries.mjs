@@ -13,7 +13,7 @@ import { deriveIdentity } from "../identity.mjs";
 import { IDENTITY } from "../identity.generated.mjs";
 import { canonicalAuthor } from "../publications/authors.mjs";
 import { bibtexPages, escapeBibtex } from "@drdustinedwards/site-helpers/scholar";
-import { decodeEntities } from "../publications/entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { paperPath, paperPdfPath } from "../publications/paths.mjs";
 import { areaLabel, foldText, formatDollars, roleLabel, typeLabel } from "./view.mjs";
 
@@ -108,7 +108,7 @@ function formatWhen(year, endYear) {
  * @param {string | null | undefined} pages
  */
 function venueOf(journal, volume, issue, pages) {
-  let out = decodeEntities(journal ?? "");
+  let out = unescapeHtml(journal ?? "");
   if (volume) out += ` ${volume}${issue ? `(${issue})` : ""}`;
   if (pages) out += `${volume ? ":" : ", "}${pages}`;
   return out.trim();
@@ -164,7 +164,7 @@ function resolveOne(source, byDoi) {
         `cv: no publication record for DOI ${source.doi}; add its file to content/publications/ first.`,
       );
     }
-    const title = decodeEntities(p.title);
+    const title = unescapeHtml(p.title);
     const venue = venueOf(p.journal, p.volume, p.issue, p.pages);
     const { slug } = p;
     const areas = [...new Set(p.topics.map((t) => TOPIC_AREA[t]))];
@@ -184,7 +184,7 @@ function resolveOne(source, byDoi) {
       meta: [venue],
       links,
       paper: {
-        authors: p.authors.map((name) => decodeEntities(name)),
+        authors: p.authors.map((name) => unescapeHtml(name)),
         venue,
         doi: p.doi,
         pagePath: paperPath(slug),

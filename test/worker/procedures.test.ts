@@ -338,8 +338,12 @@ describe("the biosafety level", () => {
       expect(saved.ok).toBe(true);
       const out = await everywhere();
       expect(out.record.biosafetyLevel).toBe("BSL-2");
-      expect(out.view).toContain("<dt>Biosafety level</dt><dd>BSL-2</dd>");
-      expect(out.sheet).toContain("<dt>Biosafety level</dt><dd>BSL-2</dd>");
+      expect(out.view).toContain(
+        '<dt class="cap-eyebrow" data-variant="mono">Biosafety level</dt><dd>BSL-2</dd>',
+      );
+      expect(out.sheet).toContain(
+        '<dt class="cap-eyebrow" data-variant="mono">Biosafety level</dt><dd>BSL-2</dd>',
+      );
       expect(out.twin).toContain("- Biosafety level: BSL-2");
       expect(out.ld).toContain('"name":"Biosafety level","value":"BSL-2"');
       const list = await runTool(operatorEnv(), operator, "list_procedures", {});

@@ -1,4 +1,6 @@
-import { countOf, type libraryCitation, type libraryDownloads } from "~/kb/procedures/library.mjs";
+import type { catalogDownloads } from "capsomer/behavior/catalog";
+
+import { countOf, type libraryCitation } from "~/kb/procedures/library.mjs";
 
 /**
  * Download and cite (docs/PROCEDURES.md): the CSV and JSON of the view shown, the markdown of the whole library, and how
@@ -14,7 +16,7 @@ export function LibraryCite({
   count: number;
   /** What the library's entries are called: ["recipe", "recipes"]. */
   noun?: [string, string];
-  downloads: ReturnType<typeof libraryDownloads>;
+  downloads: ReturnType<typeof catalogDownloads>;
   citation: ReturnType<typeof libraryCitation>;
 }) {
   return (

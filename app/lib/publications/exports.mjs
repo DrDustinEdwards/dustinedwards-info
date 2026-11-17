@@ -3,7 +3,7 @@
 
 import { ORGANISM_PATTERN } from "../../data/organisms.ts";
 import { canonicalAuthor } from "./authors.mjs";
-import { decodeEntities } from "./entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { toBibtex, toRis } from "@drdustinedwards/site-helpers/scholar";
 import { SITE_ORIGIN } from "../site-origin.mjs";
 
@@ -56,7 +56,7 @@ export function toCslJson(cslRecords) {
    * @returns {any}
    */
   const decodeDeep = (value) => {
-    if (typeof value === "string") return decodeEntities(value);
+    if (typeof value === "string") return unescapeHtml(value);
     if (Array.isArray(value)) return value.map(decodeDeep);
     if (value && typeof value === "object") {
       /** @type {Record<string, unknown>} */

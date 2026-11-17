@@ -68,8 +68,8 @@ export async function run() {
     const { text, status } = await get("/search?q=blog");
     check("search: page renders", status === 200);
     // Scoped: the zero state lists the same links.
-    const results = strip(text).match(/<ol class="search-results"[\s\S]*?<\/ol>/) ?? [""];
-    check("search: results list present", results[0].includes("search-result"));
+    const results = strip(text).match(/<ol class="cap-search-list"[\s\S]*?<\/ol>/) ?? [""];
+    check("search: results list present", results[0].includes("cap-search-result"));
     check("search: a mark is rendered", results[0].includes("<mark>"));
 
     const json = await get("/search?q=blog", { accept: "application/json" });

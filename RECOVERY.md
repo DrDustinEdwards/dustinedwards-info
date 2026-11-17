@@ -291,42 +291,33 @@ webmention resets the row and queues it again.
 
 ## 4. AI Search instance
 
+The instance's data source is this site's D1, so it is created through the API (the D1 type has no wrangler flag)
+with a token that may create AI Search instances:
+
 ```sh
-npx wrangler ai-search create dustinedwards --type builtin --hybrid-search --reranking
+curl -X POST "https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai-search/namespaces/default/instances" \
+  -H "Authorization: Bearer <API_TOKEN>" -H "Content-Type: application/json" --data @instance.json
 ```
 
-Binding `AI_SEARCH`, `instance_name` `dustinedwards`. Flags confirmed against
-`wrangler ai-search create --help` on wrangler 4.107.0.
+`instance.json`: `id` `dustinedwards-ask`; `type` `d1`; `source` the D1 database id; `token_id` the account's AI
+Search service token (its Index Engine permission holds D1 Read; list them at `GET .../ai-search/tokens`);
+`source_params.d1` with `query` set to `ASK_INDEX_QUERY` (`app/lib/search/search.server.ts`) and `template`
+`content_only`; `sync_interval` 900; `embedding_model` `@cf/qwen/qwen3-embedding-0.6b`; `index_method` vector and
+keyword; `fusion_method` `rrf`; `reranking` true; `indexing_options.keyword_tokenizer` `porter`; `score_threshold`
+0.4; and `public_endpoint_params` with `enabled` true, `mcp.disabled` false, `search_endpoint.disabled` false,
+`chat_completions_endpoint.disabled` true and a `rate_limit` of 120 requests a minute. Docs:
+https://developers.cloudflare.com/ai-search/configuration/data-source/d1/.
 
-`--type builtin` is load-bearing and not a default worth changing. The crawler
-type would index the live domain instead (a **domain onboarded to this
-account**), not the repository's content. Built-in storage also indexes on
-upload rather than on a schedule, and keeps one item per section record, which is
-what lets a citation deep-link to a heading anchor.
-
-Settings not passed on the command line are defaults and were confirmed present on
-the live instance: response caching on, `score_threshold` 0.4, reciprocal-rank
-fusion, porter keyword tokenizer. The live embedding model is
-`@cf/qwen/qwen3-embedding-0.6b`.
-
-### Authorized hosts
-
-The public endpoint and its MCP URL are enabled in the **dashboard**, not by CLI:
-**AI > AI Search > your instance > Settings > Public Endpoint**. Set Authorized
-hosts to the origin that will call it. Today that is the `workers.dev` origin; at
-DNS cutover the apex is added. This is a dashboard-only step and there is no
-wrangler command for it.
+Binding `AI_SEARCH`, `instance_name` `dustinedwards-ask`. The new instance gets a new `public_endpoint_id`, so the
+search MCP URL in `content/llms.txt` changes with it (publish it through Carrel).
 
 ### Corpus
 
-The corpus is **not** populated by any build step. After content is in D1 (step
-7), sign in to `/admin/tools` and press **Rebuild the answer index**. That uploads every
-section record through the Items binding and then prunes items the corpus no
-longer contains. The prune matters: upload alone is an upsert, so a deleted post
-would stay answerable forever.
+The corpus is D1 itself: AI Search runs the query on creation, every 15 minutes and whenever the site asks for a
+sync. Once content is in D1 (step 7), nothing else is needed; `/admin/tools` has **Sync the answer index now**.
 
-**Drafts must never reach this index.** It is a public, unauthenticated surface.
-`publishableForAsk()` is the gate and `check:ask-guards` covers it.
+**Drafts must never reach this index.** It is a public, unauthenticated surface. The query's visibility rule is the
+gate and `check:ask-guards` covers it.
 
 ---
 

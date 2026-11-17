@@ -1,5 +1,7 @@
-import { SearchField } from "capsomer/react/field";
+import { CheckChips } from "capsomer/react/chips";
+import { SearchField, SpanField } from "capsomer/react/field";
 import { JsonLd } from "capsomer/react/json-ld";
+import { ButtonLink } from "capsomer/react/link";
 import { Fragment, useState, type ReactNode } from "react";
 
 import { PageShell } from "~/components/page-shell";
@@ -47,6 +49,7 @@ import {
 
 import type { Route } from "./+types/cv";
 
+import "capsomer/eyebrow.css";
 import "capsomer/tokens.css";
 import "capsomer/status.css";
 import "capsomer/copy.css";
@@ -417,7 +420,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
     <PageShell trail={<JsonLd data={jsonLd} />}>
       <div className="cv" data-cv="">
         <header className="cv-head">
-          <p className="cv-eyebrow">
+          <p className="cap-eyebrow cv-eyebrow" data-variant="mono">
             {CV_PAGE.title} · {CV.edition}
           </p>
           <h1 className="cv-name cap-layout-grid">
@@ -427,18 +430,18 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             {CV.person.title}, {CV.person.department}, {CV.person.org}.
           </p>
           <p className="cv-actions">
-            <a href={CV_PDF_PATH} className="cap-btn" data-variant="link">
+            <ButtonLink href={CV_PDF_PATH} variant="link">
               Download PDF
-            </a>
+            </ButtonLink>
             <button type="button" className="cap-btn" data-variant="link" data-cv-print="">
               Print
             </button>
-            <a href={contentPageMarkdownPath(PATH)} className="cap-btn" data-variant="link">
+            <ButtonLink href={contentPageMarkdownPath(PATH)} variant="link">
               Markdown
-            </a>
-            <a href="/research/publications" className="cap-btn" data-variant="link">
+            </ButtonLink>
+            <ButtonLink href="/research/publications" variant="link">
               All publications
-            </a>
+            </ButtonLink>
           </p>
         </header>
 
@@ -503,81 +506,39 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
               </span>
             </summary>
             <div className="cv-more-body">
-              <fieldset className="cv-facet cap-chips">
-                <legend className="cv-label">Type</legend>
-                {TYPES.map(([id, , plural]) => (
-                  <label key={id} className="cap-chip">
-                    <input
-                      className="cap-chip-input"
-                      type="checkbox"
-                      name="type"
-                      value={id}
-                      defaultChecked={state.types.includes(id)}
-                    />
-                    {plural}{" "}
-                    <span className="cap-chip-count" data-cv-facet={`type:${id}`}>
-                      {facets.types[id] ?? 0}
-                    </span>
-                  </label>
-                ))}
-              </fieldset>
+              <CheckChips
+                legend="Type"
+                name="type"
+                checked={state.types}
+                options={TYPES.map(([id, , plural]) => ({
+                  value: id,
+                  label: plural,
+                  count: facets.types[id] ?? 0,
+                }))}
+              />
               <div className="cv-filter-row">
-                <fieldset className="cv-facet cap-chips">
-                  <legend className="cv-label">Research area</legend>
-                  {AREAS.filter(([id]) => FACTS.some((f) => f.areas.includes(id))).map(
-                    ([id, label]) => (
-                      <label key={id} className="cap-chip">
-                        <input
-                          className="cap-chip-input"
-                          type="checkbox"
-                          name="area"
-                          value={id}
-                          defaultChecked={state.areas.includes(id)}
-                        />
-                        {label}{" "}
-                        <span className="cap-chip-count" data-cv-facet={`area:${id}`}>
-                          {facets.areas[id] ?? 0}
-                        </span>
-                      </label>
-                    ),
+                <CheckChips
+                  legend="Research area"
+                  name="area"
+                  checked={state.areas}
+                  options={AREAS.filter(([id]) => FACTS.some((f) => f.areas.includes(id))).map(
+                    ([id, label]) => ({ value: id, label, count: facets.areas[id] ?? 0 }),
                   )}
-                </fieldset>
-                <fieldset className="cv-facet cv-years">
-                  <legend className="cv-label">Years</legend>
-                  <div className="cv-years-row">
-                    <select
-                      name="from"
-                      defaultValue={state.from === null ? "" : String(state.from)}
-                      aria-label="From year"
-                    >
-                      <option value="">Earliest</option>
-                      {YEARS.map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                    <span aria-hidden="true">to</span>
-                    <select
-                      name="to"
-                      defaultValue={state.to === null ? "" : String(state.to)}
-                      aria-label="To year"
-                    >
-                      <option value="">Latest</option>
-                      {[...YEARS].reverse().map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </fieldset>
+                />
+                <SpanField
+                  className="cv-years"
+                  label="Years"
+                  names={{ from: "from", to: "to" }}
+                  options={YEARS.map((y) => ({ value: String(y), label: y }))}
+                  from={state.from}
+                  to={state.to}
+                />
                 <label className="cv-field">
                   <span className="cv-label">Role</span>
                   <select name="role" defaultValue={state.role ?? ""}>
                     <option value="">Any role</option>
                     {ROLES.filter(([id]) => FACTS.some((f) => f.role === id)).map(([id, label]) => (
-                      <option key={id} value={id} data-cv-facet={`role:${id}`} data-label={label}>
+                      <option key={id} value={id} data-cv-facet={id} data-label={label}>
                         {label} ({facets.roles[id] ?? 0})
                       </option>
                     ))}
@@ -650,7 +611,11 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                     data-cv-part={part.key}
                     hidden={!part.ids.some((id) => shown.has(id))}
                   >
-                    {part.heading ? <h3 className="cv-part-title">{part.heading}</h3> : null}
+                    {part.heading ? (
+                      <h3 className="cap-eyebrow cv-part-title" data-variant="mono">
+                        {part.heading}
+                      </h3>
+                    ) : null}
                     <ol className="cv-list cap-timeline">
                       {part.ids.map((id) => {
                         const entry = BY_ID.get(id);

@@ -12,6 +12,7 @@ import {
   rosterSetErrors,
   sortCohorts,
 } from "../../app/lib/roster/compile.mjs";
+import { throwOnCompileErrors } from "./content-source.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The D1 rows sync:content writes. */
@@ -58,14 +59,7 @@ export async function compileAllRoster(options = {}) {
  */
 export async function buildRoster() {
   const compiled = await compileAllRoster();
-  const failed = compiled.filter((c) => !c.compiled.ok);
-  if (failed.length > 0) {
-    throw new Error(
-      failed
-        .map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`)
-        .join("\n"),
-    );
-  }
+  throwOnCompileErrors(compiled);
   const ok = compiled.flatMap((c) => (c.compiled.ok ? [c.compiled] : []));
   const setErrors = rosterSetErrors(ok.map((c) => c.cohort));
   if (setErrors.length > 0)

@@ -19,7 +19,7 @@ etymology:
   - ", “part”."
 senses:
   - "One of the protein subunits that together form the capsid of a virus."
-  - "A shared design system of plain-CSS components, color tokens and page patterns from which a family of apps and websites is built."
+  - "An open-source design system of plain-CSS components, design tokens and page patterns for building websites and web apps."
 senseLabels: [null, software]
 audio: /audio/capsomer.mp3
 ---

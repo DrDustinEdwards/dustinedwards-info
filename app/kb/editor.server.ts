@@ -4,7 +4,7 @@
 // own checks and commits nothing, and Save is that save, refused when the file changed since it was opened.
 
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { SourceError, readFile } from "~/lib/source/store.server";
@@ -97,7 +97,7 @@ export async function loadFile(env: EditorEnv, target: KbTarget): Promise<KbFile
   // The front matter as written, for the heading only: a file that fails its checks still opens, with its errors.
   let data: Record<string, unknown> = {};
   try {
-    data = matter(read.content, {}).data;
+    data = matter(read.content).data;
   } catch {
     data = {};
   }

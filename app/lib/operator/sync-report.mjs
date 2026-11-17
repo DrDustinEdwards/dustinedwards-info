@@ -1,43 +1,43 @@
 // `converged` is DERIVED from counts read back after the writes, never asserted by the caller: `ship`
-// fails on it, and a loop over a wrongly built corpus still reports a healthy `uploaded`.
+// fails on it, and a run's own counters would report a healthy number over a wrong index.
 
 /**
- * Any failed key makes `converged` false, even when the counts happen to agree.
+ * The Ask index after a sync has ended: one item per row of its query, so the counts are the read-back. A sync that
+ * had not ended inside the wait, or a row the index refused, makes `converged` false even when the counts agree.
  *
  * @param {{
- *   uploaded: number,
- *   removed: number,
- *   cacheDropped: number,
+ *   job: string,
+ *   ended: boolean,
  *   expected: number,
  *   present: number,
- *   failed?: Array<{ key: string, error: string }>,
+ *   refused: number,
+ *   indexing: number,
  * }} counts
  * @returns {{
- *   uploaded: number,
- *   removed: number,
- *   cacheDropped: number,
+ *   job: string,
+ *   ended: boolean,
  *   expected: number,
  *   present: number,
  *   drift: number,
+ *   refused: number,
+ *   indexing: number,
  *   converged: boolean,
- *   failed: Array<{ key: string, error: string }>,
- *   unreadable: boolean,
  * }}
  */
 export function askSyncReport(counts) {
   const agreement = convergence(counts.expected, counts.present);
-  // An absent list means the caller had nothing to report; anything else that is not an array is an
-  // unreadable failure list, and a report that cannot say what failed has not converged.
-  const failedReadable = counts.failed === undefined || Array.isArray(counts.failed);
-  const failed = Array.isArray(counts.failed) ? counts.failed : [];
+  const refused = whole(counts.refused);
   return {
-    uploaded: whole(counts.uploaded),
-    removed: whole(counts.removed),
-    cacheDropped: whole(counts.cacheDropped),
+    job: String(counts.job),
+    ended: counts.ended === true,
     ...agreement,
-    converged: agreement.converged && failedReadable && failed.length === 0,
-    failed,
-    unreadable: !failedReadable,
+    refused,
+    indexing: whole(counts.indexing),
+    converged:
+      agreement.converged &&
+      counts.ended === true &&
+      Number.isInteger(counts.refused) &&
+      refused === 0,
   };
 }
 
@@ -147,29 +147,4 @@ function unreadable(a, b) {
 /** @param {unknown} n @returns {number} */
 function whole(n) {
   return Number.isInteger(n) ? Number(n) : 0;
-}
-
-/**
- * @param {ReturnType<typeof askSyncReport>} report
- * @returns {string}
- */
-export function askSyncSummary(report) {
-  if (report.failed?.length) {
-    return (
-      `ASK UPLOAD FAILED for ${report.failed.length} key(s) after retries: ` +
-      `${report.failed.map((f) => `${f.key} (${f.error})`).join(", ")}. ` +
-      `${report.expected} expected, ${report.present} present.`
-    );
-  }
-  if (report.unreadable) {
-    return (
-      `ASK SYNC REPORT UNREADABLE: the failure list was not a list, so what failed is unknown. ` +
-      `${report.expected} expected, ${report.present} present.`
-    );
-  }
-  return report.converged
-    ? `Ask index converged: ${report.expected} expected, ${report.present} present, ` +
-        `${report.uploaded} uploaded, ${report.removed} removed.`
-    : `ASK INDEX STILL SHORT: ${report.expected} expected, ${report.present} present, ` +
-        `drift ${report.drift}, after uploading ${report.uploaded} and removing ${report.removed}.`;
 }

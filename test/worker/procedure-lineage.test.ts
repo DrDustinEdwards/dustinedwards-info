@@ -102,7 +102,7 @@ describe("a variant's lineage", () => {
         }),
       );
       expect(html).toContain(
-        `<dt>Based on</dt><dd><a href="${PARENT}/v/1">Phage Isolation and Purification Protocol, version 1</a></dd>`,
+        `<dt class="cap-eyebrow" data-variant="mono">Based on</dt><dd><a href="${PARENT}/v/1">Phage Isolation and Purification Protocol, version 1</a></dd>`,
       );
 
       const person = {

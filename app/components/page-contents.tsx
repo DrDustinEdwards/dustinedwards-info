@@ -1,3 +1,4 @@
+import "capsomer/eyebrow.css";
 import { htmlToText } from "@drdustinedwards/site-helpers/text";
 
 /** Below this, a contents list is furniture rather than a map. */
@@ -23,7 +24,7 @@ export function PageContents({
       className={className ? `page-contents ${className}` : "page-contents"}
       aria-labelledby="page-contents-label"
     >
-      <p className="page-contents-label" id="page-contents-label">
+      <p className="cap-eyebrow page-contents-label" data-variant="mono" id="page-contents-label">
         {label}
       </p>
       <ol className="cap-leader-index">

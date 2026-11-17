@@ -1,7 +1,12 @@
 import { JsonLd } from "capsomer/react/json-ld";
 import { DraftNotice } from "capsomer/react/draft-notice";
 import { Catalog } from "capsomer/react/catalog";
-import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
+import {
+  catalogDownloads,
+  catalogRedirect,
+  parseCatalogParams,
+  queryCatalog,
+} from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -10,8 +15,8 @@ import { PageShell } from "~/components/page-shell";
 import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { thing } from "@drdustinedwards/site-helpers/schema";
-import { countOf, libraryDownloads, libraryRedirect } from "~/kb/procedures/library.mjs";
+import { itemList, thing } from "@drdustinedwards/site-helpers/schema";
+import { countOf } from "~/kb/procedures/library.mjs";
 import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import {
@@ -38,7 +43,6 @@ import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
 import "~/styles/prose.css";
-import "~/styles/site-catalog.css";
 import "~/styles/library.css";
 
 /**
@@ -59,7 +63,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const items = baseItems(base, await listPublishedRecordsOfProfile(env, base.profile));
   const empty = items.length === 0;
   if (empty && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
-  const canonical = libraryRedirect(url, baseCatalog(base));
+  const canonical = catalogRedirect(baseCatalog(base), url, { keepUnknown: true });
   if (canonical) throw redirect(canonical, 301);
   return { base, items, empty, search: url.search };
 }
@@ -112,16 +116,11 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
     name: base.name,
     description: lead(base, items),
     url: `${SITE_ORIGIN}${base.library}`,
-    mainEntity: {
-      "@type": "ItemList",
-      numberOfItems: items.length,
-      itemListElement: items.map((item, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        name: item.title,
-        url: `${SITE_ORIGIN}${item.path}`,
-      })),
-    },
+    mainEntity: itemList(
+      SITE_ORIGIN,
+      base.name,
+      items.map((item) => ({ name: item.title, path: item.path })),
+    ),
   });
   return (
     <PageShell trail={<JsonLd data={collection} />}>
@@ -136,7 +135,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
         </DraftNotice>
       ) : null}
       <p className="library-counts">{lead(base, items)}</p>
-      <div className="library site-catalog site-catalog-wide">
+      <div className="library page-wide">
         <Catalog
           definition={catalog}
           result={result}
@@ -154,7 +153,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
         <LibraryCite
           count={result.count}
           noun={nounOf(base)}
-          downloads={libraryDownloads(result, base.library)}
+          downloads={catalogDownloads(catalog, result)}
           citation={baseCitation(base, {
             name: SITE.name,
             affiliation: SITE.affiliation,

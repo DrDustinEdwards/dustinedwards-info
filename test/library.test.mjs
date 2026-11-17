@@ -13,9 +13,7 @@ import {
   workflowContext,
   workflowMarkdown,
   libraryCitation,
-  libraryDownloads,
   libraryOverview,
-  libraryRedirect,
   libraryTabs,
   methodHref,
   overviewMarkdown,
@@ -252,28 +250,6 @@ await test("the tabs are All and each kind of work, counted from the rows; the c
   );
 });
 
-await test("an unknown parameter is served, not redirected, so a cache-buster or a tracking link still lands; a known one is made clean", () => {
-  const at = (query) => libraryRedirect(new URL(`https://example.test/research/protocols${query}`));
-  assert.equal(at(""), null);
-  assert.equal(at("?cb=123"), null, "a cache-buster is ignored");
-  assert.equal(
-    at("?utm_source=x&method=pcr"),
-    null,
-    "a tracking parameter beside a clean filter is ignored",
-  );
-  assert.equal(
-    at("?method=pcr&q=rev"),
-    "/research/protocols?q=rev&method=pcr",
-    "the order of the known ones is fixed",
-  );
-  assert.equal(
-    at("?cb=1&sort=title&q=rev&sort=title"),
-    "/research/protocols?q=rev",
-    "the default sort is dropped, and so is the unknown one, from the redirect",
-  );
-  assert.equal(at("?page=1"), "/research/protocols");
-});
-
 await test("a workflow stage links the calculators it names, from the one registry, and an unknown calculator is an error", () => {
   const o = libraryOverview(libraryItems(RECORDS));
   const isolate = o.stages.find((s) => s.id === "isolate");
@@ -425,21 +401,6 @@ await test("the citation is built from the site's identity and the library's add
     md.includes("[CSV](https://example.test/research/protocols.csv)") &&
       md.includes("[JSON](https://example.test/research/protocols.json)"),
   );
-});
-
-await test("the downloads carry the view's filter state, so what is downloaded is what is shown; the markdown is always the library", () => {
-  const items = libraryItems(RECORDS);
-  const view = (query) => queryCatalog(LIBRARY, items, parseCatalogParams(LIBRARY, query));
-  assert.deepEqual(libraryDownloads(view("")), {
-    csv: "/research/protocols.csv",
-    json: "/research/protocols.json",
-    markdown: "/research/protocols.md",
-  });
-  assert.deepEqual(libraryDownloads(view("method=pcr&q=rev")), {
-    csv: "/research/protocols.csv?q=rev&method=pcr",
-    json: "/research/protocols.json?q=rev&method=pcr",
-    markdown: "/research/protocols.md",
-  });
 });
 
 await test("a protocol knows its neighbors in the phage workflow from the stages, not from anything typed on it", () => {

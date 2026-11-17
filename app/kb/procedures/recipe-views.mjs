@@ -11,11 +11,6 @@ export const UNIT_SYSTEMS = Object.freeze({ metric: "Metric", imperial: "Imperia
 /** @typedef {keyof typeof UNIT_SYSTEMS} UnitSystem */
 /** @typedef {{ amount: string, unit: string, fixed: boolean, min: number | null, max: number | null }} Quantity */
 
-/** The system an address asks for (`?units=metric`), or null for the recipe's own. @param {string | null} value @returns {UnitSystem | null} */
-export function readUnits(value) {
-  return value === "metric" || value === "imperial" ? value : null;
-}
-
 /** Grams in one of each mass unit. */
 const GRAMS = /** @type {Record<string, number>} */ ({
   g: 1,

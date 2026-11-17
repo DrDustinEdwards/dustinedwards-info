@@ -3,7 +3,7 @@
 // editor (editor.server.ts); and Duplicate, a new draft copied from an entry that records where it came from.
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";
-import matter from "gray-matter";
+import { matter, stringifyMatter } from "@drdustinedwards/site-helpers/matter";
 
 import { listRegistry } from "~/db/registry";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
@@ -37,8 +37,7 @@ export type KbForm = {
 /** A value as YAML text, for a field the form edits as YAML. */
 function yamlText(value: unknown): string {
   if (value === undefined || value === null) return "";
-  return matter
-    .stringify("", { v: value })
+  return stringifyMatter("", { v: value })
     .replace(/^---\n/, "")
     .replace(/\n---\n*$/, "")
     .replace(/^v:\s?/, "")

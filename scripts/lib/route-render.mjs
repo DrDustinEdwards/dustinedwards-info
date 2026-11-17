@@ -101,11 +101,6 @@ export async function bundleRoutes(entries) {
       jsx: "automatic",
       plugins: [stubServer],
       logLevel: "silent",
-      // gray-matter calls require("fs") lazily, and esbuild's __require shim throws for it unless a
-      // real `require` is in scope.
-      banner: {
-        js: "import { createRequire as __nodeCreateRequire } from 'node:module';\nconst require = __nodeCreateRequire(import.meta.url);",
-      },
     });
   } catch (error) {
     // The directory is inside the repo's cache, so a failed build must not leave it behind; the error

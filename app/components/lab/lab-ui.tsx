@@ -1,44 +1,16 @@
-// The small pieces the /lab-bench pages share: a post's result line and a table in Capsomer's scrolling region.
+// The /lab-bench pages' result line: Capsomer's form status, said in the lab's words.
 
-import type { ReactNode } from "react";
-import { Alert } from "capsomer/react/banner";
+import { useMemo } from "react";
+import { FormStatus } from "capsomer/react/form-status";
 
-/** The answer to the last post: a status line when it worked, an alert when it did not. */
-export function Result({ result }: { result?: { ok: boolean; text: string } | null }) {
-  if (!result) return null;
-  return result.ok ? (
-    <p className="cap-muted" role="status">
-      Done: {result.text}
-    </p>
-  ) : (
-    <Alert tone="crit">Not done: {result.text}</Alert>
+/** The answer to the last post, as the form status says it: "Done: ..." when it worked, "Not done: ..." when it did not. */
+export function LabStatus({ result }: { result?: { ok: boolean; text: string } | null }) {
+  const status = useMemo(
+    () =>
+      result
+        ? { ok: result.ok, message: `${result.ok ? "Done" : "Not done"}: ${result.text}` }
+        : null,
+    [result],
   );
-}
-
-/** A table that scrolls on a phone in a labeled, focusable region (DEFAULTS.md). */
-export function LabTable({
-  label,
-  head,
-  children,
-}: {
-  label: string;
-  head: string[];
-  children: ReactNode;
-}) {
-  return (
-    <div className="cap-table-wrap" role="region" aria-label={label} tabIndex={0}>
-      <table className="cap-table">
-        <thead>
-          <tr>
-            {head.map((h) => (
-              <th scope="col" key={h}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
-  );
+  return <FormStatus status={status} />;
 }

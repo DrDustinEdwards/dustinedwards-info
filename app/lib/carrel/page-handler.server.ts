@@ -7,7 +7,7 @@
 
 import { RefusedError, VersionConflictError } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { listPageRows } from "~/db/pages";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
@@ -85,8 +85,7 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
   return {
     kind: "page",
 
-    async list(query) {
-      const needle = query.q?.toLowerCase();
+    async list() {
       const summaries: ContentSummary[] = (await listPageRows(env)).map((row) => {
         const status: ContentStatus = row.draft ? "draft" : "published";
         return {
@@ -100,9 +99,7 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
           updatedAt: row.syncedAt.toISOString(),
         };
       });
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return summaries;
     },
 
     async get(slug) {

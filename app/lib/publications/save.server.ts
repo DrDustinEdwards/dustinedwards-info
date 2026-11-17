@@ -17,20 +17,12 @@ import {
   type PurgeOutcome,
 } from "~/lib/cache-purge.server";
 import { refreshCvSearch } from "~/lib/cv/save.server";
-import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import {
-  blobGuard,
-  commitFiles,
-  publicFileEntry,
-  fileHistory,
-  readFile,
-} from "~/lib/source/store.server";
+import { publicFileEntry, fileHistory, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
-import { errorMessage } from "@dustinedwards/site-runtime/log";
+import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
-import { askAvailable, syncAskPaper } from "~/lib/search/ask.server";
+import { askSyncAfterWrite } from "~/lib/search/ask.server";
 
 import { citationSeedsFrom } from "./cited-by.mjs";
 import { compilePublication } from "./compile.mjs";
@@ -183,32 +175,6 @@ async function rowIsCurrent(env: PublicationEnv, slug: string, blobSha: string) 
   return row?.source_blob_sha === blobSha;
 }
 
-/** The Ask index must not fail a save: the commit has landed. A failure is returned, never dropped. */
-async function syncAsk(env: PublicationEnv, compiled: Compiled) {
-  if (!askAvailable(env)) return null;
-  try {
-    const result = await syncAskPaper(
-      env,
-      compiled.record.slug,
-      compiled.draft ? null : compiled.twin,
-    );
-    return { ok: true as const, ...result };
-  } catch (error) {
-    console.error(
-      JSON.stringify({
-        alert: "ask-sync-failed-after-publication-save",
-        detail: errorMessage(error),
-      }),
-    );
-    return {
-      ok: false as const,
-      message:
-        `The publication saved, but its Ask record did not update: ${errorMessage(error)}. ` +
-        `The next ship's Ask sync converges it from the source.`,
-    };
-  }
-}
-
 /**
  * What the CV (content/cv/publications.md) makes of this save. The CV cites a paper by DOI and is joined to the
  * publications at read time, so a paper that stops being published, or whose DOI changes, would leave the CV
@@ -245,7 +211,7 @@ export type SavedPublication = {
   created: boolean;
   draft: boolean;
   purged: PurgeOutcome;
-  askSync: Awaited<ReturnType<typeof syncAsk>>;
+  askSync: Awaited<ReturnType<typeof askSyncAfterWrite>>;
   note?: string;
 };
 
@@ -289,24 +255,27 @@ export async function savePublication(
   const cv = await cvCitation(env, slug, compiled);
   if (cv.refusal) throw new PublicationInvalid(slug, [cv.refusal]);
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
-  // After the gate, so a file that fails validation is still refused even when it is unchanged.
-  const written = await commitUnlessUnchanged(env, {
+  const written = await commitAndConverge(env, {
+    actor,
+    file: path,
     existing,
     raw,
+    sourceBlobSha: compiled.sourceBlobSha,
+    expectedHeadSha: options.expectedHeadSha,
+    expectedBlobSha: options.expectedBlobSha,
+    message: `${options.isNew ? "Add" : "Update"} publication: ${compiled.record.title}`,
     rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
-    commit: () =>
-      commitFiles(env, {
-        expectedHeadSha: options.expectedHeadSha,
-        expectedBlobs: blobGuard(path, options.expectedBlobSha),
-        message: `${options.isNew ? "Add" : "Update"} publication: ${compiled.record.title}${tag}`,
-        changes: [{ path, content: raw }],
-      }),
+    write: async () => {
+      await writePublicationRow(env, compiled);
+      const purged = await purgePublications(`save_publication ${slug}`);
+      // The CV is joined to this paper at read time, so its page reads the new row already; its search
+      // records and its cache are what a save has to refresh.
+      if (!cv.cited) return purged;
+      await refreshCvSearch(env);
+      return combinePurges(purged, await purgeCv(`save_publication ${slug}`));
+    },
+    slug,
+    mismatch: { subject: `The publication "${slug}"`, target: "its page" },
   });
   if (written.action === "noop") {
     return {
@@ -321,34 +290,7 @@ export async function savePublication(
       note: UNCHANGED_NOTE,
     };
   }
-  const { commitSha } = written;
-  const blobSha = written.blobShas[path];
-  if (blobSha && blobSha !== compiled.sourceBlobSha) {
-    throw new Error(
-      `The publication "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
-        `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the stored source.`,
-    );
-  }
-
-  let purged: PurgeOutcome = false;
-  await convergeWithRetry({
-    write: async () => {
-      await writePublicationRow(env, compiled);
-      purged = await purgePublications(`save_publication ${slug}`);
-      // The CV is joined to this paper at read time, so its page reads the new row already; its search
-      // records and its cache are what a save has to refresh.
-      if (cv.cited) {
-        await refreshCvSearch(env);
-        purged = combinePurges(purged, await purgeCv(`save_publication ${slug}`));
-      }
-    },
-    // Nothing kept in KV for a publication: the thrown error names the commit and the repair (the content
-    // sync), and the next ship's sync converges the row from the repository anyway.
-    recordDivergence: async () => undefined,
-    slug,
-    commitSha,
-  });
+  const { commitSha, purged } = written;
 
   return {
     slug,
@@ -358,6 +300,6 @@ export async function savePublication(
     created: options.isNew,
     draft: compiled.draft,
     purged,
-    askSync: await syncAsk(env, compiled),
+    askSync: await askSyncAfterWrite(env, `paper saved: ${compiled.record.slug}`),
   };
 }

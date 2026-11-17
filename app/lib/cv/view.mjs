@@ -6,6 +6,9 @@
  * carries none of it; each side hands in `Facts`.
  */
 
+import { listParam, yearParam } from "capsomer/behavior/catalog";
+import { listText } from "capsomer/behavior/hooks";
+
 /** @typedef {import("./types.ts").CvType} CvType */
 /** @typedef {import("./types.ts").CvArea} CvArea */
 /** @typedef {import("./types.ts").CvRole} CvRole */
@@ -144,32 +147,6 @@ export function formatDollars(amount) {
 /** @returns {CvState} */
 function defaultState() {
   return { types: [], areas: [], from: null, to: null, role: null, q: "", sort: "type" };
-}
-
-/**
- * Both spellings a list arrives in: repeated keys from the scripts-off form, commas from a hand-typed
- * URL. Unknown values are dropped rather than refused: a stale shared link still opens the CV.
- *
- * @param {URLSearchParams} params
- * @param {string} key
- * @param {Set<string>} known
- */
-function listParam(params, key, known) {
-  /** @type {string[]} */
-  const out = [];
-  for (const raw of params.getAll(key)) {
-    for (const value of raw.split(",")) {
-      const v = value.trim();
-      if (known.has(v) && !out.includes(v)) out.push(v);
-    }
-  }
-  return out;
-}
-
-/** @param {string | null} raw */
-function yearParam(raw) {
-  if (!raw || !/^\d{4}$/.test(raw.trim())) return null;
-  return Number(raw.trim());
 }
 
 /**
@@ -412,8 +389,8 @@ export function timelineData(all, state) {
 export function timelineEmptyText(data) {
   if (data.series.some((s) => s.values.some((n) => n > 0))) return null;
   if (data.entries === 0) return "No entries match these filters, so there is nothing to chart.";
-  const names = data.series.map((s) => s.label.toLowerCase());
-  return `The timeline charts ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}, and none of the entries these filters select is one of those.`;
+  const names = listText(data.series.map((s) => s.label.toLowerCase()));
+  return `The timeline charts ${names}, and none of the entries these filters select is one of those.`;
 }
 
 /**
@@ -505,37 +482,6 @@ export function facetCounts(all, state) {
 export function yearOptions(all) {
   const years = all.map((f) => f.year).filter((y) => y !== null);
   return range(Math.min(...years), Math.max(...years));
-}
-
-/**
- * The timeline's accessible name: what it plots and its peak, since the bars are not read out.
- *
- * @param {ReturnType<typeof timelineData>} data
- */
-export function timelineLabel(data) {
-  const totals = data.years.map((_, i) =>
-    data.series.reduce((sum, s) => sum + (s.values[i] ?? 0), 0),
-  );
-  const peak = Math.max(0, ...totals);
-  const first = data.years[0];
-  const last = data.years[data.years.length - 1];
-  const names = data.series.map((s) => s.label.toLowerCase());
-  const what = `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]} per year, ${first} to ${last}`;
-  if (peak === 0) return `${what[0]?.toUpperCase()}${what.slice(1)}: none match the filters.`;
-  const peakYears = data.years.filter((_, i) => totals[i] === peak);
-  return `${what[0]?.toUpperCase()}${what.slice(1)}. Most in ${peakYears.join(" and ")}, with ${peak}. Each year's bar shows that year only.`;
-}
-
-/**
- * @param {string} what "papers", "grants" or "students in one-year cohorts"
- * @param {number[]} years
- * @param {number[]} values
- */
-export function sparkLabel(what, years, values) {
-  const peak = Math.max(0, ...values);
-  if (peak === 0) return `No ${what} per year match the filters.`;
-  const at = years.filter((_, i) => values[i] === peak);
-  return `${what[0]?.toUpperCase()}${what.slice(1)} per year, ${years[0]} to ${years[years.length - 1]}: most in ${at.join(" and ")}, with ${peak}.`;
 }
 
 /**

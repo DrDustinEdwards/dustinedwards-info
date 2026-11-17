@@ -172,22 +172,9 @@ export const NON_PARTICIPATING = new Map([
   ),
 ]);
 
-/*
+/**
  * Refuses 0 < opacity < 1 unless listed (0 and 1 are a reveal pair). A group is exempt only
  * when every member matches.
  * @type {Array<{ test: RegExp, why: string }>}
  */
-export const OPACITY_EXEMPT = [
-  {
-    /* Anchored at the end, per the vacuity rule. */
-    test: /\[data-enarratio-dimmed\]$|\[data-cv-out\]$/,
-    why:
-      "a chart bar outside the active filter, faded on purpose to show what the filter left out. " +
-      "A graphic, not text: its value is in the chart's hover details and data table, and the bars " +
-      "in the filter stay at full strength (enarratio/base.css, app/styles/cv.css)",
-  },
-  {
-    test: /^\.search-why-sep$/,
-    why: 'incidental punctuation, the "/" between why-terms, recorded as LEFT in this header',
-  },
-];
+export const OPACITY_EXEMPT = [];

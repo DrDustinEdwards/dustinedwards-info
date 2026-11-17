@@ -1,4 +1,4 @@
-import { labelForUrl, urlForKey } from "../lib/search/ask-keys.mjs";
+import { labelForUrl, rowIdOf, urlForRowId } from "../lib/search/ask-citations.mjs";
 import { splitFollowUp } from "../lib/search/follow-up.mjs";
 import { CUT_EVENT, answerDelta } from "@dustinedwards/site-runtime/ai-ask";
 import {
@@ -15,14 +15,14 @@ import { jsonData, type SseEvent } from "capsomer/behavior/sse";
 const CHUNKS_EVENT = "chunks";
 
 /**
- * The `chunks` event's payload as sources. Same key-to-URL mapping as the upload path, so a citation
- * cannot disagree with what was indexed; the panel drops repeats.
+ * The `chunks` event's payload as sources: each chunk's row id is the URL it was indexed under. The panel
+ * drops repeats.
  */
 function citationsFromChunks(parsed: unknown): AskSource[] {
-  const chunks: Array<{ item?: { key?: string } }> = Array.isArray(parsed) ? parsed : [];
+  const chunks: unknown[] = Array.isArray(parsed) ? parsed : [];
   const out: AskSource[] = [];
   for (const chunk of chunks) {
-    const url = urlForKey(chunk?.item?.key ?? "");
+    const url = urlForRowId(rowIdOf(chunk));
     if (url)
       out.push({ url, title: labelForUrl(url), kind: url.includes("#") ? "section" : undefined });
   }

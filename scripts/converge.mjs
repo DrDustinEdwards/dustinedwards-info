@@ -25,8 +25,7 @@ import {
 } from "./lib/readiness.mjs";
 import { spawnSyncBounded } from "./lib/retry.mjs";
 import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
-import { convergeAsk, convergeCvPdf, convergeMedia, readAskDrift } from "./lib/operator-sync.mjs";
-import { ASK_POLL_WINDOW_MS, settleAskDrift } from "../app/lib/health/ask-converge.mjs";
+import { convergeAsk, convergeCvPdf, convergeMedia } from "./lib/operator-sync.mjs";
 import { readOperatorToken } from "./lib/operator-token.mjs";
 import { INDEX_ADVICE, RENDER_ADVICE, missReport } from "./lib/converge-misses.mjs";
 import { uptimeStepOutcome } from "./lib/uptime-step.mjs";
@@ -272,8 +271,8 @@ if (!(docs === identity && identity === prose)) {
 }
 
 /*
- * `sync:content` does not rebuild AI Search. It uploads through the deployed Worker, so a miss
- * leaves the deploy standing.
+ * `sync:content` writes D1, which AI Search reads for itself; sync_ask asks it to now and waits, through the deployed
+ * Worker, so a miss leaves the deploy standing.
  */
 
 announce("Bring the Ask index into step");
@@ -339,21 +338,6 @@ let deferredMiss = "";
       // A 429 or an unparseable body: name that, not three "reported no check" misses.
       deferredMiss = verdict.why;
     } else {
-      // The Ask index can list short seconds after a full write-back, so a failing row is re-read
-      // at 10s intervals (well under health's 20 a minute) before it counts as a miss.
-      const askAt = verdict.checks.findIndex((c) => c.name === "ask-index-drift");
-      if (askAt >= 0 && verdict.checks[askAt].ok !== true) {
-        console.log(
-          `  ask-index-drift is behind; re-reading ${READINESS_PATH} for up to ` +
-            `${ASK_POLL_WINDOW_MS / 1000}s before calling it a miss.`,
-        );
-        const settled = await settleAskDrift({
-          row: verdict.checks[askAt],
-          reading: () => readAskDrift(ORIGIN),
-          sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
-        });
-        if (settled) verdict.checks[askAt] = settled;
-      }
       const { misses, converged } = deferredMisses(verdict.checks, DEFERRED_CHECKS, READINESS_PATH);
       for (const name of converged) console.log(`  ${name} ok, after ${DEFERRED_CHECKS[name]}.`);
       if (!verdict.ok) misses.unshift(verdict.why);

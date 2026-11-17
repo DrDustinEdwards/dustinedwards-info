@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
 import { libraryTabs } from "../app/kb/procedures/library.mjs";
@@ -45,7 +45,7 @@ async function procedures() {
   return Promise.all(
     names.map(async (name) => {
       const raw = await text(`content/procedures/${name}`);
-      return { file: name, raw, data: matter(raw, {}).data };
+      return { file: name, raw, data: matter(raw).data };
     }),
   );
 }
@@ -298,7 +298,7 @@ await test("every Tm is computed from the sequence, never stored: no record carr
   );
   assert.equal(names.length, 12);
   for (const name of names) {
-    const data = matter(await text(`content/registry/primer/${name}`), {}).data;
+    const data = matter(await text(`content/registry/primer/${name}`)).data;
     for (const field of [
       "tm",
       "Tm",

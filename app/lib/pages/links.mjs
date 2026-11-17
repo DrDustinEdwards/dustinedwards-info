@@ -10,6 +10,7 @@
 
 import { CONTENT_PAGE_PATHS, contentPageMarkdownPath } from "../content-pages.mjs";
 import { wordpressDisposition } from "../wordpress-redirects.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 
 /**
  * @typedef {{
@@ -20,14 +21,6 @@ import { wordpressDisposition } from "../wordpress-redirects.mjs";
  * `posts` maps `/writing/<slug>` to whether a reader can open it; `idsOf` is the element ids a content
  * page carries, or null for a path that is not one.
  */
-
-const decodeEntities = (/** @type {string} */ value) =>
-  value
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;|&#39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
 
 const safeDecode = (/** @type {string} */ value) => {
   try {
@@ -41,7 +34,7 @@ const SITE_HOST = /^https?:\/\/(?:www\.)?dustinedwards\.info(?=[/?#]|$)/i;
 
 /** Every element id in rendered HTML. */
 export function idsIn(/** @type {string} */ html) {
-  return new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => decodeEntities(m[1] ?? "")));
+  return new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => unescapeHtml(m[1] ?? "")));
 }
 
 const PAGE_SET = new Set(/** @type {readonly string[]} */ (CONTENT_PAGE_PATHS));
@@ -83,9 +76,7 @@ export function pageLinkErrors({ html }, book) {
   /** @type {string[]} */
   const errors = [];
   const seen = new Set();
-  for (const raw of [...html.matchAll(/\shref="([^"]*)"/g)].map((m) =>
-    decodeEntities(m[1] ?? ""),
-  )) {
+  for (const raw of [...html.matchAll(/\shref="([^"]*)"/g)].map((m) => unescapeHtml(m[1] ?? ""))) {
     const href = SITE_HOST.test(raw) ? raw.replace(SITE_HOST, "") || "/" : raw;
     if (!href.startsWith("/") || href.startsWith("//") || seen.has(href)) continue;
     seen.add(href);

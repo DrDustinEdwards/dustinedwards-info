@@ -70,6 +70,9 @@ function pageJsonLd(page: ContentPage): object[] {
       "@id": `${pageUrl}#softwaresourcecode`,
       name: page.title,
       codeRepository: page.codeRepository,
+      // The code's own facts, where the page states them: a language and license belong to the source.
+      ...(page.programmingLanguage ? { programmingLanguage: page.programmingLanguage } : {}),
+      ...(page.license ? { license: page.license } : {}),
       author: person,
       targetProduct: { "@id": node["@id"] },
     }),

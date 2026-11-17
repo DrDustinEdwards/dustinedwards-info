@@ -16,50 +16,29 @@ import {
   publicationDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
-  withTimeout,
   CHECK_TIMEOUT_MS,
 } from "../app/lib/health/verdicts.mjs";
 
 const HEALTHY_FTS = { posts: 12, postsFts: 12, docs: 46, identity: 46, prose: 46 };
 
-await test("nine missing records is a breach, and the nine reaches the message", () => {
-  const verdict = askDriftVerdict({
-    expected: 46,
-    present: 37,
-    missing: Array.from({ length: 9 }, (_, i) => `missing-key-${i}`),
-    stale: [],
-  });
+await test("an Ask index short of its query is a breach, and the counts reach the message", () => {
+  const verdict = askDriftVerdict({ expected: 46, present: 37, failed: 0, indexing: 9 });
+  assert.equal(verdict.ok, false, "nine rows not yet indexed must not read as healthy");
+  assert.match(verdict.detail, /46 expected, 37 present/);
+  assert.match(verdict.detail, /9 indexing/);
+});
 
-  assert.equal(verdict.ok, false, "nine missing records must not read as healthy");
-  assert.match(verdict.detail, /drift 9\b/, "the drift count belongs in the sentence");
-  assert.match(verdict.detail, /9 missing/);
-  assert.match(verdict.detail, /sync-ask/, "a breach must name its repair");
+await test("a refused row is a breach even when the counts agree", () => {
+  // AI Search keeps the old item of a row it refuses, so the counts can agree while the index holds stale text.
+  const verdict = askDriftVerdict({ expected: 46, present: 46, failed: 1, indexing: 0 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /1 refused/);
 });
 
 await test("an index in step is not a breach", () => {
-  const verdict = askDriftVerdict({ expected: 46, present: 46, missing: [], stale: [] });
+  const verdict = askDriftVerdict({ expected: 46, present: 46, failed: 0, indexing: 0 });
   assert.equal(verdict.ok, true);
   assert.match(verdict.detail, /46 expected/);
-});
-
-await test("STALE counts as drift too, in the other direction", () => {
-  // A record the corpus no longer knows about is a wrong answer too: a verdict that only
-  // counted `missing` would pass while Ask cited a deleted post.
-  const verdict = askDriftVerdict({
-    expected: 12,
-    present: 15,
-    missing: [],
-    stale: ["a", "b", "c"],
-  });
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /drift 3\b/);
-  assert.match(verdict.detail, /3 stale/);
-});
-
-await test("both directions are summed, not maxed", () => {
-  const verdict = askDriftVerdict({ expected: 10, present: 10, missing: ["x"], stale: ["y"] });
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /drift 2\b/, "one missing plus one stale is two problems");
 });
 
 await test("agreeing FTS counts are healthy", () => {
@@ -110,28 +89,6 @@ await test("FAIL CLOSED: a non-integer count is unreadable, not coerced", () => 
   assert.match(verdict.detail, /identity/);
 });
 
-await test("a check that answers in time is passed through untouched", async () => {
-  const verdict = await withTimeout(Promise.resolve({ ok: true, detail: "fine" }), 50, "quick");
-  assert.deepEqual(verdict, { ok: true, detail: "fine" });
-});
-
-await test("A HUNG CHECK IS A FAILED CHECK, not a hung response", async () => {
-  // Never settles. Without the timeout this hangs the endpoint, which is indistinguishable
-  // from the site being down.
-  const started = Date.now();
-  const verdict = await withTimeout(new Promise(() => {}), 30, "wedged");
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /wedged/);
-  assert.match(verdict.detail, /30ms/);
-  assert.ok(Date.now() - started < 5000, "the timeout did not actually bound the wait");
-});
-
-await test("a rejecting check is a failed check carrying its message", async () => {
-  const verdict = await withTimeout(Promise.reject(new Error("D1 unreachable")), 50, "db");
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /D1 unreachable/);
-});
-
 await test("the timeout clears the day's slowest measured healthy path", () => {
   // ask-index-drift was measured at a 2332ms maximum on production 2026-08-19.
   // A timeout at or under that turns a known-healthy tail into a false alarm.
@@ -142,13 +99,13 @@ await test("the timeout clears the day's slowest measured healthy path", () => {
 });
 
 await test("askDriftVerdict supplies the counts it fails on", () => {
-  const v = askDriftVerdict({ missing: ["a"], stale: [], expected: 113, present: 112 });
+  const v = askDriftVerdict({ expected: 113, present: 112, failed: 0, indexing: 1 });
   assert.equal(v.ok, false);
   assert.deepEqual(v.counts, { expected: 113, present: 112 });
 });
 
 await test("a HEALTHY askDriftVerdict carries no counts to leak", () => {
-  const v = askDriftVerdict({ missing: [], stale: [], expected: 113, present: 113 });
+  const v = askDriftVerdict({ expected: 113, present: 113, failed: 0, indexing: 0 });
   assert.equal(v.ok, true);
   assert.equal(v.counts, undefined);
 });

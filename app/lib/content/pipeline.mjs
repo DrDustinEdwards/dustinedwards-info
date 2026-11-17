@@ -7,7 +7,7 @@ import { ContentError, render } from "@drdustinedwards/site-helpers/render";
 import { createHighlight } from "@drdustinedwards/site-helpers/render/highlight";
 import { editorialPack } from "@drdustinedwards/site-helpers/render/packs";
 import { isAllowedUrl } from "@drdustinedwards/site-helpers/render/url";
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 // Zod builds its parsers, and probes `new Function`, when a schema is created, so the flag goes first (site-runtime ./zod-jitless).
 import "@dustinedwards/site-runtime/zod-jitless";
 import { sha256Hex } from "@dustinedwards/site-runtime/encoding";

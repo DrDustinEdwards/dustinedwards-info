@@ -1,14 +1,14 @@
 /*
- * The protocol library (app/routes/protocols.tsx), on the catalog palette in site-catalog.css: its layout only.
+ * The protocol library (app/routes/protocols.tsx), on Capsomer's catalog: its layout only.
  */
 .library {
-  margin-block: 2rem;
+  margin-block: var(--space-7);
 }
 
 .library-links {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
+  gap: var(--space-2) var(--space-4);
 }
 
 /* Capsomer's table keeps every cell on one line, which makes this one wider than its column and hides the quick
@@ -28,84 +28,14 @@
   font-family: var(--font-sans);
 }
 
-/* The workflow as a line of stations: a filled disc of the family's color where the lab has a protocol, a ring
-   where it has none yet, the rule running through them. */
-.library-pipeline {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-6) var(--space-5);
-  margin: var(--space-6) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.library-stage {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-inline-size: 0;
-}
-
-.library-stage::before {
-  content: "";
-  position: absolute;
-  inset-block-start: 0.75rem;
-  inset-inline: 0 calc(-1 * var(--space-5));
-  border-block-start: 3px solid var(--text);
-}
-
-.library-stage:last-child::before {
-  inset-inline-end: auto;
-  inline-size: 1.5rem;
-}
-
-.library-stage-dot {
-  position: relative;
-  display: grid;
-  place-items: center;
-  inline-size: 1.5rem;
-  block-size: 1.5rem;
-  margin-block-end: var(--space-4);
-  border: 2px solid var(--text);
-  border-radius: 50%;
-  background: var(--paper);
-  font: 700 0.6875rem / 1 var(--font-mono);
-}
-
-.library-stage:not([data-empty]) .library-stage-dot {
-  border-color: var(--brand);
-  background: var(--brand);
-  color: var(--on-brand);
-}
-
-.library-stage-name,
-.library-stage-name:visited {
-  color: var(--text);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-a.library-stage-name:hover {
-  color: var(--brand);
-  background: var(--link-hover-bg);
-  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
-}
-
-.library-stage-n {
-  color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
+/* The calculators under a station of the workflow (a step indicator, data-variant="stations"). */
 .library-stage-tools {
   display: grid;
-  gap: 0.25rem;
+  gap: var(--space-2);
   margin: var(--space-4) 0 0;
   padding: 0;
   list-style: none;
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
 }
 
 /* The ways in: the start-here protocols on a dark panel, then each browse group as an index, in ruled cells. */
@@ -140,8 +70,8 @@ a.library-stage-name:hover {
 }
 
 .library-start-mark {
-  font: 700 0.6875rem / 1.6 var(--font-mono);
-  letter-spacing: 0.1em;
+  font: var(--weight-bold) var(--fs-label) / var(--leading-relaxed) var(--font-mono);
+  letter-spacing: var(--tracking-sign);
   text-decoration: underline;
   text-transform: uppercase;
 }
@@ -149,9 +79,9 @@ a.library-stage-name:hover {
 .library-start-title,
 .library-start-title:visited {
   color: var(--paper);
-  font-size: 1.125rem;
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: var(--fs-h3);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight-5);
   text-decoration: none;
 }
 
@@ -160,34 +90,34 @@ a.library-stage-name:hover {
 }
 
 .library-start-why {
-  font-size: 0.875rem;
+  font-size: var(--fs-body);
   line-height: 1.45;
 }
 
 .library-subtitle {
   margin: 0 0 var(--space-3);
   color: var(--text);
-  font: var(--weight-heading) 0.6875rem / 1.6 var(--font-mono);
-  letter-spacing: 0.1em;
+  font: var(--weight-heading) var(--fs-label) / var(--leading-relaxed) var(--font-mono);
+  letter-spacing: var(--tracking-sign);
   text-transform: uppercase;
 }
 
 .library-browse .cap-leader-index-link {
   min-block-size: 0;
   padding-block: var(--space-3);
-  font-size: 0.9375rem;
+  font-size: var(--fs-lead);
 }
 
 /* A course carries a second link to the page that describes it. */
 .library-tile-about {
   display: inline-block;
   margin-block: 0 var(--space-3);
-  font-size: 0.8125rem;
+  font-size: var(--fs-detail);
 }
 
 /* The tabs sit above the catalog's form: room beneath them, and no scrollbar chrome on a list that fits. */
 .library > .cap-tabs-list {
-  margin-block-end: 1.25rem;
+  margin-block-end: var(--space-5-5);
   scrollbar-width: none;
 }
 
@@ -196,8 +126,8 @@ a.library-stage-name:hover {
   font-family: var(--font-sans);
 }
 .library-cite-text {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--text);
+  padding: var(--space-4) var(--space-5);
+  border: var(--line-w) solid var(--text);
   /* The citation ends in the page's address, one unbroken word wider than a phone (WCAG 1.4.10). */
   overflow-wrap: anywhere;
   user-select: all;

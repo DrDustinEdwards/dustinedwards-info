@@ -10,7 +10,14 @@ import { headers as homeHeaders, loader as homeLoader } from "~/routes/home";
 
 import { versionCases } from "./carrel-version-cases";
 import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext, textsOf, carrelRequest, recordPurges } from "./route-helpers";
+import {
+  renderRoute,
+  routeContext,
+  textsOf,
+  recordPurges,
+  carrelSend,
+  carrelGet,
+} from "./route-helpers";
 import { SYNTHETIC_COHORTS, cohortFile, seedPages, seedRoster } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -33,26 +40,6 @@ const ID = `roster.${SLUG}`;
 const FILE = rosterPath(SLUG);
 const PHOTO_KEY = CURRENT.photo.src.slice("/media/".length);
 const ADDED = "Example Person Added Through Carrel";
-
-const headersFor = (key: string) => ({
-  authorization: `Bearer ${key}`,
-  "content-type": "application/json",
-  "cf-connecting-ip": "203.0.113.9",
-});
-const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
-const get = (url: string) =>
-  carrelRequest(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
-function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return carrelRequest(
-    argsFor(
-      new Request(url, {
-        method,
-        headers: headersFor(testEnv.CARREL_SITE_KEY),
-        body: JSON.stringify(body),
-      }),
-    ),
-  );
-}
 
 /** The rendered roster section of the program page, and the loader data behind it. */
 async function programPage() {
@@ -117,7 +104,7 @@ describe("an edit through the adapter is live at the next request", () => {
       const countBefore = (await homeFacts()).researchers;
 
       const edited = await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] });
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: edited,
         expectedVersion: await versionOf(FILE),
         changeId: "chg-roster",
@@ -142,7 +129,7 @@ describe("an edit through the adapter is live at the next request", () => {
       expect((await homeFacts()).researchers).toBe(countBefore + 1);
 
       // The file read back through Carrel is the edit, at the head.
-      const read = (await (await get(`${PREFIX}/content/${ID}`)).json()) as {
+      const read = (await (await carrelGet(`${PREFIX}/content/${ID}`)).json()) as {
         source: string;
         kind: string;
         version: string;
@@ -158,7 +145,7 @@ describe("an edit through the adapter is live at the next request", () => {
     async () => {
       const before = await homeFacts();
       const year = CURRENT.year + 1;
-      const created = await send("PUT", `${PREFIX}/content/roster.${year}/draft`, {
+      const created = await carrelSend("PUT", `${PREFIX}/content/roster.${year}/draft`, {
         source: await cohortFile({ year, photo: null, researchers: ["Example Person Seven"] }),
         expectedVersion: null,
         changeId: "chg-new-cohort",
@@ -177,7 +164,7 @@ describe("an edit through the adapter is live at the next request", () => {
   );
 
   it("an unchanged save commits nothing and purges nothing", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: currentFile,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-same",
@@ -193,7 +180,7 @@ describe("a save purges every page that embeds the roster", () => {
     "sends the content pages' tag and the home page's, and the pages carry exactly those tags",
     { timeout: 180_000 },
     async () => {
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] }),
         expectedVersion: await versionOf(FILE),
         changeId: "chg-purge",
@@ -221,7 +208,7 @@ describe("a save is held to what CI holds", () => {
       "year: 2031",
       "year: 2031\nemail: someone@example.com",
     );
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: bad,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-bad",
@@ -242,7 +229,7 @@ describe("a save is held to what CI holds", () => {
         src: "/media/dustin-edwards-not-there-fedcba9876543210-1080x720.webp",
       },
     });
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-photo",
@@ -255,18 +242,18 @@ describe("a save is held to what CI holds", () => {
   });
 
   it("REFUSES an id that is not a year, so no other path can be read or written through it", async () => {
-    const response = await send("PUT", `${PREFIX}/content/roster.notes/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/roster.notes/draft`, {
       source: currentFile,
       expectedVersion: null,
       changeId: "chg-slug",
     });
     expect(response.status).toBe(422);
     expect(await commits()).toHaveLength(0);
-    expect((await get(`${PREFIX}/content/roster.notes`)).status).toBe(404);
+    expect((await carrelGet(`${PREFIX}/content/roster.notes`)).status).toBe(404);
   });
 
   it("REFUSES a stale version, names the current one, and commits nothing", async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] }),
       expectedVersion: "b".repeat(40),
       changeId: "chg-stale",
@@ -280,7 +267,7 @@ describe("a save is held to what CI holds", () => {
   });
 
   it("has no draft state: a cohort cannot be unpublished, and the answer says how to remove one", async () => {
-    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, {
+    const response = await carrelSend("POST", `${PREFIX}/content/${ID}/unpublish`, {
       expectedVersion: await versionOf(FILE),
       changeId: "chg-down",
     });
@@ -299,7 +286,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
       await testEnv.DB.prepare("DELETE FROM roster WHERE slug = ?1").bind(SLUG).run();
       expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length - 1);
 
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: currentFile,
         expectedVersion: await versionOf(FILE),
         changeId: "chg-repair",
@@ -321,7 +308,7 @@ describe("an empty table is a fault, never an empty roster", () => {
 
 describe("Carrel lists cohorts beside posts, and the operator reads them and cannot save one", () => {
   it("shows each cohort as kind roster under its roster.<year> id", async () => {
-    const res = (await (await get(`${PREFIX}/content?limit=100&q=${SLUG}`)).json()) as {
+    const res = (await (await carrelGet(`${PREFIX}/content?limit=100&q=${SLUG}`)).json()) as {
       items: Array<{ id: string; kind: string; path: string | null; status: string }>;
     };
     expect(res.items.find((i) => i.id === ID)).toMatchObject({
@@ -337,7 +324,7 @@ versionCases({
   id: ID,
   file: FILE,
   edit: () => cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] }),
-  get,
-  send,
+  get: carrelGet,
+  send: carrelSend,
   timeout: 240000,
 });

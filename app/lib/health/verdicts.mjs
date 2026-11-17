@@ -1,5 +1,3 @@
-import { errorMessage } from "@dustinedwards/site-runtime/log";
-
 /**
  * A derived index against its source: the sizes, what it lacks and what it holds beyond the source,
  * each sorted. Kept apart so a missing key and an extra one cannot cancel out in a count.
@@ -17,14 +15,14 @@ export function setDrift(expected, present) {
 }
 
 /**
- * Both directions summed: a missing record and a stale one are each a wrong answer. Matches the admin badge.
+ * The Ask index holds one item per row its query returns (AI Search adds and removes them itself on each sync), so
+ * the two counts are the comparison, and a row the index refused (too large, empty) fails it too.
  *
- * @param {{ expected: number, present: number, missing: string[], stale: string[] }} status
+ * @param {{ expected: number, present: number, failed: number, indexing: number }} status
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
  */
 export function askDriftVerdict(status) {
-  const drift = status.missing.length + status.stale.length;
-  if (drift === 0) {
+  if (status.expected === status.present && status.failed === 0) {
     return {
       ok: true,
       detail: `Ask index agrees with D1: ${status.expected} expected, ${status.present} present.`,
@@ -33,9 +31,9 @@ export function askDriftVerdict(status) {
   return {
     ok: false,
     detail:
-      `Ask index drift ${drift}: ${status.missing.length} missing, ` +
-      `${status.stale.length} stale, ${status.expected} expected, ` +
-      `${status.present} present. Repair with sync-ask on /admin/tools.`,
+      `Ask index drift: ${status.expected} expected, ${status.present} present, ` +
+      `${status.failed} refused, ${status.indexing} indexing. A sync is asked for within the minute; ` +
+      `a refused row is named in the AI Search job logs.`,
     counts: { expected: status.expected, present: status.present },
   };
 }
@@ -350,39 +348,3 @@ export function ftsEqualityVerdict(counts) {
 
 /** Measured: ask-index-drift maxed at 2332 ms over 12 samples, so 3 s clears it without false alarms. */
 export const CHECK_TIMEOUT_MS = 3000;
-
-/**
- * A timeout is a failed check. It does not cancel the work: only the RESPONSE is bounded, and abandoned
- * work keeps accumulating under sustained timeouts.
- *
- * @param {Promise<{ ok: boolean, detail: string, counts?: { expected: number, present: number } }>} promise
- * @param {number} ms
- * @param {string} name
- * @returns {Promise<{ ok: boolean, detail: string, counts?: { expected: number, present: number } }>}
- */
-export function withTimeout(promise, ms, name) {
-  return new Promise((resolve) => {
-    const timer = setTimeout(
-      () =>
-        resolve({
-          ok: false,
-          detail: `check ${name} did not answer within ${ms}ms and is reported failed`,
-        }),
-      ms,
-    );
-
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        resolve({
-          ok: false,
-          detail: `check threw: ${errorMessage(error)}`,
-        });
-      },
-    );
-  });
-}

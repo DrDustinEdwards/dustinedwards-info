@@ -216,4 +216,4 @@ dashboard opt-in. `quickAction` has no local emulation, so the Worker tests mock
   table.
 - The CV's search records depend on every file and on the papers it cites. The CV save, `sync_cv` and a save of a
   cited paper rewrite them; a paper changed through git alone reaches them at the next sync.
-- A filter that leaves nothing to chart (no entry matches, or none is a publication, grant, talk or award, as with `?type=service`) shows one sentence in place of the timeline and answers 200. Enarratio's bar chart refuses empty data ("data is empty"), so app/lib/cv/charts.ts draws the sentence and never calls it; the headline lines still draw.
+- A filter that leaves nothing to chart (no entry matches, or none is a publication, grant, talk or award, as with `?type=service`) shows one sentence in place of the timeline and answers 200. Enarratio's bar chart refuses empty data ("data is empty"), so app/lib/cv/render-charts.ts draws the sentence and never calls it; the headline lines still draw.

@@ -35,16 +35,16 @@ function currentUrl(form: HTMLFormElement, query: string): string {
 
 function renderHit(hit: JsonHit): HTMLLIElement {
   const item = document.createElement("li");
-  item.className = "search-result";
+  item.className = "cap-search-result";
 
   const head = document.createElement("div");
-  head.className = "search-result-head";
+  head.className = "cap-search-head";
   const kind = document.createElement("span");
-  kind.className = "search-type";
-  kind.dataset.type = hit.type;
+  kind.className = "cap-pill";
+  kind.dataset.variant = "outline";
   kind.textContent = hit.type;
   const heading = document.createElement("h2");
-  heading.className = "search-result-title";
+  heading.className = "cap-search-title";
   const link = document.createElement("a");
   // Reduced to a path so the link matches the server's exactly and a same-origin check is the whole guard.
   const parsed = new URL(hit.url, location.origin);
@@ -57,13 +57,13 @@ function renderHit(hit: JsonHit): HTMLLIElement {
 
   if (hit.anchor && hit.documentTitle) {
     const context = document.createElement("p");
-    context.className = "search-result-context";
+    context.className = "cap-search-context";
     context.textContent = `in ${hit.documentTitle}`;
     item.appendChild(context);
   }
 
   const snippet = document.createElement("p");
-  snippet.className = "search-snippet";
+  snippet.className = "cap-search-snippet";
   // The one field written as HTML: the server escaped the text before substituting its <mark> markers.
   snippet.innerHTML = trustedHtml(hit.snippet);
   item.appendChild(snippet);
@@ -72,26 +72,29 @@ function renderHit(hit: JsonHit): HTMLLIElement {
 }
 
 function links(list: HTMLOListElement): HTMLAnchorElement[] {
-  return [...list.querySelectorAll<HTMLAnchorElement>(".search-result-title a")];
+  return [...list.querySelectorAll<HTMLAnchorElement>(".cap-search-title a")];
 }
 
 export function enhanceSearch(): void {
   const form = document.querySelector<HTMLFormElement>(".search-form");
   const input = document.querySelector<HTMLInputElement>("#q");
-  const list = document.querySelector<HTMLOListElement>(".search-results");
-  const count = document.querySelector<HTMLParagraphElement>(".search-count");
+  const list = document.querySelector<HTMLOListElement>(".cap-search-list");
+  const count = document.querySelector<HTMLParagraphElement>(".cap-search-count");
   if (!form || !input) return;
 
   let results: HTMLOListElement | null = list;
 
   function ensureList(): HTMLOListElement | null {
     if (results?.isConnected) return results;
-    const body = document.querySelector(".search-body");
-    if (!body) return null;
+    const main = document.querySelector(".cap-search-main");
+    if (!main) return null;
     const created = document.createElement("ol");
-    created.className = "search-results";
-    /* insertBefore, never .prepend(): the global Element here is HTMLRewriter's. */
-    body.insertBefore(created, body.firstChild);
+    created.className = "cap-search-list";
+    created.setAttribute("aria-label", "Search results");
+    /* After the count (and the sort, when there is one), before anything else; insertBefore, never .after(): the
+       global Element here is HTMLRewriter's. */
+    const anchor = main.querySelector(".cap-search-sort") ?? count;
+    main.insertBefore(created, anchor ? anchor.nextSibling : main.firstChild);
     results = created;
     return created;
   }
@@ -129,7 +132,7 @@ export function enhanceSearch(): void {
     target.textContent = "";
     for (const hit of data.results ?? []) target.appendChild(renderHit(hit));
     // The server's "Nothing matched" answered the query the page opened with, not this one.
-    if (target.childElementCount > 0) document.querySelector(".search-zero")?.remove();
+    if (target.childElementCount > 0) document.querySelector(".cap-search-empty")?.remove();
 
     if (count) {
       const total = data.total ?? 0;
@@ -147,7 +150,7 @@ export function enhanceSearch(): void {
    */
   function followQuery(query: string) {
     for (const link of document.querySelectorAll<HTMLAnchorElement>(
-      ".search-sort a, .search-facets a, .search-active-filters a, .cap-pagination a",
+      ".cap-search-sort a, .cap-search-facets a, .search-active-filters a, .cap-pagination a",
     )) {
       // A disabled end of the pager is an anchor with no href; rewriting it would make it link to "/".
       if (!link.hasAttribute("href")) continue;

@@ -22,7 +22,7 @@ import { post } from "./fixtures";
 import { seedMediaRow } from "./media-fixtures";
 import { removeSource, source, stubSources, writes, type SourceStub } from "./source-stub";
 
-/* Ask and R2 are absent on purpose: `syncAskForPost` returns null with no `AI_SEARCH`
+/* Ask and R2 are absent on purpose: `askSyncAfterWrite` returns null with no `AI_SEARCH`
  * binding, and the save must succeed anyway. */
 
 const publishEnv = () => env as unknown as Parameters<typeof savePost>[0];
@@ -532,7 +532,7 @@ describe("deletePost", () => {
     expect(await countRows("posts", "WHERE slug = ?1", "operator-cannot-delete")).toBe(1);
   });
 
-  it("REPORTS a failed Ask removal, which is not the same answer as Ask being off", async () => {
+  it("REPORTS a refused Ask sync, which is not the same answer as Ask being off", async () => {
     await savePost(publishEnv(), {
       slug: "ask-stuck",
       raw: post("ask-stuck"),
@@ -543,8 +543,11 @@ describe("deletePost", () => {
     const withBrokenAsk = {
       ...env,
       AI_SEARCH: {
-        items: {
-          list: async () => {
+        update: async () => {
+          throw new Error("planted AI Search outage");
+        },
+        jobs: {
+          create: async () => {
             throw new Error("planted AI Search outage");
           },
         },

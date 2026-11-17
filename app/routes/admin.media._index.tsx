@@ -83,8 +83,8 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
       signal,
       headers: JSON_HEADERS,
     });
-    const body = (await response.json().catch(() => null)) as { rows?: MediaRecord[] } | null;
-    return body?.rows ?? [];
+    if (!response.ok) throw new Error(`The server answered ${response.status}.`);
+    return ((await response.json()) as { rows: MediaRecord[] }).rows;
   };
   const changes = async (
     cursor: string,

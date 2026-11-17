@@ -16,8 +16,7 @@ import { accessIdentity, logRefusal, refusal } from "~/lib/access.server";
 import { adminActorContext } from "~/lib/admin-actor.server";
 import { authenticateSmoke } from "~/lib/smoke.server";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
-import { getEnv, getExecutionContext } from "~/lib/context";
-import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
+import { getEnv } from "~/lib/context";
 import {
   isolationVerdict,
   originRefusal,
@@ -26,15 +25,8 @@ import {
 import { timed } from "@dustinedwards/site-runtime/server-timing";
 import { getTimings } from "@dustinedwards/site-runtime/context";
 import { timedLoader } from "~/lib/timing";
-import {
-  askAvailable,
-  askDriftCount,
-  askStatusContext,
-  askStatusReader,
-} from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
 import type { loader as rootLoader } from "~/root";
-import { plural } from "@drdustinedwards/site-helpers/text";
 
 /*
  * This import keeps admin CSS off the public plane: every /admin/* child nests under this layout.
@@ -145,8 +137,6 @@ export const middleware: Route.MiddlewareFunction[] = [
       /* The real email, not a placeholder: it is the topbar's binding width constraint, which this measures. */
       context.set(adminActorContext, { kind: "smoke", id: smoke.id, email: smoke.email });
     }
-    // Lazy and memoized: one listing per request, and a route that never asks never pays.
-    context.set(askStatusContext, askStatusReader(env, timings));
     return next();
   },
 ];
@@ -155,24 +145,10 @@ export async function loader({ context }: Route.LoaderArgs) {
   return timedLoader(
     context,
     async (timings) => {
-      /*
-       * The badge reads a cached count from KV, never AI Search. /admin/tools calls the reader uncached,
-       * because the page that fixes drift must not act on a stale number.
-       */
-      const [drift, counts] = await Promise.all([
-        /* The ExecutionContext travels because the miss path finishes its cache write on `waitUntil`. */
-        timed(timings, "layout_ask_drift", () =>
-          askDriftCount(getEnv(context), getExecutionContext(context), timings),
-        ),
-        timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
-      ]);
-      const payload = {
-        email: context.get(adminActorContext).email,
-        counts,
-        /* Null only when Ask is on and the count failed or ran out of time: unknown, never a clean 0. */
-        askDrift: askAvailable(getEnv(context)) ? drift : 0,
-        askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
-      };
+      const counts = await timed(timings, "layout_nav_counts", () =>
+        adminNavCounts(getEnv(context)),
+      );
+      const payload = { email: context.get(adminActorContext).email, counts };
 
       return data(payload);
       // The layout's own total: its marks run in parallel and one nests, so summing them overcounts.
@@ -192,19 +168,9 @@ const ICONS = {
 };
 
 /** Count included as words: a bare numeral announces "Posts 3", which names no unit. */
-function countNote(count: number | null, drift: number | null, maxAgeSeconds: number) {
-  const size = count === null ? "" : count === 1 ? "item" : "items";
-  const lead = size ? `${size}, ` : "";
-  if (drift === null) {
-    return `${lead}Ask index drift unknown: the check failed or ran out of time. Open Tools to check it.`;
-  }
-  if (drift <= 0) return size;
-  const minutes = Math.round(maxAgeSeconds / 60);
-  const age = minutes >= 1 ? plural(minutes, "minute") : `${maxAgeSeconds} seconds`;
-  return (
-    `${lead}${plural(drift, "Ask index item")} drifted. ` +
-    `This count is up to ${age} old; open Tools for the current figure and the repair.`
-  );
+function countNote(count: number | null) {
+  if (count === null) return undefined;
+  return count === 1 ? "item" : "items";
 }
 
 const RouterLink = shellLink("/admin");
@@ -224,7 +190,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   const { pathname } = useLocation();
   const at = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
 
-  const { counts, askDrift, askDriftMaxAgeSeconds } = loaderData;
+  const { counts } = loaderData;
   const nav: AdminEntry[] = [
     {
       id: "overview",
@@ -241,7 +207,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       icon: ICONS.media,
       current: at("/admin/media"),
       count: counts.media ?? undefined,
-      countNote: countNote(counts.media, 0, askDriftMaxAgeSeconds),
+      countNote: countNote(counts.media),
     },
     // No count: a pending mention is not worth a third query on every admin page.
     {
@@ -261,7 +227,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       icon: ICONS.kb,
       current: at("/admin/kb"),
     },
-    // Carries the answer index drift: the repair is on this page.
     {
       id: "tools",
       label: "Tools",
@@ -269,8 +234,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       group: "Site",
       icon: ICONS.tools,
       current: at("/admin/tools"),
-      countNote: countNote(null, askDrift, askDriftMaxAgeSeconds) || undefined,
-      tone: askDrift === null || askDrift > 0 ? "warn" : undefined,
     },
   ];
   /* The tab title is "<page> · dustinedwards.info": the menu entry the reader is in names the page. */

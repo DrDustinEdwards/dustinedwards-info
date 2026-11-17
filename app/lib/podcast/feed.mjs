@@ -1,7 +1,7 @@
 // Pure, so node:test and the CSP builder can import it. Every feed URL is checked against a host
 // allowlist; the audio list is what workers/csp.mjs writes into `media-src`, so the two cannot disagree.
 
-import { decodeEntities } from "../publications/entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 
 export const PODCAST_FEED_URL = "https://germomics.com/feed/podcast/";
 
@@ -30,16 +30,6 @@ const EPISODE_PAGE_HOSTS = ["germomics.com", "www.germomics.com"];
  */
 
 /**
- * The shared decoder, plus `&nbsp;`: podcast hosts write it in show notes, and every whitespace run
- * here collapses to one space anyway. Replaced before decoding, so `&amp;nbsp;` still reads literally.
- *
- * @param {string} text
- */
-function decodeFeedEntities(text) {
-  return decodeEntities(text.replace(/&nbsp;/g, " "));
-}
-
-/**
  * @param {string} xml @param {string} tag
  */
 function textOf(xml, tag) {
@@ -47,7 +37,7 @@ function textOf(xml, tag) {
   const match = xml.match(new RegExp(`<${escaped}(?:\\s[^>]*)?>([\\s\\S]*?)</${escaped}>`));
   if (!match) return "";
   const raw = (match[1] ?? "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
-  return decodeFeedEntities(raw.replace(/<[^>]*>/g, " "))
+  return unescapeHtml(raw.replace(/<[^>]*>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -57,7 +47,7 @@ function attrOf(xml, tag, attr) {
   const element = xml.match(new RegExp(`<${tag.replace(":", "\\:")}\\s[^>]*>`));
   if (!element) return "";
   const value = element[0].match(new RegExp(`\\s${attr}="([^"]*)"`));
-  return value ? decodeFeedEntities(value[1] ?? "") : "";
+  return value ? unescapeHtml(value[1] ?? "") : "";
 }
 
 /**
