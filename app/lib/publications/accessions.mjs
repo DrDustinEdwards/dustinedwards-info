@@ -1,6 +1,6 @@
 // Accessions are read only inside the data-availability statement: a bare regex over a PDF returns
 // comparison phages and other outbreaks' deposits, a wrong citation. The text is the committed
-// extraction, which check:machine-readable binds to each PDF's sha256.
+// extraction, which check:content binds to each PDF's sha256.
 
 // Case-insensitive with an optional statement: covers both ASM templates, Frontiers and MDPI.
 const SECTION_START = /\bdata availability\b\.?\s*(statement)?\s*:?\s*/i;

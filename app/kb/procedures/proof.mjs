@@ -66,7 +66,7 @@ export function proofFromFile(value) {
 
 /**
  * The proof with its words and addresses, from the rows the page reads. A slug the rows do not hold is kept as its
- * slug, unlinked, so a stale reference is visible on the page instead of dropped; check:protocols refuses it before it
+ * slug, unlinked, so a stale reference is visible on the page instead of dropped; check:content refuses it before it
  * ships.
  *
  * @param {{ papers: string[], phages: string[] } | null} proof

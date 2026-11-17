@@ -1,7 +1,7 @@
 // Reads a self-hosted paper's PDF and writes its sha256 and its full text into the publication file
 // (docs/PUBLICATIONS.md): `node scripts/extract-publication-text.mjs [slug ...]`, every hosted file when none
 // is named. Run it after adding or replacing a PDF; the file's `pdfSha256` and `## Full text` section are its
-// output, and check:machine-readable refuses a file whose hash is not the PDF's. The text is stored as the
+// output, and check:content refuses a file whose hash is not the PDF's. The text is stored as the
 // twin prints it, with no de-hyphenation, so it is fit for retrieval, not citation.
 
 import { readFile, readdir, writeFile } from "node:fs/promises";

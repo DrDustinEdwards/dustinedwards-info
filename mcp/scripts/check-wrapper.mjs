@@ -13,7 +13,7 @@
  * deletion, and half this repo's guarantees are about things that must stay.
  *
  * Pure: no network, no deployment, no Cloudflare API. Same principle as the app's
- * check:policy and check:search.
+ * check:ask-guards and check:search.
  *
  * Verified by planting violations. See the PLANTED VIOLATIONS block at the bottom.
  */

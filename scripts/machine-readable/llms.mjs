@@ -86,7 +86,7 @@ if (target) {
       if (r.status !== 0) throw new Error(wranglerTail(r.output));
       return r;
     },
-    { label: `check:machine-readable llms.txt settings row read (${target})` },
+    { label: `check:content llms.txt settings row read (${target})` },
   );
   const match = result.stdout.match(/\[[\s\S]*\]/);
   if (!match) {
@@ -130,7 +130,7 @@ console.log(`  ${LLMS_PATH}: ${fileBytes.length} bytes, sha ${sha(fileBytes)}`);
 /* Measured 15 on the pure tier by running this part on 2026-10-01, floor a little under. --local and
    --remote add the D1 comparison on top, so the pure count bounds every mode. */
 const floorBreach = assertFloor(
-  "check:machine-readable/llms",
+  "check:content/llms",
   "checks",
   tally.checks,
   13,

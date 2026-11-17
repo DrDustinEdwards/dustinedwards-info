@@ -75,13 +75,13 @@ const NOT_ASSETS = new Map([
 ]);
 
 // A pattern is allowed here because it matches only the slug shape paths.mjs generates. The twins are
-// gitignored build product, not media; llms.txt lists them and check:machine-readable reconciles it.
+// gitignored build product, not media; llms.txt lists them and check:content reconciles it.
 const NOT_ASSET_PATTERNS = [
   {
     test: /^\/research\/publications\/[a-z0-9-]+\.md$/,
     why:
       "A generated markdown twin of a paper, gitignored build product served " +
-      "as an asset. Listed in llms.txt and reconciled by check:machine-readable; " +
+      "as an asset. Listed in llms.txt and reconciled by check:content; " +
       "not media, and not committed, so not in this manifest.",
   },
 ];

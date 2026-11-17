@@ -1,6 +1,6 @@
 /**
  * The procedure format (docs/PROCEDURES.md): marks.mjs reads the Cooklang marks and the conditions a
- * step states, parse.mjs reads a file into sections and steps, and validate.mjs judges it. check:protocols
+ * step states, parse.mjs reads a file into sections and steps, and validate.mjs judges it. check:content
  * and save_procedure share validate.mjs, so a rule tested here is the rule both apply.
  */
 

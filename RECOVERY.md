@@ -106,7 +106,7 @@ new numbered file; never edit an applied one.
 
 `0001_init.sql` seeds a stale `settings` row for `llms.txt`. The source of truth
 is the tracked file `content/llms.txt`; `sync:content` writes the row from it, so
-the seed is overwritten by step 9 below, and `check:machine-readable` fails if the
+the seed is overwritten by step 9 below, and `check:content` fails if the
 two ever disagree.
 
 ---
@@ -458,9 +458,8 @@ the first deploy goes is Dustin's decision.
 
 ```sh
 npm run build:content                  # regenerate the artifact from content/posts
-npm run check:content                  # gate: every post validates
 npm run sync:content -- --remote       # posts, the llms.txt row, both FTS indexes
-npm run check:machine-readable -- --remote  # gate: the row must match content/llms.txt
+npm run check:content -- --remote      # gate: every post validates, and the llms.txt row matches content/llms.txt
 ```
 
 `sync:content` writes three things: the posts and their tags, the `llms.txt`
@@ -605,7 +604,7 @@ time, so it is recovered as long as git history is intact. `first_published` liv
 in frontmatter and is recovered with the file.
 
 **The `llms.txt` settings row.** Source of truth is `content/llms.txt`, tracked
-and pinned to LF. `sync:content` writes the row from it and `check:machine-readable` fails if
+and pinned to LF. `sync:content` writes the row from it and `check:content` fails if
 they disagree.
 
 ### Permanently lost

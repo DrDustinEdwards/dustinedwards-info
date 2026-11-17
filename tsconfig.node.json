@@ -36,19 +36,19 @@
     // Also imported by `app/lib/seo.ts`: the list page types each paper with the same `schemaTypeFor` its
     // own page uses, so one `@id` is never two types. Imports only entities.mjs.
     "app/lib/publications/article-json-ld.mjs",
-    // Every publication URL and file path, stated once. `check:machine-readable`
+    // Every publication URL and file path, stated once. `check:content`
     // asserts that each hosted `pdfPath` is the path `paperPdfPath` derives, so
     // the gate has to reach the one function that owns the rule rather than
     // restate it. That binding is what stops `citation_pdf_url` pointing into a
     // directory Google Scholar will not accept.
     "app/lib/publications/paths.mjs",
-    // The citation exports, and the three files they reach. `check:machine-readable`
+    // The citation exports, and the three files they reach. `check:content`
     // generates BibTeX, RIS and CSL JSON twice and compares bytes, asserts one
     // entry per shown record, and asserts that organism names are
     // brace-protected THROUGH the matcher the writer uses rather than through a
     // substring test. Every one of those needs the real module, so this project
     // has to list it and everything it imports.
-    // The accession reader and the retraction notice. check:machine-readable
+    // The accession reader and the retraction notice. check:content
     // reconciles the corpus against what the data-availability statements name,
     // through the same function the page links from, and validates every
     // notice through the same one the page renders. Both are the shape this
@@ -69,7 +69,7 @@
     "app/lib/publications/search-inputs.mjs",
     "app/lib/publications/exports.mjs",
     "app/lib/publications/export-response.mjs",
-    // The publication index's listing. check:machine-readable compares its
+    // The publication index's listing. check:content compares its
     // SHOWCASE_TYPES with export-response.mjs's by importing it, which a route
     // module (React, a loader) could not be.
     "app/lib/publications/listing.mjs",
@@ -162,7 +162,7 @@
     "app/lib/cv/markdown.mjs",
     // The print document and the fingerprint, which the Worker and scripts/build-cv-pdf.mjs both draw from.
     "app/lib/cv/pdf-html.mjs",
-    // The Ask item key mapping. check:machine-readable round-trips every paper's
+    // The Ask item key mapping. check:content round-trips every paper's
     // page URL through it, because the key is the citation: AI Search carries
     // nothing else about where a chunk came from, so a key that does not map
     // back to the page cites a URL that 404s, and only a reader who clicked
@@ -192,7 +192,7 @@
     // the Worker asks GitHub for the same string. One statement, because a
     // path.join spelling would 404 on the contents API.
     "app/lib/media/manifest.mjs",
-    // The operator publish policy: the Worker imports it and check:policy
+    // The operator publish policy: the Worker imports it and check:ask-guards
     // imports it, on the same principle as query.mjs.
     "app/lib/editor/publish-policy.mjs",
     // The artifact read limits. github.server.ts enforces them on the wire and
@@ -245,7 +245,7 @@
     "app/lib/nav-data.generated.mjs",
     // The listing order, shared by the header's build-time post list and (as SQL) the D1 listing queries.
     "app/lib/post-order.mjs",
-    // The procedure system's compile path. check:protocols, build:content and sync:content compile every
+    // The procedure system's compile path. check:content, build:content and sync:content compile every
     // procedure with the SAME modules the operator API's save_procedure runs, so a file CI passes is the
     // file the save tool accepts. No Env and no DOM.
     "app/kb/bases.mjs",
@@ -278,7 +278,7 @@
     "app/lib/pages/invariants.mjs",
     "app/lib/pages/links.mjs",
     "app/lib/pages/protected.mjs",
-    // The llms.txt rules, shared by check:machine-readable and the llms.txt save (docs/LLMS.md).
+    // The llms.txt rules, shared by check:content and the llms.txt save (docs/LLMS.md).
     "app/lib/llms/validate.mjs",
     // The dictionary entries that open named Software pages: parsed and judged by one door the build, the sync and
     // the Carrel adapter all call (docs/DICTIONARY.md). The page compile leads a twin with the entry.

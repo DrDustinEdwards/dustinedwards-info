@@ -2,7 +2,7 @@
 // that source. Mermaid's drawing is a light/dark <img> pair, and an SVG loaded as an image cannot
 // see the page's custom properties, so the pair cannot follow the theme. These keys are Prelum's
 // hash of that mermaid. The renderer swaps the pair for one inline figure. A changed source hashes
-// to a new key and the swap misses it: check:diagrams fails until the drawing here is updated.
+// to a new key and the swap misses it: check:content fails until the drawing here is updated.
 
 import { escapeHtml } from "@dustinedwards/site-runtime/html";
 

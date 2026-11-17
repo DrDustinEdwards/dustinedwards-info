@@ -96,7 +96,7 @@ export async function seedMention(
 /**
  * Every publication file in the repository, compiled by the door the Carrel adapter's save uses and written
  * to D1 as sync:content writes it, so a case that reads the papers reads the whole corpus. The PDFs are not
- * in this isolate, so the host says every one is there; check:machine-readable holds the real ones.
+ * in this isolate, so the host says every one is there; check:content holds the real ones.
  */
 const PUBLICATION_FILES = import.meta.glob("../../content/publications/*.md", {
   query: "?raw",

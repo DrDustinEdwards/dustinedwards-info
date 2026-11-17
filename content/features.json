@@ -42,7 +42,7 @@
         },
         {
           "kind": "gate",
-          "gate": "check:machine-readable"
+          "gate": "check:content"
         }
       ]
     },
@@ -59,7 +59,7 @@
         },
         {
           "kind": "gate",
-          "gate": "check:policy"
+          "gate": "check:ask-guards"
         }
       ]
     },
@@ -75,7 +75,7 @@
         },
         {
           "kind": "gate",
-          "gate": "check:policy"
+          "gate": "check:ask-guards"
         }
       ]
     },
@@ -91,7 +91,7 @@
         },
         {
           "kind": "assertion",
-          "gate": "check:policy",
+          "gate": "check:ask-guards",
           "text": "readState reads a previously published post"
         }
       ]
@@ -129,12 +129,13 @@
       "anchors": [
         {
           "kind": "gate",
-          "gate": "check:diagrams"
+          "gate": "check:content"
         },
         {
           "kind": "assertion",
-          "gate": "check:diagrams",
-          "text": "a diagram with no alt fails"
+          "gate": "check:content",
+          "text": "a diagram with no alt fails",
+          "file": "scripts/machine-readable/diagrams.mjs"
         }
       ]
     },
@@ -375,7 +376,7 @@
         },
         {
           "kind": "assertion",
-          "gate": "check:machine-readable",
+          "gate": "check:content",
           "text": "llms.txt is LF-only",
           "file": "app/lib/llms/validate.mjs"
         },
@@ -396,7 +397,7 @@
         },
         {
           "kind": "gate",
-          "gate": "check:machine-readable"
+          "gate": "check:content"
         }
       ]
     },
@@ -521,7 +522,7 @@
         },
         {
           "kind": "gate",
-          "gate": "check:protocols"
+          "gate": "check:content"
         }
       ]
     },
@@ -601,10 +602,6 @@
         {
           "kind": "gate",
           "gate": "check:content"
-        },
-        {
-          "kind": "gate",
-          "gate": "check:protocols"
         }
       ]
     },

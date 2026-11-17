@@ -10,7 +10,7 @@ import { validateCorpus } from "../app/lib/publications/validate.mjs";
 import { readCitedBy, repoHost } from "../scripts/lib/publications.mjs";
 
 /*
- * The publication file format and its validator, node side. check:machine-readable holds the real corpus to
+ * The publication file format and its validator, node side. check:content holds the real corpus to
  * the same code; these cases plant one defect at a time in a real or minimal file and read the messages,
  * which is what a Carrel writer is shown.
  */

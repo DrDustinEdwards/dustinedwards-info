@@ -1,4 +1,4 @@
-// Judges a parsed publication file (docs/PUBLICATIONS.md). check:machine-readable and the Carrel adapter's
+// Judges a parsed publication file (docs/PUBLICATIONS.md). check:content and the Carrel adapter's
 // save both call this, so a file CI refuses is a file the save refuses, for the same reason in the same
 // words. Every message starts with the field path, with no leading dot (`authors[2]: ...`).
 //

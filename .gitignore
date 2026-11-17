@@ -57,7 +57,7 @@
 
 # The paper twins were files here until publications moved to D1 (a Worker route serves them now). A checkout that
 # built them before the move still has them, ignored, and the asset handler would serve them ahead of the route,
-# so check:machine-readable refuses any that remain (publications-twins). Delete them; nothing writes them now.
+# so check:content refuses any that remain (publications-twins). Delete them; nothing writes them now.
 /public/research/publications/*.md
 
 # Claude Code. settings.json is committed; the local override never is.

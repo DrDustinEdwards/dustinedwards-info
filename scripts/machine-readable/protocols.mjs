@@ -10,18 +10,18 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { lineageErrors } from "../app/kb/procedures/lineage.mjs";
+import { lineageErrors } from "../../app/kb/procedures/lineage.mjs";
 import {
   compileDirectory,
   PROCEDURE_FIXTURES_DIR,
   PROCEDURES_SOURCE_DIR,
-} from "./lib/procedures.mjs";
+} from "../lib/procedures.mjs";
 import { createTally } from "@dustinedwards/devkit/node";
 
 const tally = createTally({ separator: ": " });
 const { ok } = tally;
 
-console.log("\ncheck:protocols\n");
+console.log("\ncheck:content/protocols\n");
 
 const sources = await compileDirectory(PROCEDURES_SOURCE_DIR);
 // Fixtures name photos that are not in the repository; their sizes are not measured.
@@ -121,11 +121,10 @@ console.log(
    (two each, and a draft each) and one for the variant's lineage. */
 const MINIMUM_CHECKS = 28;
 tally.floor(
-  "check:protocols",
+  "check:content/protocols",
   "checks",
   MINIMUM_CHECKS,
   "A procedure or fixture was skipped rather than failing.",
 );
 
-console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
-process.exit(tally.failures > 0 ? 1 : 0);
+export const outcome = { checks: tally.checks, failures: tally.failures };

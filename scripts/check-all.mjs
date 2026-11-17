@@ -17,7 +17,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
 
 /** Fails closed below this. Moves only to the count a run printed, never to a sum. */
-const MINIMUM_GATES = 19;
+const MINIMUM_GATES = 20;
 
 /** @type {Record<string, string>} */
 export const CI_EXCLUDED = {
@@ -38,18 +38,14 @@ export const TIERS = {
   // Offline: test/worker/setup.ts makes any outbound fetch throw.
   "check:worker": "offline",
   "check:content": "offline",
-  "check:machine-readable": "offline",
   "check:features": "offline",
-  "check:protocols": "offline",
   "check:fonts": "offline",
   "check:postinstall": "offline",
-  "check:diagrams": "offline",
   "check:contrast": "offline",
   "check:secrets": "offline",
   "check:migrations": "offline",
   // The console.* ratchet (devkit-console, .console.json): raw calls in server code may only go down.
   "check:console": "offline",
-  "check:policy": "offline",
   "check:ask-guards": "offline",
   "check:test-assertions": "offline",
   // Offline: the renderer takes alt from the reference alone, never from the media index in D1.
@@ -68,7 +64,7 @@ export const TIERS = {
 /** @type {Record<string, string[] | undefined>} */
 const REMOTE_ARGS = {
   "check:backup": ["--remote"],
-  "check:machine-readable": ["--remote"],
+  "check:content": ["--remote"],
 };
 
 const all = process.argv.includes("--all");
@@ -533,7 +529,7 @@ function summarize(results, skipped, sampler) {
 
   if (!all) {
     console.log(
-      "  NOT COVERED by this tier: check:backup, check:machine-readable and the schema\n" +
+      "  NOT COVERED by this tier: check:backup, check:content's llms.txt row and the schema\n" +
         "  test against the remote database. `npm run check:all` adds them. Neither tier\n" +
         "  covers verify-live, which needs a deploy.\n",
     );

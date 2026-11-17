@@ -1,4 +1,4 @@
-// Pure functions of the committed corpus (no clock, no citation count), so check:machine-readable can
+// Pure functions of the committed corpus (no clock, no citation count), so check:content can
 // compare bytes and two downloads match. Author names go through `canonicalAuthor` in authors.mjs.
 
 import { ORGANISM_PATTERN } from "../../data/organisms.ts";
@@ -8,7 +8,7 @@ import { toBibtex, toRis } from "@drdustinedwards/site-helpers/scholar";
 import { SITE_ORIGIN } from "../site-origin.mjs";
 
 /**
- * For check:machine-readable. A substring test is wrong: Mycobacterium smegmatis contains the bare
+ * For check:content. A substring test is wrong: Mycobacterium smegmatis contains the bare
  * genus, which the matcher correctly never braces.
  *
  * @param {string} text

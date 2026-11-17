@@ -110,7 +110,7 @@ What the protocol library filters and lists by (`app/kb/procedures/taxonomy.mjs`
   experiments).
 - `start_here`: a position (1, 2, 3 ...) in the library's "Start here" list, stored and never inferred. The list is
   the procedures that state one, in that order, each with its own `description`; two procedures may not share a
-  position (`check:protocols`), and a procedure with none is simply not on the list.
+  position (`check:content`), and a procedure with none is simply not on the list.
 - `proof_of_use`: what shows the method works, stated and never inferred: `papers` (publication slugs of the papers that
   used it) and/or `phages` (phage keys it produced).
 
@@ -122,13 +122,13 @@ What the protocol library filters and lists by (`app/kb/procedures/taxonomy.mjs`
 
   The file holds slugs only; the page and the twin read each paper's title and each phage's name from their rows
   (`app/kb/procedures/proof.server.ts`), so a corrected title reaches every protocol that names the paper. The section
-  appears only when the field is filled; `check:protocols` refuses a slug with no file.
+  appears only when the field is filled; `check:content` refuses a slug with no file.
 
 - `status` (protocol): where the protocol stands, one of `in-use`, `in-development` or `retired` (`PROTOCOL_STATUSES` in
   `taxonomy.mjs`; the page says In use, In development, Retired), or `"MISSING: <why>"`.
 - `forked_from`: on a variant made with the admin editor's Duplicate, `{ slug, version }`, the file name of the procedure
   it was copied from and the version it was copied at, if that one had a version. It may not name the procedure itself.
-  `check:protocols` holds it to a procedure here, of the same profile, at a version that procedure states (its current
+  `check:content` holds it to a procedure here, of the same profile, at a version that procedure states (its current
   version or one in its history), and a variant is published only when that version of its parent is frozen (the save
   refuses it otherwise; a draft may wait). The page and twin say "Based on" with the parent's title, linked to the
   frozen copy of the version copied, and the JSON-LD names it first in `isBasedOn` (`app/kb/procedures/lineage.mjs`,
@@ -357,4 +357,4 @@ the copy that needs neither.
 | The markdown twin   | the page's `.md` address, generated from the same record                                                                                                        |
 | JSON-LD             | Bioschemas LabProtocol 0.9-DRAFT (with every temperature and g-force its steps state as `parameter`), schema.org Recipe, or HowTo for a computational procedure |
 | Search              | `search_docs`, written by the sync and by `save_procedure`                                                                                                      |
-| The check           | `npm run check:protocols` validates every file with the save tool's own validator                                                                               |
+| The check           | `npm run check:content` validates every file with the save tool's own validator                                                                                 |

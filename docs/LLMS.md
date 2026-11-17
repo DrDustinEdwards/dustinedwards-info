@@ -25,7 +25,7 @@ A document has no draft state, so it is always published:
 
 ## What a save is held to
 
-`app/lib/llms/validate.mjs` is the one judgment. `check:machine-readable` (`scripts/machine-readable/llms.mjs`)
+`app/lib/llms/validate.mjs` is the one judgment. `check:content` (`scripts/machine-readable/llms.mjs`)
 and the save both call `llmsChecks`, so a file CI passes is the file a save accepts:
 
 - not empty, longer than 200 bytes (the retired seed was 247), at most 64 KiB, LF only, ends with a newline,
@@ -41,7 +41,7 @@ and the save both call `llmsChecks`, so a file CI passes is the file a save acce
 - it lists every Research, Teaching and Software page, the procedures included, and lists none the site does
   not have (the paths a save reads are `CONTENT_PAGE_PATHS` and the published procedures' rows in D1);
 - it lists no paper twin that no published paper produces (the save reads the publications table;
-  `check:machine-readable` reads the compiled corpus, through the same `overAdvertisedTwins`);
+  `check:content` reads the compiled corpus, through the same `overAdvertisedTwins`);
 - its Contact URL is `SITE_ORIGIN`, so the cutover turns CI red until the file follows.
 
 `test/llms.test.mjs` shows each rule firing on the real file with one thing changed.

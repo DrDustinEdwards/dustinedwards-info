@@ -360,7 +360,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             title="Writing"
             more={<Link to="/writing">All {posts} posts</Link>}
           >
-            {/* The same four properties as `PostCard`; `check:machine-readable` reads both. No h-feed: a hand-picked three is not the feed. */}
+            {/* The same four properties as `PostCard`; `check:content` reads both. No h-feed: a hand-picked three is not the feed. */}
             <ol className="home-rows">
               {[featured, ...recent.filter((post) => post.slug !== featured.slug)].map((post) => (
                 <li key={post.slug} className="home-row h-entry">

@@ -62,7 +62,7 @@ function stripControls(value) {
  */
 
 /**
- * Pure: check:machine-readable regenerates every twin and compares bytes.
+ * Pure: check:content regenerates every twin and compares bytes.
  *
  * @param {TwinFacts} paper a compiled publication record (compile.mjs)
  * @param {object} options
@@ -75,7 +75,7 @@ function stripControls(value) {
  * @returns {string}
  */
 export function paperTwin(paper, { pages, citedBy, citedByFetchedAt, pagePath, pdfPath }) {
-  // Decoded here: the stored corpus keeps character references escaped on purpose (check:machine-readable keeps "<" out of stored abstracts).
+  // Decoded here: the stored corpus keeps character references escaped on purpose (check:content keeps "<" out of stored abstracts).
   const title = unescapeHtml(paper.title);
   const frontmatter = [
     "---",

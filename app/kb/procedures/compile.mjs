@@ -1,5 +1,5 @@
 // One door from a procedure file to everything derived from it: parse, validate, render, the markdown
-// twin and the search input. check:protocols, sync:content and the operator API's save_procedure all
+// twin and the search input. check:content, sync:content and the operator API's save_procedure all
 // call compileProcedure, so a file CI passes is the file the save tool accepts and the page draws.
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";
