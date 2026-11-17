@@ -278,7 +278,9 @@ export type Webmention = typeof webmentions.$inferSelect;
 
 /**
  * The columns every row derived from a repository file ends with: the file's path, the blob sha it was built from, and
- * when it was synced. A function, so each table gets its own column builders.
+ * when that file last changed here (a save, or a content sync that brought a new blob; a sync of the same blob keeps it,
+ * scripts/sync-content.mjs). Carrel reads it as the item's updatedAt and re-reads a body only when it moves. A function,
+ * so each table gets its own column builders.
  */
 const sourceColumns = () => ({
   sourcePath: text("source_path").notNull().unique(),
