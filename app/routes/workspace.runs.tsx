@@ -52,7 +52,7 @@ export default function LabRuns({ loaderData, actionData }: Route.ComponentProps
   const { runs, procedures, lots, all, lotRows } = loaderData;
   return (
     <>
-      <PageHead title="Runs" lead="A saved run is never changed; a correction is a new run." />
+      <PageHead title="Runs" />
       <LabStatus result={actionData} />
       {runs.length === 0 ? (
         <p className="cap-muted">No runs recorded yet.</p>

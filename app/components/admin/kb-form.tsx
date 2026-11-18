@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trustedHtml } from "capsomer/behavior/trusted-html";
-import { Form, Link, useNavigation } from "react-router";
+import { Form, useNavigation } from "react-router";
 
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
@@ -338,19 +338,6 @@ export function KbFormEditor({
           { label: file.group, href: file.listHref },
         ]}
         title={file.title}
-        lead={
-          <>
-            <code>{file.file}</code>
-            {file.publicHref ? (
-              <>
-                {" "}
-                <Link to={file.publicHref} reloadDocument>
-                  View the page
-                </Link>
-              </>
-            ) : null}
-          </>
-        }
         actions={
           <>
             {isEntry ? (
@@ -362,6 +349,11 @@ export function KbFormEditor({
               >
                 Duplicate
               </Button>
+            ) : null}
+            {file.publicHref ? (
+              <ButtonLink to={file.publicHref} reloadDocument variant="quiet">
+                View the page
+              </ButtonLink>
             ) : null}
             <ButtonLink to="?view=file" variant="quiet">
               Advanced: edit the file
@@ -380,10 +372,7 @@ export function KbFormEditor({
       ) : null}
 
       {isEntry && duplicating ? (
-        <Panel
-          title="Duplicate as a new draft"
-          description="A copy with its own title and address, recording that it came from this one. Its version, history and Start-here place are left behind."
-        >
+        <Panel title="Duplicate as a new draft">
           <Form method="post" id="kb-duplicate" className="app-filters">
             <input type="hidden" name="intent" value="duplicate" />
             <div className="cap-field">

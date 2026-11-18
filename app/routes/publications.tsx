@@ -237,7 +237,6 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
             labelledBy="publications-title"
             title={(p) => <PaperCell p={p} cited={p.doi ? citations[p.doi] : undefined} />}
             cells={{ journal: (p) => <span className="paper-venue">{venue(p)}</span> }}
-            emptyText={{ noMatch: "No publications match this filter." }}
             actions={
               /* Always the full list: a citation file carrying only the filtered subset is one nobody asked for. */
               <span className="paper-feeds">

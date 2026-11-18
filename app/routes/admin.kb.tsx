@@ -131,11 +131,14 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
           </Form>
 
           {rows.length === 0 ? (
-            <Empty kind={total === 0 ? "nothing-yet" : "no-match"}>
-              {total === 0
-                ? `No ${base.name.toLowerCase()} yet.`
-                : `Nothing in ${base.name.toLowerCase()} matches "${q}".`}
-            </Empty>
+            <Empty
+              kind={total === 0 ? "nothing-yet" : "no-match"}
+              title={
+                total === 0
+                  ? `No ${base.name.toLowerCase()} yet.`
+                  : `Nothing in ${base.name.toLowerCase()} matches "${q}".`
+              }
+            />
           ) : (
             <Panel title={base.name} count={rows.length} flush>
               <RowList label={base.name}>
@@ -171,7 +174,7 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
           )}
         </>
       ) : gaps.length === 0 ? (
-        <Empty kind="all-clear">Nothing is waiting on information.</Empty>
+        <Empty kind="all-clear" title="Nothing is waiting on information." />
       ) : (
         <Panel title="Needs info" count={gaps.length} flush>
           <RowList label="Needs info">

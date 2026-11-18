@@ -147,7 +147,6 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
             </>
           )}
           cells={cells}
-          emptyText={{ noMatch: "No phages match this search." }}
         />
       </div>
       <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(after)} />

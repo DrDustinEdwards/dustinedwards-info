@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form, Link, useNavigation } from "react-router";
+import { Form, useNavigation } from "react-router";
 
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
@@ -115,21 +115,15 @@ export function KbFileEditor({
         ]}
         title={file.title}
         actions={
-          <ButtonLink to={{ search: "" }} variant="quiet">
-            Back to the form
-          </ButtonLink>
-        }
-        lead={
           <>
-            <code>{file.file}</code>
             {file.publicHref ? (
-              <>
-                {" "}
-                <Link to={file.publicHref} reloadDocument>
-                  View the page
-                </Link>
-              </>
+              <ButtonLink to={file.publicHref} reloadDocument variant="quiet">
+                View the page
+              </ButtonLink>
             ) : null}
+            <ButtonLink to={{ search: "" }} variant="quiet">
+              Back to the form
+            </ButtonLink>
           </>
         }
       />
