@@ -71,6 +71,7 @@ export function siteHealthResponse(env: Env): Promise<Response> {
       durableObjectCheck("ask-budget", env.ASK_BUDGET),
       // The last real Ask answer call failed (a spend cap, a revoked key): the binding checks above still pass then.
       aiOutcomeCheck("ask", env.APP_KV),
+      aiOutcomeCheck("alt-text", env.APP_KV),
       // The deploy's time holds a job back until its first window since the deploy has passed: a job added
       // after its hour today (purge-zero-results, check-publications) has not been due yet.
       cronCheck(env.DB, {
