@@ -15,6 +15,7 @@ import { canonicalAuthor } from "../publications/authors.mjs";
 import { bibtexPages, escapeBibtex } from "@drdustinedwards/site-helpers/scholar";
 import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { paperPath, paperPdfPath } from "../publications/paths.mjs";
+import { isShowcase } from "../publications/showcase.mjs";
 import { areaLabel, foldText, formatDollars, roleLabel, typeLabel } from "./view.mjs";
 
 /** A CV entry's id part: Prelum's slug, capped at 48. @param {string} value */
@@ -396,6 +397,16 @@ export function buildCv(source, publications) {
 /** @typedef {ReturnType<typeof buildCv>} Cv */
 
 /**
+ * Whether an entry counts as a paper: the site's own definition (isShowcase), so a publication the site
+ * has no record for (an inline citation, such as a magazine piece) stays listed but is not counted.
+ *
+ * @param {CvEntry} e
+ */
+export function countsAsPaper(e) {
+  return e.paper?.record ? isShowcase(e.paper.record) : false;
+}
+
+/**
  * What filtering reads from each entry (app/lib/cv/view.mjs). The search text also carries the type,
  * role and area labels the page prints beside the entry, so a word a reader can see is a word the
  * search finds, on the server and in the browser alike.
@@ -407,6 +418,7 @@ export function cvFacts(entries) {
   return entries.map((e, order) => ({
     id: e.id,
     type: e.type,
+    paper: countsAsPaper(e),
     section: e.section,
     areas: e.areas,
     role: e.role,

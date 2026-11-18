@@ -5,11 +5,13 @@ import { buildCvFrom } from "../scripts/lib/cv.mjs";
 import { buildPublications } from "../scripts/lib/publications.mjs";
 import { renderCvCharts } from "../app/lib/cv/render-charts.ts";
 import { cvFacts } from "../app/lib/cv/entries.mjs";
+import { isShowcase } from "../app/lib/publications/showcase.mjs";
 import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
 import {
   AREAS,
   ROLES,
   TYPES,
+  headline,
   matches,
   parseState,
   stateToSearch,
@@ -144,4 +146,11 @@ await test("the PDF's fingerprint is a deterministic function of the CV data, an
     fingerprint,
     "a dropped entry moves it",
   );
+});
+
+await test("the CV's paper count is the site's: a publication the site has no record for is listed, not counted", () => {
+  const showcase = PUBLICATIONS.filter((p) => isShowcase(p)).length;
+  const publications = FACTS.filter((f) => f.type === "publication").length;
+  assert.equal(headline(FACTS).papers, showcase);
+  assert.ok(publications > showcase, "an inline citation is listed beside the counted papers");
 });

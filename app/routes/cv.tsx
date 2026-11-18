@@ -11,6 +11,7 @@ import { getEnv } from "~/lib/context";
 import {
   CV_PAGE,
   CV_PDF_PATH,
+  countsAsPaper,
   cvFacts,
   formatDollars,
   type Cv,
@@ -340,6 +341,7 @@ function Entry({ entry, hidden, order }: { entry: CvEntry; hidden: boolean; orde
       data-cv-entry=""
       data-order={order}
       data-type={entry.type}
+      data-paper={countsAsPaper(entry) ? "" : undefined}
       data-section={entry.section ?? undefined}
       data-areas={entry.areas.join(" ")}
       data-role={entry.role ?? undefined}

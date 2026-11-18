@@ -154,7 +154,7 @@ export async function run({ browser }) {
         "cv: ticking a type filters in place and writes the URL",
         pubs.search === "?type=publication" &&
           pubs.shownTypes.join() === "publication" &&
-          pubs.shown === Number(pubs.papers),
+          pubs.shown >= Number(pubs.papers),
         JSON.stringify(pubs),
       );
       ok(

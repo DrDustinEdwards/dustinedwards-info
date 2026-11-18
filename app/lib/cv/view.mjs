@@ -17,6 +17,7 @@ import { listText } from "capsomer/behavior/hooks";
  * @typedef {object} Facts what filtering, grouping and counting read from an entry
  * @property {string} id
  * @property {CvType} type
+ * @property {boolean} paper counts as a paper: a publication the site has a record for (isShowcase), so the CV's count is the home page's
  * @property {string | null} section
  * @property {CvArea[]} areas
  * @property {CvRole | null} role
@@ -317,7 +318,7 @@ export function headline(shown) {
   let dollars = 0;
   let students = 0;
   for (const f of shown) {
-    if (f.type === "publication") papers += 1;
+    if (f.paper) papers += 1;
     if (f.type === "grant") {
       grants += 1;
       dollars += f.amount ?? 0;
@@ -420,7 +421,7 @@ export function sparkData(all, state) {
   return {
     years,
     selected: selectedRange(state, years),
-    papers: per((f) => (f.type === "publication" ? 1 : 0)),
+    papers: per((f) => (f.paper ? 1 : 0)),
     grants: per((f) => (f.type === "grant" ? 1 : 0)),
     students: per((f) => (f.type === "mentoring" && f.cohort ? (f.students ?? 0) : 0)),
   };
