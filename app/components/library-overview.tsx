@@ -1,4 +1,4 @@
-import { countOf, overviewSentence, type libraryOverview } from "~/kb/procedures/library.mjs";
+import { countOf, type libraryOverview } from "~/kb/procedures/library.mjs";
 
 /**
  * The library's overview (docs/PROCEDURES.md): the phage workflow as a line of stations, then the ways in, all
@@ -14,9 +14,6 @@ export function LibraryOverview({ overview }: { overview: ReturnType<typeof libr
         <h2 className="cap-part-title" id="library-pipeline-title">
           The phage workflow
         </h2>
-        <p className="cap-part-lead">
-          From soil sample to annotated genome. A filled station has a protocol here.
-        </p>
         <div className="cap-steps" data-variant="stations">
           <ol
             className="cap-steps-list"
@@ -39,9 +36,7 @@ export function LibraryOverview({ overview }: { overview: ReturnType<typeof libr
                   <span className="cap-step-name">{stage.label}</span>
                 )}
                 <span className="cap-step-meta">
-                  {stage.count > 0
-                    ? countOf(stage.count, ["protocol", "protocols"])
-                    : "No protocol yet"}
+                  {stage.count > 0 ? countOf(stage.count, ["protocol", "protocols"]) : "None"}
                 </span>
                 {stage.tools.length > 0 ? (
                   <ul className="library-stage-tools" aria-label={`Calculators for ${stage.label}`}>
@@ -62,13 +57,11 @@ export function LibraryOverview({ overview }: { overview: ReturnType<typeof libr
         <h2 className="cap-part-title" id="library-overview-title">
           In the library
         </h2>
-        <p className="cap-part-lead">{overviewSentence(overview)}</p>
         <div className="library-browse-grid">
           {overview.start.length > 0 ? (
             <ol className="library-start" aria-label="Start here" data-livery="">
               {overview.start.map((p) => (
                 <li key={p.slug}>
-                  <span className="library-start-mark">Start here</span>
                   <a className="library-start-title" href={p.href}>
                     {p.title}
                   </a>

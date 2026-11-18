@@ -97,11 +97,7 @@ function PreviewPane({
     if (frame.current && doc) frame.current.srcdoc = trustedHtml(doc);
   }, [doc]);
   return (
-    <Panel
-      title="Preview"
-      src={busy ? "Updating" : failed ? "Not drawn" : "As the page will look"}
-      flush
-    >
+    <Panel title="Preview" src={busy ? "Updating" : failed ? "Not drawn" : undefined} flush>
       {failed ? (
         <div className="kb-preview-note">
           <Alert tone="warn" title="The page cannot be drawn until these are fixed">
@@ -374,17 +370,12 @@ export function KbFormEditor({
         }
       />
 
-      {created ? (
-        <Banner tone="ok">
-          A new draft, copied from the protocol named under Copied from. Nothing about it is public
-          until you publish it.
-        </Banner>
-      ) : null}
+      {created ? <Banner tone="ok">A new draft. Not public until you publish it.</Banner> : null}
       {saved ? (
         <Banner tone="ok">
           {saved.unchanged
             ? "Nothing to save: the file was already this. Its page was brought up to date."
-            : `Saved as revision ${saved.commit}. The page shows it on the next visit.`}
+            : `Saved as revision ${saved.commit}.`}
         </Banner>
       ) : null}
 
@@ -461,11 +452,7 @@ export function KbFormEditor({
           <input type="hidden" name="model" value={modelJson} />
 
           {gapFields.length > 0 || nested.length > 0 ? (
-            <Panel
-              title="Needs info"
-              count={gapFields.length + nested.length}
-              description="Values nobody has yet. Fill one in here and it is saved with the rest; leave it empty and it keeps its reason."
-            >
+            <Panel title="Needs info" count={gapFields.length + nested.length}>
               {fieldsOf(gapFields)}
               {nested.length > 0 ? (
                 <ul className="kb-nested-gaps">

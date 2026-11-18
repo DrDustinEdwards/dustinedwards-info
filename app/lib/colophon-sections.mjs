@@ -21,14 +21,10 @@ export const COLOPHON_VERSIONS =
   "This is the third version of this site. The first launched in 2006, the second, " +
   "on WordPress, in 2016, and this one in 2026.";
 
-export const COLOPHON_INTRO =
-  "Most of this page is generated from the repository's configuration and checked on " +
-  "every build. The reasons behind each choice are written by hand.";
-
 /**
  * Order is load-bearing: record `ordinal` is derived from the index here.
  *
- * @type {ReadonlyArray<{ id: string, title: string, lead: string }>}
+ * @type {ReadonlyArray<{ id: string, title: string, lead?: string }>}
  */
 export const COLOPHON_SECTIONS = /** @type {const} */ ([
   {
@@ -55,14 +51,10 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
   {
     id: "runtime",
     title: "Runtime",
-    lead: "Compatibility date, Worker flags and the pinned Node version.",
   },
   {
     id: "bindings",
     title: "Bindings",
-    lead:
-      "Every resource the Worker binds to, what it is for, and the measurement that " +
-      "put it there.",
   },
   {
     id: "schema",
@@ -75,14 +67,10 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
   {
     id: "gates",
     title: "Gates",
-    lead:
-      "Checks that run before anything ships. The list is derived from the scripts, so a " +
-      "gate cannot be added and forgotten.",
   },
   {
     id: "dependencies",
     title: "Dependencies",
-    lead: "Runtime dependencies only. Build tooling is excluded.",
   },
   {
     id: "credits",
@@ -94,7 +82,6 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
   {
     id: "not-adopted",
     title: "What was not adopted",
-    lead: "Choices ruled out on purpose, each with its reason.",
   },
   {
     id: "ai",
@@ -347,11 +334,11 @@ function colophonPageInput(stack, features) {
     uid: "page:colophon",
     title: COLOPHON_TITLE,
     description: COLOPHON_DESCRIPTION,
-    intro: `${COLOPHON_VERSIONS} ${COLOPHON_INTRO}`,
+    intro: COLOPHON_VERSIONS,
     sections: COLOPHON_SECTIONS.map((section) => ({
       anchor: section.id,
       title: section.title,
-      body: `${section.lead} ${contentFor(section.id)}`,
+      body: [section.lead, contentFor(section.id)].filter(Boolean).join(" "),
     })),
   };
 }

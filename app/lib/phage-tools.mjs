@@ -786,7 +786,6 @@ export const TOOLS = {
         name: "plaques",
         label: "Plaques counted",
         value: "111",
-        hint: "On one plate, or in one spot.",
       },
       {
         name: "volume",
@@ -850,7 +849,6 @@ export const TOOLS = {
         name: "pfu",
         label: "pfu wanted per plate",
         value: "11100",
-        hint: "What webs depends on plaque size; see the notes below.",
       },
       {
         name: "volume",
@@ -933,7 +931,6 @@ export const TOOLS = {
         label: "Titer on the reference host",
         unit: "pfu/ml",
         value: "1e10",
-        hint: "Usually the host the phage was isolated on.",
       },
     ],
     run: runEop,
@@ -988,7 +985,6 @@ export const TOOLS = {
         name: "pfu",
         label: "pfu wanted per plate",
         value: "10000",
-        hint: "What webs depends on plaque size and host; see the notes below.",
       },
       {
         name: "plates",

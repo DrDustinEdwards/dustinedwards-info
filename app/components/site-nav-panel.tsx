@@ -225,7 +225,6 @@ function Row({ row, pathname }: { row: MenuRow; pathname: string }) {
             {row.title}
           </span>
         )}
-        {row.note ? <span className="site-nav-desc">{row.note}</span> : null}
         {row.links && row.links.length > 0 ? (
           <RowLinks links={row.links} pathname={pathname} />
         ) : null}
@@ -274,7 +273,6 @@ export function SiteNavPanel({ menu, pathname }: { menu: Menu; pathname: string 
           {menu.badge ? <b>{menu.badge}</b> : <Icon name={menu.icon} />}
         </span>
         <p className="site-nav-band-title">{menu.heading}</p>
-        <p className="site-nav-band-line">{menu.blurb}</p>
       </div>
       {menu.tiles.length > 0 ? (
         <ul className="site-nav-tiles" aria-label={`${menu.heading} highlights`}>
@@ -297,7 +295,9 @@ export function SiteNavPanel({ menu, pathname }: { menu: Menu; pathname: string 
             className="site-nav-spot"
             aria-current={current(spotlight.to, pathname)}
           >
-            <span className="site-nav-spot-eyebrow">{spotlight.eyebrow}</span>
+            {spotlight.eyebrow ? (
+              <span className="site-nav-spot-eyebrow">{spotlight.eyebrow}</span>
+            ) : null}
             {spotlight.kind === "map" ? <MapDrawing /> : null}
             {spotlight.icon ? (
               <span className="site-nav-badge" aria-hidden="true">

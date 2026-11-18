@@ -117,10 +117,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
 
   return (
     <div className="app-page">
-      <PageHead
-        title="Tools"
-        lead="The site's upkeep: the search and site file indexes, which secrets this deployment holds, and searches that found nothing."
-      />
+      <PageHead title="Tools" />
 
       {/*
         The status region is always in the DOM, because a region inserted already holding its text is
@@ -175,10 +172,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
                   (ask.failed > 0 ? `, and refused ${ask.failed}` : "") +
                   (ask.indexing > 0 ? `; ${ask.indexing} are being indexed now.` : ".")
                 : `The answer index has all ${ask.expected} post sections and paper parts.`}
-          {ask
-            ? " It reads them from the site's database by itself every 15 minutes and whenever a post or paper is published or withdrawn" +
-              (lastSync ? `; the last sync was ${lastSync} UTC.` : ".")
-            : null}
+          {ask && lastSync ? ` Last sync ${lastSync} UTC.` : null}
           {budget
             ? ` ${budget.count} of ${budget.limit} answers used on ${budget.day} (UTC); cached answers do not count.`
             : null}
@@ -205,21 +199,12 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
         </RouterConfirmModal>
       ) : null}
 
-      <Panel
-        title="Site file index"
-        footer={
-          <Form method="post" className="cap-cluster">
-            <Button type="submit" name="intent" value="rebuild">
-              Rebuild the site file index
-            </Button>
-          </Form>
-        }
-      >
-        <p>
-          An index of the site's own files: every static asset in the repository and every card and
-          document the Worker generates in OG. A rebuild derives it again from both, for when the
-          health check reports drift. The media library keeps its own rows.
-        </p>
+      <Panel title="Site file index">
+        <Form method="post" className="cap-cluster">
+          <Button type="submit" name="intent" value="rebuild">
+            Rebuild the site file index
+          </Button>
+        </Form>
       </Panel>
 
       <Panel
@@ -257,15 +242,9 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
           <Pill variant="outline">{misses.length === 0 ? "none" : `${misses.length} shown`}</Pill>
         }
         flush={misses.length > 0}
-        footer={
-          <p className="cap-muted">
-            {"Queries nobody has repeated recently are removed on a schedule, by the site's daily " +
-              "purge-zero-results job; there is no button here for it any more."}
-          </p>
-        }
       >
         {misses.length === 0 ? (
-          <p>Nothing recorded yet, which is the good case.</p>
+          <p>None.</p>
         ) : (
           <RowList label="Searches that found nothing">
             {misses.map((miss) => (

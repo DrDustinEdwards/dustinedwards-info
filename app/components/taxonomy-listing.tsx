@@ -44,7 +44,6 @@ type ListingPost = Parameters<typeof PostRow>[0]["post"];
 export function TaxonomyListing({
   base,
   heading,
-  dek,
   posts,
   page,
   pageCount,
@@ -54,8 +53,6 @@ export function TaxonomyListing({
   /** The page's path, which its feeds hang off. */
   base: string;
   heading: string;
-  /** The sentence under the heading. The trail above the heading leads back to all posts. */
-  dek: React.ReactNode;
   posts: ListingPost[];
   page: number;
   pageCount: number;
@@ -69,7 +66,6 @@ export function TaxonomyListing({
         <header className="list-head">
           <Breadcrumb trail={listingTrail(heading, base)} />
           <h1 className="list-label cap-layout-grid">{heading}</h1>
-          <p className="list-dek">{dek}</p>
           <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 
@@ -94,7 +90,7 @@ export function TaxonomyListing({
         />
 
         <p className="list-feeds">
-          Subscribe: <a href={`${base}/rss.xml`}>RSS</a> <a href={`${base}/feed.json`}>JSON</a>
+          Feeds: <a href={`${base}/rss.xml`}>RSS</a> <a href={`${base}/feed.json`}>JSON</a>
         </p>
       </main>
       <ShellFooter />

@@ -76,14 +76,13 @@ describe("calculators in a procedure's steps", () => {
     },
   );
 
-  it("fills a field from the step's own words and says so", { timeout: 120_000 }, async () => {
+  it("fills a field from the step's own words", { timeout: 120_000 }, async () => {
     const raw = isolation.replace("   > CALC: webbed-plate", "   > CALC: webbed-plate plates=10");
     expect(raw).not.toBe(isolation);
     const html = renderToStaticMarkup(
       createElement(ProcedureView, { record: await record(raw), count: 1, factor: 1 }),
     );
     expect(html).toMatch(/id="[^"]*webbed-plate-plates"[^>]*value="10"/);
-    expect(html).toContain("except what this step states");
   });
 
   it(

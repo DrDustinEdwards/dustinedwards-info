@@ -69,11 +69,7 @@ function specFor(field: FormField, original: unknown): FieldSpec {
   const { yaml: _yaml, gap, ...spec } = field;
   return {
     ...spec,
-    help: gap
-      ? `Needs info: ${gap}`
-      : field.kind === "yaml"
-        ? (field.help ?? "YAML, as in the file.")
-        : field.help,
+    help: gap ? `Needs info: ${gap}` : field.help,
     placeholder: reason(original) ?? undefined,
     wide: OWN_KINDS.has(field.kind) || undefined,
   };

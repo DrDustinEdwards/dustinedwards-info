@@ -105,11 +105,7 @@ export function StepCalculators({
             marker="sign"
             print="hide"
           >
-            <p className="phage-tool-hint">
-              The fields start on the lab&apos;s worked example
-              {Object.keys(values).length ? ", except what this step states" : ""}. Enter your own
-              numbers.
-            </p>
+            <p className="phage-tool-hint">Starts on the lab&apos;s worked example.</p>
             <ToolBody
               id={id}
               instance={`${scope}-${id}`}

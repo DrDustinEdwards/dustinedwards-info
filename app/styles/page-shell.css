@@ -38,13 +38,7 @@
   }
 }
 
-/* The rail's index, small: the label in the mono over the manual's dotted-leader index, the leaders dropped. */
-.page-contents-label {
-  margin: 0 0 var(--space-3);
-  color: var(--text-secondary);
-  line-height: var(--leading-relaxed);
-}
-
+/* The rail's index, small: the manual's dotted-leader index, the leaders dropped. */
 /* The public plane's link rules are unlayered and the index's layered, so its ink is restated here. */
 .cap-leader-index-link,
 .cap-leader-index-link:visited {

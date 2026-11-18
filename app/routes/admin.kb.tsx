@@ -107,14 +107,7 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
 
   return (
     <div className="app-page">
-      <PageHead
-        title="Knowledge Base"
-        lead={
-          tab === NEEDS_INFO
-            ? `${plural(gaps.length, "value", "values")} waiting on someone who has it, across every entry and registry item.`
-            : "Protocols, software how-tos and recipes. Each entry is a file in the repository; this page reads them."
-        }
-      />
+      <PageHead title="Knowledge Base" />
 
       <TabsNav aria-label="Knowledge bases" variant="line" renderLink={tabLink}>
         {tabs.map((t) => (

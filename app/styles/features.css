@@ -3,12 +3,6 @@
  * Complete with script off: every card is in the HTML, and the script only hides the cards a chip leaves out. The cards are
  * Capsomer's panels and the chips Capsomer's solid chips, on the site's tokens.
  */
-.features-lead {
-  max-inline-size: 46rem;
-  margin-block: var(--space-3) var(--space-6);
-  color: var(--text-secondary);
-}
-
 .features-chips {
   margin-block-end: var(--space-7);
 }
@@ -48,11 +42,6 @@
   min-inline-size: 2rem;
   color: var(--text-secondary);
   font-weight: var(--weight-regular);
-}
-
-.features-intro {
-  margin-block: 0 var(--space-5-5);
-  color: var(--text-secondary);
 }
 
 .features-grid {

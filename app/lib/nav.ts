@@ -63,21 +63,21 @@ export type MenuLink = {
 };
 
 /**
- * One grouped row of the left half. `title` is a link when `to` is set; `note` is plain text under it;
+ * One grouped row of the left half. `title` is a link when `to` is set;
  * `links` are links under it, shown on one line separated by middots.
  */
 export type MenuRow = {
   icon: NavIcon;
   title: string;
   to?: string;
-  note?: string;
   links?: MenuLink[];
 };
 
 /** The one block of the right half. */
 type Spotlight = {
   kind: "text" | "map";
-  eyebrow: string;
+  /** Names the audience when the title alone does not (Join the lab). */
+  eyebrow?: string;
   /** An icon in a round well above the title (Join the lab). */
   icon?: NavIcon;
   title: string;
@@ -93,8 +93,6 @@ export type Menu = {
   badge?: string;
   /** The band's first line. */
   heading: string;
-  /** The band's one-line description. */
-  blurb: string;
   tiles: MenuLink[];
   rows: MenuRow[];
   spotlight?: Spotlight;
@@ -170,14 +168,12 @@ function researchMenu(): Menu {
     id: "research",
     icon: "research",
     heading: "Research",
-    blurb: "Retroviruses, bacteriophages and science education",
     tiles: RESEARCH_AREAS,
     rows: [
       {
         icon: "publications",
         title: "Publications",
         to: "/research/publications",
-        note: "Every paper, with BibTeX and RIS",
       },
       {
         icon: "collections",
@@ -200,7 +196,6 @@ function researchMenu(): Menu {
     spotlight: NAV_DATA.latestPaper
       ? {
           kind: "text",
-          eyebrow: "Latest paper",
           title: NAV_DATA.latestPaper.title,
           body: [NAV_DATA.latestPaper.journal, NAV_DATA.latestPaper.year]
             .filter(Boolean)
@@ -216,10 +211,8 @@ function researchMenu(): Menu {
   };
 }
 
-/** A course tile; its line is the course page's own front matter description, read at build (scripts/lib/nav-data.mjs). */
 function courseTile(to: string, label: string, icon: NavIcon): MenuLink {
-  const description = (NAV_DATA.courses as Record<string, string> | undefined)?.[to];
-  return description ? { to, label, icon, description } : { to, label, icon };
+  return { to, label, icon };
 }
 
 function teachingMenu(): Menu {
@@ -227,7 +220,6 @@ function teachingMenu(): Menu {
     id: "teaching",
     icon: "teaching",
     heading: "Teaching",
-    blurb: "Courses, study help and joining the lab",
     tiles: [
       courseTile("/teaching/phage-discovery", "Phage Discovery Program", "bacteriophages"),
       courseTile("/teaching/virus-isolation", "Virus Isolation", "research"),
@@ -253,7 +245,6 @@ function teachingMenu(): Menu {
       eyebrow: "Prospective students",
       icon: "users",
       title: "Join the lab",
-      body: "Undergraduate research beyond the courses",
       to: "/teaching#join-the-lab",
     },
     footer: [
@@ -269,7 +260,6 @@ function softwareMenu(): Menu {
     id: "software",
     icon: "software",
     heading: "Software",
-    blurb: "Products, the open tools behind them, and how it fits together",
     tiles: SOFTWARE_PRODUCTS,
     rows: [
       {
@@ -286,14 +276,11 @@ function softwareMenu(): Menu {
         icon: "doc",
         title: "Software how-tos",
         to: "/software/how-tos",
-        note: "Step-by-step guides",
       },
     ],
     spotlight: {
       kind: "map",
-      eyebrow: "System map",
       title: "How the systems fit together",
-      body: "Every system and what it connects to, with the Capsid explorer for the detail",
       to: "/systems",
     },
     footer: [
@@ -316,7 +303,6 @@ function writingMenu(now: number): Menu {
     id: "writing",
     icon: "writing",
     heading: "Writing",
-    blurb: "Articles, series and tags",
     tiles: posts.slice(0, 3).map((post) => ({
       to: `/writing/${post.slug}`,
       label: post.title,
@@ -337,7 +323,6 @@ function writingMenu(now: number): Menu {
     spotlight: newest
       ? {
           kind: "text",
-          eyebrow: "Newest",
           title: newest.title,
           body: newest.firstLine,
           to: `/writing/${newest.slug}`,
@@ -367,7 +352,6 @@ function aboutMenu(): Menu {
     badge: initials(IDENTITY.name),
     // The band states the person and the whole identity line, university system included.
     heading: IDENTITY.name,
-    blurb: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.org}`,
     tiles: [
       { to: "/about", label: "About", icon: "about" },
       {
@@ -380,11 +364,10 @@ function aboutMenu(): Menu {
     ],
     rows: [
       { icon: "recipes", title: "Interests", links: [{ to: "/recipes", label: "Recipes" }] },
-      { icon: "colophon", title: "Colophon", to: "/colophon", note: "How this site is built" },
+      { icon: "colophon", title: "Colophon", to: "/colophon" },
     ],
     spotlight: {
       kind: "text",
-      eyebrow: "The lab",
       title: NAV_DATA.lab.department,
       body: [NAV_DATA.lab.university, NAV_DATA.lab.place].filter(Boolean).join(", "),
       to: "/research",

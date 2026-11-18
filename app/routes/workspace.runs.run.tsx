@@ -66,8 +66,7 @@ export default function LabRun({ loaderData, actionData }: Route.ComponentProps)
       {run.replaced_by ? (
         <p>
           Corrected by{" "}
-          <Link to={`${LAB_BENCH_PATH}/runs/${run.replaced_by}`}>run {run.replaced_by}</Link>. This
-          record stays as it was saved.
+          <Link to={`${LAB_BENCH_PATH}/runs/${run.replaced_by}`}>run {run.replaced_by}</Link>.
         </p>
       ) : null}
       <dl className="lab-facts">

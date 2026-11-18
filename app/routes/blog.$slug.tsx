@@ -1,15 +1,14 @@
 import { JsonLd } from "capsomer/react/json-ld";
-import { Link, data } from "react-router";
+import { data } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { Breadcrumb } from "~/components/breadcrumb";
 import { PostHistory } from "~/components/post-history";
-import { PostRail, ymd } from "~/components/post-rail";
+import { PostRail } from "~/components/post-rail";
 import { Signs } from "capsomer/react/manual";
 import { RelatedLinks } from "capsomer/react/related-links";
 import { SeriesNav } from "capsomer/react/series-nav";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { EvidenceRow } from "~/components/evidence-row";
-import { ISLAND_GZIP_BYTES } from "virtual:islands";
 
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -220,7 +219,7 @@ const REVISED_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 export default function BlogPost({ loaderData }: Route.ComponentProps) {
   const { post, toc, seriesParts, mentions } = loaderData;
 
-  const { canonical, description: dek } = postSocial(post);
+  const { canonical } = postSocial(post);
 
   const published = post.publishAt ? new Date(post.publishAt).getTime() : null;
   const revised = post.updatedAt ? new Date(post.updatedAt).getTime() : null;
@@ -231,12 +230,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
 
   const sections = toc.filter((entry) => entry.depth === 2);
 
-  const gzipBytes = ISLAND_GZIP_BYTES.blog;
-  const evidence = [
-    post.wordCount > 0 ? `${post.wordCount.toLocaleString("en-US")} words` : null,
-    gzipBytes ? `${(gzipBytes / 1000).toFixed(2)} kB gzipped` : null,
-    post.sourceBlobSha ? `source hash ${post.sourceBlobSha.slice(0, 7)}` : null,
-  ];
+  const evidence = [post.wordCount > 0 ? `${post.wordCount.toLocaleString("en-US")} words` : null];
 
   return (
     <>
@@ -251,8 +245,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         <header className="post-head">
           <Breadcrumb trail={postTrail(post)} />
           <h1 className="p-name cap-layout-grid">{post.title}</h1>
-          {/* The meta tag's string: `postSocial` falls back to the site description, so the raw column would differ from the head. */}
-          <p className="post-dek">{dek}</p>
+          {post.description ? <p className="post-dek">{post.description}</p> : null}
           <EvidenceRow facts={evidence} />
           {/* `hidden`, not `.sr-only`, which is still announced. mf2 parsers read markup, not computed style. */}
           <p className="p-author h-card" hidden>
@@ -321,7 +314,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
               about it. Drawn, with no words (Dustin, 2026-11-04). */}
           <hr className="cap-hold" />
 
-          <nav className="post-actions" aria-label="Use this post elsewhere">
+          <nav className="post-actions post-share" aria-label="Use this post elsewhere">
             <a
               className="post-action"
               href={`/writing/${post.slug}.md`}
@@ -347,10 +340,6 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             >
               Open in ChatGPT
             </a>
-          </nav>
-
-          {/* `.post-share .u-url` is the enhancement's hook for copy-link-to-selection; keep the class if the row moves. */}
-          <nav className="post-actions post-share" aria-label="This post's address">
             <a className="post-action u-url" href={canonical}>
               Permalink
             </a>
@@ -369,17 +358,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             }))}
           />
 
-          <p className="post-colophon-note">
-            Built on the stack described at <Link to="/colophon">/colophon</Link>.
-          </p>
-
-          {revisedLabel && post.changelog && (
-            <PostHistory
-              entries={post.changelog}
-              publishedAt={post.publishAt ? ymd(post.publishAt) : null}
-              sourceHash={post.sourceBlobSha}
-            />
-          )}
+          {revisedLabel && post.changelog && <PostHistory entries={post.changelog} />}
 
           <RelatedLinks
             kind="internal"

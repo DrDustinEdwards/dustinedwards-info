@@ -120,7 +120,7 @@ describe("a library with no published entry", () => {
     expect(sitemap).not.toContain(`${SITE_ORIGIN}/software/how-tos<`);
   });
 
-  it("shows the signed-in admin the empty library, unindexed, saying it goes public with its first entry", async () => {
+  it("shows the signed-in admin the empty library, unindexed, saying nothing is published yet", async () => {
     // A local request is the admin's (access.server.ts), as on the dev server.
     const loaderData = await libraryLoader({
       request: new Request("http://localhost/recipes"),
@@ -128,7 +128,7 @@ describe("a library with no published entry", () => {
       context: routeContext(),
     } as never);
     const html = renderRoute("/recipes", KbLibrary, { loaderData });
-    expect(html).toContain("Only you can see this page: no recipe is published yet.");
+    expect(html).toContain("No recipe published yet.");
     expect(html).toContain("0 recipes from the");
     // Its downloads are not there yet, so it offers none.
     expect(html).not.toContain("Download and cite");

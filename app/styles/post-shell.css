@@ -103,18 +103,6 @@
   box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
 }
 
-.post-share {
-  margin-block-start: var(--space-3);
-}
-
-.post-colophon-note {
-  margin-block-start: var(--space-6);
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--fs-body);
-  line-height: var(--leading-normal);
-}
-
 /* Scoped to .post-body: prose.css is shared with about, colophon, privacy, phage-discovery and both
  * playgrounds. */
 

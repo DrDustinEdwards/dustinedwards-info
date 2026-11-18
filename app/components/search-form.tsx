@@ -13,13 +13,11 @@ export function SearchForm({
   defaultValue,
   label = "Search this site",
   labelHidden,
-  placeholder = "Try: d1, tag:cloudflare, 2026, or a quoted phrase",
   children,
 }: {
   defaultValue?: string;
   label?: string;
   labelHidden?: boolean;
-  placeholder?: string;
   children?: React.ReactNode;
 }) {
   const [value, setValue] = useState(defaultValue ?? "");
@@ -33,7 +31,6 @@ export function SearchForm({
           name="q"
           value={value}
           onChange={setValue}
-          placeholder={placeholder}
           autoComplete="off"
         />
         <Button type="submit" variant="primary">

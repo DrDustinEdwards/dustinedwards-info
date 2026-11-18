@@ -42,7 +42,7 @@ const MARK_START_SQL = `char(${MARK_OPEN.charCodeAt(0)})`;
 const MARK_END_SQL = `char(${MARK_CLOSE.charCodeAt(0)})`;
 
 /** "filter" is not an index match: it labels a browse-path record, where there was no text to match. */
-export type MatchReason = "title" | "tag" | "body" | "filter";
+type MatchReason = "title" | "tag" | "body" | "filter";
 
 export interface SearchHit {
   uid: string;

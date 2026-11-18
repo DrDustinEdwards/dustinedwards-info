@@ -152,21 +152,3 @@ export function humanCheck(check) {
   const finding = copy.failing(check.counts) ?? check.detail;
   return { name: copy.name, finding, repair: copy.repair };
 }
-
-/**
- * @param {Array<{ name: string, ok: boolean, detail: string, counts?: { expected: number, present: number } }>} checks
- * @returns {string}
- */
-export function statusSentence(checks) {
-  const failing = checks.filter((check) => !check.ok);
-  // Guard the value, not the length, so the compiler knows `worst` is defined.
-  const worst = failing[0];
-  if (!worst) {
-    return "Everything agrees: the site, the source, the library and search are all in step.";
-  }
-  const first = humanCheck(worst);
-  if (failing.length === 1) {
-    return `One thing needs attention. ${first.finding}`;
-  }
-  return `${failing.length} things need attention. ${first.finding}`;
-}

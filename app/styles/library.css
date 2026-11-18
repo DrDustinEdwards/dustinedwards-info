@@ -69,7 +69,8 @@
   gap: var(--space-3);
 }
 
-.library-start-mark {
+.library-start::before {
+  content: "Start here";
   font: var(--weight-bold) var(--fs-label) / var(--leading-relaxed) var(--font-mono);
   letter-spacing: var(--tracking-sign);
   text-decoration: underline;
@@ -135,8 +136,4 @@
 
 .library-cite p {
   margin: 0 0 var(--space-4);
-}
-
-.library-cite .library-subtitle {
-  margin-block-start: var(--space-6);
 }

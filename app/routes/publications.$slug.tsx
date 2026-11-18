@@ -220,8 +220,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
 
           {/* `accessionUrl` refuses a kind with no registry: a wrong registry is a 404 that looks like a working link. */}
           {paper.accessions.length > 0 ? (
-            <section className="paper-data" aria-labelledby="data-heading">
-              <h2 id="data-heading">Data</h2>
+            <section className="paper-data" aria-label="Data">
               <p className="paper-links">
                 {paper.accessions.map((accession) => (
                   <a key={accession.id} href={accessionUrl(accession)}>
@@ -238,7 +237,6 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
               works={citedBy.citing}
               source="OpenAlex"
               readAt={citedByFetchedAt ?? undefined}
-              order="Newest first."
             />
           ) : null}
 

@@ -170,7 +170,6 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
         />
       </div>
       <LibraryCite
-        count={result.count}
         downloads={catalogDownloads(LIBRARY, result)}
         citation={libraryCitation({
           name: SITE.name,

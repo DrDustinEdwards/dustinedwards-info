@@ -24,7 +24,7 @@ export function NotFoundHelp() {
       <link rel="stylesheet" href={searchFormCssUrl} />
       <SearchForm defaultValue={notFoundQuery(pathname)} />
       <nav aria-labelledby="not-found-sections">
-        <h2 id="not-found-sections">Or start from a section</h2>
+        <h2 id="not-found-sections">Sections</h2>
         <ul>
           {NAV.map((item) => (
             <li key={item.to}>

@@ -125,33 +125,27 @@ const AVIAN = {
   description: "Two bird retroviruses, and why they matter for wild turkeys and prairie chickens",
 };
 
-/** The lab's own pages. Each line is cut from that page's description. */
+/** The lab's own pages. */
 const LAB_RESOURCES = [
   {
     rail: "Protocol",
     to: "/research/protocols/phage-isolation",
     label: "Phage isolation and purification",
-    description:
-      "Where the Tarleton SEA-PHAGES lab runs a step differently from the Phage Discovery Guide",
   },
   {
     rail: "Calculations",
     to: "/teaching/virus-isolation/faq",
     label: "Lab calculations and common questions",
-    description: "Titers in pfu/ml, spot titer dilutions, webbed plate volumes and lysate yields",
   },
   {
     rail: "Calculators",
     to: "/research/tools",
     label: "Phage lab calculators",
-    description:
-      "Titer from plaque counts and spot titers, serial dilution plans and webbed plate volumes, with the arithmetic shown",
   },
   {
     rail: "Protocol",
     to: "/research/protocols/coi-primers",
     label: "COI primers: LCO1490 and HCO2198",
-    description: "Primer sequences and PCR conditions for COI barcoding of invertebrates",
   },
 ];
 
@@ -163,14 +157,12 @@ function Section({
   id,
   no,
   title,
-  lead,
   more,
   children,
 }: {
   id: string;
   no: string;
   title: string;
-  lead?: ReactNode;
   more: ReactNode;
   children: ReactNode;
 }) {
@@ -180,7 +172,6 @@ function Section({
         <span className="cap-part-no">{no}</span>
         {title}
       </h2>
-      {lead ? <p className="cap-part-lead">{lead}</p> : null}
       {children}
       <p className="home-more">{more}</p>
     </section>
@@ -194,7 +185,7 @@ function Row({
   title,
   summary,
 }: {
-  rail: ReactNode;
+  rail?: ReactNode;
   to: string;
   title: ReactNode;
   summary?: ReactNode;
@@ -234,11 +225,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </span>
               <PlateI />
             </div>
-            <figcaption className="cap-plate-caption">
-              <span>
-                <b>Plate I.</b> Plaque morphology, drawn.
-              </span>
-            </figcaption>
           </figure>
         </div>
 
@@ -270,18 +256,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           id="research"
           no="1"
           title="Research"
-          lead="I study viral genomics."
           more={<Link to="/research">All research</Link>}
         >
           <ul className="home-rows">
             {RESEARCH_AREAS.map((area) => (
-              <Row
-                key={area.to}
-                rail="Area"
-                to={area.to}
-                title={area.label}
-                summary={area.description}
-              />
+              <Row key={area.to} to={area.to} title={area.label} summary={area.description} />
             ))}
             <Row rail="Current" to={AVIAN.to} title={AVIAN.label} summary={AVIAN.description} />
           </ul>
@@ -291,7 +270,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           id="publications"
           no="2"
           title="Publications"
-          lead={`${paperCount} papers on retroviruses, bacteriophages and science education.`}
           more={<Link to="/research/publications">All {paperCount} papers</Link>}
         >
           {/* A report's numbered references: number, year, title, the journal in the mono. */}
@@ -316,15 +294,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           id="lab"
           no="3"
           title="Lab resources"
-          lead="The lab's protocols and calculators."
           more={<Link to="/research/protocols">All protocols</Link>}
         >
           {/* The procedures as an Apollo checklist card (capsomer/manual.css .cap-checklist). */}
           <div className="cap-checklist">
-            <p className="cap-checklist-strip" aria-hidden="true">
-              <span>Lab · Procedures</span>
-              <span>{LAB_RESOURCES.length} cards</span>
-            </p>
             <ol className="cap-checklist-items">
               {LAB_RESOURCES.map((item) => (
                 <li key={item.to} className="cap-checklist-item">
@@ -333,7 +306,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     <span className="cap-checklist-dots" aria-hidden="true" />
                     <span className="cap-checklist-kind">{item.rail}</span>
                   </div>
-                  <p className="cap-checklist-note">{item.description}</p>
                 </li>
               ))}
             </ol>
@@ -344,7 +316,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           id="teaching"
           no="4"
           title="Teaching"
-          lead={`${discovery.researchers} student researchers in ${discovery.cohorts} cohorts since ${discovery.since}.`}
           more={<Link to="/teaching">All teaching</Link>}
         >
           <ul className="home-rows">
@@ -398,14 +369,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           id="software"
           no="6"
           title="Software"
-          lead="Products and the tools behind them."
           more={<Link to="/software">All software</Link>}
         >
           <ul className="home-rows">
             {SOFTWARE_PRODUCTS.map((product) => (
               <Row
                 key={product.to}
-                rail="Product"
                 to={product.to}
                 title={product.label}
                 summary={product.description}
