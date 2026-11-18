@@ -24,6 +24,7 @@ import {
   reserveAskBudget,
   writeCachedAnswer,
 } from "~/lib/search/ask-guard.server";
+import { recordAiOutcome } from "@dustinedwards/site-runtime/health";
 import { errorMessage, logEvent } from "@dustinedwards/site-runtime/log";
 import { refuseCrossSite } from "@dustinedwards/site-runtime/origin";
 import { publiclyVisibleSlugs } from "~/db";
@@ -140,6 +141,8 @@ export async function action({ request, context }: Route.ActionArgs) {
   try {
     /* Guard first, then tee: the cache must store what the reader saw, including the guard's substitution. */
     const upstream = await askStream(env, question);
+    // /health's ai-ask check: the call was accepted, so any earlier failure is over.
+    getExecutionContext(context).waitUntil(recordAiOutcome(env.APP_KV, "ask", { ok: true }));
     // Set before the guarded stream closes, so they are settled by the time `captured` is.
     let refused = false;
     let cut = false;
@@ -183,6 +186,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   } catch (error) {
     // The client treats any non-200 as "Ask is unavailable"; a 500 here would land on a page with real results.
     console.error(JSON.stringify({ alert: "ask-stream-failed", detail: errorMessage(error) }));
+    getExecutionContext(context).waitUntil(
+      recordAiOutcome(env.APP_KV, "ask", { ok: false, kind: "unavailable" }),
+    );
     return new Response("Ask is unavailable.", { status: 502 });
   }
 }
