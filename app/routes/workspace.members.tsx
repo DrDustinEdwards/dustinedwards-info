@@ -52,10 +52,10 @@ export default function LabMembers({ loaderData, actionData }: Route.ComponentPr
   const confirm = actionData?.confirm;
   return (
     <>
-      <PageHead
-        title="Members"
-        lead="Adding or removing a person here changes the Cloudflare Access list."
-      />
+      <PageHead title="Members" />
+      <p className="cap-muted">
+        Adding or removing a person here changes the Cloudflare Access list.
+      </p>
       {syncNotice ? (
         <Banner tone="warn" title="Cloudflare Access is not synced">
           {syncNotice}
