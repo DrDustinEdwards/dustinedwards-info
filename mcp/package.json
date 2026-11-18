@@ -17,7 +17,7 @@
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.2.4",
     "@drdustinedwards/site-helpers": "github:DrDustinEdwards/prelum#v0.63.1",
-    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.48.1",
+    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.51.0",
     "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.167.0",
     "@modelcontextprotocol/server": "2.4.0",
     "agents": "0.32.0",
