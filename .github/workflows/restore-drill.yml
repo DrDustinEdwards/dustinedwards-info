@@ -25,10 +25,9 @@ concurrency:
 
 jobs:
   drill:
-    uses: DrDustinEdwards/devkit/.github/workflows/restore-drill.yml@9e40afbad5fa778718b9aac65bc205b3c0a9c101 # v0.51.0
+    uses: DrDustinEdwards/devkit/.github/workflows/restore-drill.yml@6b0656ca6e6072ccdd73b85647d5c16ff85ea98f # v0.53.0
     with:
       bucket: dustinedwards-backups
-      d1-dump-ref: v0.15.0
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
