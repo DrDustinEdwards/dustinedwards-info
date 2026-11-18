@@ -167,9 +167,6 @@ export function LabPrimer({
         {primer.tm !== null ? (
           <Fact term="Melting temperature estimate (Tm)">{primer.tm} °C</Fact>
         ) : null}
-        <Fact term="Annealing temperature">
-          Depends on the polymerase: <a href={note.calculator.url}>{note.calculator.name}</a>
-        </Fact>
         {usedBy.length > 0 ? (
           <Fact term={usedBy.length === 1 ? "Used in" : "Used in these protocols"}>
             <ul className="registry-used">
@@ -182,6 +179,13 @@ export function LabPrimer({
           </Fact>
         ) : null}
       </dl>
+      {primer.tm !== null ? (
+        <p className="registry-note">
+          {note.statement} The Tm estimate is not an annealing temperature. For the annealing
+          temperature of a particular polymerase, use the{" "}
+          <a href={note.calculator.url}>{note.calculator.name}</a>.
+        </p>
+      ) : null}
 
       <h2 id="literature">In the literature</h2>
       <dl className="registry-facts">

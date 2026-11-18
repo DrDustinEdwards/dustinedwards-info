@@ -314,7 +314,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
               about it. Drawn, with no words (Dustin, 2026-11-04). */}
           <hr className="cap-hold" />
 
-          <nav className="post-actions" aria-label="Use this post elsewhere">
+          <nav className="post-actions post-share" aria-label="Use this post elsewhere">
             <a
               className="post-action"
               href={`/writing/${post.slug}.md`}
