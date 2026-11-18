@@ -127,6 +127,9 @@ export function KbFileEditor({
           </>
         }
       />
+      <p className="cap-muted">
+        <code>{file.file}</code>
+      </p>
 
       {saved ? (
         <Banner tone="ok">

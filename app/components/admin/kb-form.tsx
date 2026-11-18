@@ -361,6 +361,9 @@ export function KbFormEditor({
           </>
         }
       />
+      <p className="cap-muted">
+        <code>{file.file}</code>
+      </p>
 
       {created ? <Banner tone="ok">A new draft. Not public until you publish it.</Banner> : null}
       {saved ? (
@@ -373,6 +376,10 @@ export function KbFormEditor({
 
       {isEntry && duplicating ? (
         <Panel title="Duplicate as a new draft">
+          <p className="cap-muted">
+            A copy with its own title and address, recording that it came from this one. Its
+            version, history and Start-here place are left behind.
+          </p>
           <Form method="post" id="kb-duplicate" className="app-filters">
             <input type="hidden" name="intent" value="duplicate" />
             <div className="cap-field">

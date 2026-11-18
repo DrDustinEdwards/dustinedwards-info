@@ -53,6 +53,7 @@ export default function LabRuns({ loaderData, actionData }: Route.ComponentProps
   return (
     <>
       <PageHead title="Runs" />
+      <p className="cap-muted">A saved run is never changed; a correction is a new run.</p>
       <LabStatus result={actionData} />
       {runs.length === 0 ? (
         <p className="cap-muted">No runs recorded yet.</p>
