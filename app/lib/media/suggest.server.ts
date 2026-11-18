@@ -5,7 +5,9 @@
 import { mediaSuggester } from "@dustinedwards/site-api";
 
 /** What the model suggests for one stored picture. Throws when the site has no ANTHROPIC_API_KEY. */
-export const suggestFor = mediaSuggester({
+export const suggestFor = mediaSuggester<Env>({
   app: "dustinedwards",
   describe: "on a scientist's personal website",
+  // /health's ai-alt-text check.
+  outcomeKv: (env) => env.APP_KV,
 });
