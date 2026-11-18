@@ -71,8 +71,8 @@
     "@codemirror/state": "6.7.1",
     "@codemirror/view": "6.43.7",
     "@drdustinedwards/site-helpers": "github:DrDustinEdwards/prelum#v0.63.1",
-    "@dustinedwards/d1-dump": "github:DrDustinEdwards/d1-dump#v0.16.0",
-    "@dustinedwards/site-api": "github:DrDustinEdwards/site-api#v0.43.0",
+    "@dustinedwards/d1-dump": "github:DrDustinEdwards/d1-dump#v0.16.1",
+    "@dustinedwards/site-api": "github:DrDustinEdwards/site-api#v0.45.0",
     "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.167.0",
     "@fontsource-variable/source-serif-4": "5.3.0",
     "@lezer/highlight": "1.2.3",
@@ -81,7 +81,7 @@
     "@shikijs/transformers": "4.5.0",
     "capsomer": "github:DrDustinEdwards/capsomer#v0.159.0",
     "drizzle-orm": "0.45.2",
-    "enarratio": "0.13.1",
+    "enarratio": "0.15.0",
     "github-slugger": "2.0.0",
     "hast-util-from-html": "2.1.0",
     "hast-util-to-mdast": "10.1.2",
@@ -89,7 +89,7 @@
     "hastscript": "9.0.3",
     "htmlparser2": "10.1.0",
     "image-size": "2.1.0",
-    "katex": "0.16.47",
+    "katex": "0.18.2",
     "linkedom": "0.18.14",
     "mdast-util-gfm": "3.1.0",
     "mdast-util-to-markdown": "2.2.0",
@@ -117,7 +117,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.67.0",
     "@cloudflare/vitest-plugin": "1.6.0",
-    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.48.1",
+    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.51.2",
     "@mermaid-js/mermaid-cli": "12.2.0",
     "@react-router/dev": "8.5.1",
     "@resvg/resvg-js": "2.6.2",
@@ -146,10 +146,18 @@
     "node": ">=26.11.1",
     "npm": "12.2.0"
   },
+  "overrides": {
+    "rehype-katex": {
+      "katex": "$katex"
+    },
+    "micromark-extension-math": {
+      "katex": "$katex"
+    }
+  },
   "allowScripts": {
     "esbuild": false,
     "puppeteer": true,
     "workerd": false
   },
-  "pinning": "VERSION RANGES, and the rule behind the two shapes below. EXACT-PINNED: the toolchain that builds and deploys this Worker. wrangler, vite, @cloudflare/vite-plugin, react-router and @react-router/dev decide what the deployed bundle IS, so a caret on any of them means a deploy nobody can reproduce from the same commit, and the lockfile is not enough: it is the thing a fresh resolve is allowed to move. katex is pinned on a DIFFERENT ground, added 2026-09-06: the renderer, the stylesheet and the 20 font faces are one artifact split across three places, and scripts/build-katex.mjs derives the last two from the first, so a caret that moved the renderer under a committed stylesheet would put class names and font metrics out of step with the markup they style. rehype-katex depends on katex ^0.16.0, so the pin also has to stay inside that range or npm installs a second nested copy and the deduped one stops being the one that renders. remark-math and rehype-katex are pinned with it, because a plugin bump is what would move the renderer. CARETED: everything else, because a library that only affects rendered output is covered by the gates that compare renders, and pinning it buys nothing a re-render would not catch. Bump a pin deliberately, in its own commit, with the gates run after it."
+  "pinning": "VERSION RANGES, and the rule behind the two shapes below. EXACT-PINNED: the toolchain that builds and deploys this Worker. wrangler, vite, @cloudflare/vite-plugin, react-router and @react-router/dev decide what the deployed bundle IS, so a caret on any of them means a deploy nobody can reproduce from the same commit, and the lockfile is not enough: it is the thing a fresh resolve is allowed to move. katex is pinned on a DIFFERENT ground, added 2026-09-06: the renderer, the stylesheet and the 20 font faces are one artifact split across three places, and scripts/build-katex.mjs derives the last two from the first, so a caret that moved the renderer under a committed stylesheet would put class names and font metrics out of step with the markup they style. rehype-katex depends on katex ^0.16.0, so an overrides entry makes it use this one copy; without it npm installs a second nested copy and the deduped one stops being the one that renders. remark-math and rehype-katex are pinned with it, because a plugin bump is what would move the renderer. CARETED: everything else, because a library that only affects rendered output is covered by the gates that compare renders, and pinning it buys nothing a re-render would not catch. Bump a pin deliberately, in its own commit, with the gates run after it."
 }
