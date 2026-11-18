@@ -46,7 +46,10 @@ function flakyD1(failures: number, through = 1) {
   const db = env.DB;
   const proxy = new Proxy(db, {
     get(target, property) {
-      if (property !== "batch") return Reflect.get(target, property, receiver);
+      if (property !== "batch") {
+        const value = Reflect.get(target, property, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      }
       return async (statements: D1PreparedStatement[]) => {
         if (passing > 0) {
           passing -= 1;
