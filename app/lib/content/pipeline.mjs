@@ -222,8 +222,10 @@ function imageProps(src) {
   return { srcSet: srcset, sizes, sources: sources.filter((s) => !s.media).map((s) => ({ type: s.type, srcSet: s.srcset })), href };
 }
 
+// assertSafe: Prelum's output scan runs on every render, the second check on chart markup and the rest of the page.
 const SITE_OPTIONS = {
   media: { keyOf: mediaKeyOf, imageProps },
+  assertSafe: true,
 };
 
 /**
