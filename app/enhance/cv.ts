@@ -77,6 +77,7 @@ export default function start(): void {
       return {
         id: li.id,
         type: d.type as Facts["type"],
+        paper: d.paper !== undefined,
         section: d.section ?? null,
         areas: (d.areas ?? "").split(" ").filter(Boolean) as Facts["areas"],
         role: (d.role ?? null) as Facts["role"],
