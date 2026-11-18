@@ -142,17 +142,17 @@
     "vitest": "4.1.11",
     "wrangler": "4.158.0"
   },
+  "overrides": {
+    "micromark-extension-math": {
+      "katex": "$katex"
+    },
+    "rehype-katex": {
+      "katex": "$katex"
+    }
+  },
   "engines": {
     "node": ">=26.11.1",
     "npm": "12.2.0"
-  },
-  "overrides": {
-    "rehype-katex": {
-      "katex": "$katex"
-    },
-    "micromark-extension-math": {
-      "katex": "$katex"
-    }
   },
   "allowScripts": {
     "esbuild": false,
