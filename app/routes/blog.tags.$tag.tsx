@@ -73,12 +73,5 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function BlogTag({ loaderData }: Route.ComponentProps) {
   const { tag, ...listing } = loaderData;
-  return (
-    <TaxonomyListing
-      {...listing}
-      base={tagPath(tag.slug)}
-      heading={`Tagged ${tag.name}`}
-      dek={`Every post on this blog tagged ${tag.name}.`}
-    />
-  );
+  return <TaxonomyListing {...listing} base={tagPath(tag.slug)} heading={`Tagged ${tag.name}`} />;
 }

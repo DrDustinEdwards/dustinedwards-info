@@ -99,10 +99,7 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
   };
   return (
     <div className="app-page">
-      <PageHead
-        title="Media"
-        lead="The files the site stores and serves, the same library Carrel shows."
-      />
+      <PageHead title="Media" />
       <MediaLibrary
         data={loaderData.library}
         action={BASE}

@@ -28,7 +28,6 @@ const POSTS_DIR = path.join(ROOT, "content", "posts");
 const PUBLICATIONS_DIR = path.join(ROOT, "content", "publications");
 const CV_DIR = path.join(ROOT, "content", "cv");
 const PROCEDURES_DIR = path.join(ROOT, "content", "procedures");
-const PAGES_DIR = path.join(ROOT, "content", "pages");
 const NAV_DATA_PATH = path.join(ROOT, "app", "lib", "nav-data.generated.mjs");
 
 /** The longest first line a spotlight carries. */
@@ -189,34 +188,6 @@ function readLibraryCounts(dir = PROCEDURES_DIR) {
 }
 
 /**
- * The front matter `description` of every page under /teaching/, by path, read from content/pages (the field the
- * page's meta description uses). The Teaching panel's course tiles take their line from here by their own address,
- * so the tiles name the courses once, in app/lib/nav.ts, and test/nav.test.mjs fails a tile whose page has no
- * description. A page without one is left out.
- *
- * @param {string} [dir]
- * @returns {Record<string, string>}
- */
-function readTeachingDescriptions(dir = PAGES_DIR) {
-  /** @type {Record<string, string>} */
-  const found = {};
-  for (const name of readdirSync(dir)
-    .filter((n) => n.endsWith(".md"))
-    .sort()) {
-    const { data } = matter(readFileSync(path.join(dir, name), "utf8"));
-    if (
-      typeof data.path === "string" &&
-      data.path.startsWith("/teaching/") &&
-      typeof data.description === "string" &&
-      data.description.trim() !== ""
-    ) {
-      found[data.path] = data.description.trim();
-    }
-  }
-  return found;
-}
-
-/**
  * What the build had to leave out, for the gate to report (test/nav.test.mjs): posts that fail the front matter
  * schema, a paper file that cannot be read, no published paper, no town for the lab. The build itself only warns.
  *
@@ -243,7 +214,6 @@ function readNavData() {
     latestPaper: readLatestPaper(),
     posts: readPosts(),
     libraries: readLibraryCounts(),
-    courses: readTeachingDescriptions(),
     lab: {
       department: identity.department,
       university: identity.affiliation,

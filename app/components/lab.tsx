@@ -57,12 +57,7 @@ export function LabInventory({
 }) {
   return (
     <>
-      <p className="registry-lede">
-        The lab&rsquo;s reference catalog: its primers, the bacterial strains its phages grow on,
-        the reagents and the equipment its protocols use, with the phages it has isolated. It
-        records what a thing is, never how much of it the lab has or where it sits.{" "}
-        {inventorySentence(rows)}
-      </p>
+      <p className="registry-lede">{inventorySentence(rows)}</p>
       <div className="registry page-wide">
         <Catalog
           definition={INVENTORY}
@@ -86,11 +81,6 @@ export function LabPrimers({ result }: { result: CatalogResult<PrimerListRow> })
   const note = tmNote();
   return (
     <>
-      <p className="registry-lede">
-        The primers the lab&rsquo;s protocols use, with each sequence as stored. Length, GC content
-        and melting temperature are computed from the sequence, and a pair&rsquo;s product is
-        computed from where its primers bind a reference sequence.
-      </p>
       <div className="registry page-wide">
         <Catalog
           definition={PRIMERS}
@@ -192,13 +182,6 @@ export function LabPrimer({
           </Fact>
         ) : null}
       </dl>
-      {primer.tm !== null ? (
-        <p className="registry-note">
-          {note.statement} The Tm estimate is not an annealing temperature. For the annealing
-          temperature of a particular polymerase, use the{" "}
-          <a href={note.calculator.url}>{note.calculator.name}</a>.
-        </p>
-      ) : null}
 
       <h2 id="literature">In the literature</h2>
       <dl className="registry-facts">
@@ -298,11 +281,6 @@ export function LabPrimer({
 export function LabStrains({ result }: { result: CatalogResult<StrainRow> }) {
   return (
     <>
-      <p className="registry-lede">
-        The bacterial hosts the lab&rsquo;s phages are isolated on. Each strain&rsquo;s phages are
-        counted from the phages table, so a phage added there is counted here with no edit to the
-        strain.
-      </p>
       <div className="registry page-wide">
         <Catalog
           definition={STRAINS}
@@ -382,13 +360,6 @@ export function LabStrain({
 export function LabReagents({ result }: { result: CatalogResult<ReagentRow> }) {
   return (
     <>
-      <p className="registry-lede">
-        The substances the lab&rsquo;s protocols use, apart from the samples they work on, in one
-        table. A reagent is bought (a supplier and a catalog number, where a record in the
-        repository states them) or prepared in the lab (a link to its recipe). Each row lists the
-        protocols that use it, and each protocol&rsquo;s own table has its amount, stock and final
-        concentration.
-      </p>
       <div className="registry page-wide">
         <Catalog
           definition={REAGENTS}
@@ -435,12 +406,6 @@ export function LabReagents({ result }: { result: CatalogResult<ReagentRow> }) {
 export function LabEquipment({ result }: { result: CatalogResult<EquipmentRow> }) {
   return (
     <>
-      <p className="registry-lede">
-        The instruments and labware the lab&rsquo;s protocols list under Equipment, in one table. A
-        manufacturer appears where a record in the repository states it, and a centrifuge&rsquo;s
-        rotor is recorded as a gap until Dustin names it. Each row lists the protocols that use it,
-        and each protocol&rsquo;s own table has its words and settings for the item.
-      </p>
       <div className="registry page-wide">
         <Catalog
           definition={EQUIPMENT_CATALOG}

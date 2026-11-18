@@ -103,14 +103,6 @@
   line-height: var(--leading-snug);
 }
 
-.site-nav-band-line {
-  grid-column: 2;
-  margin: var(--space-1) 0 0;
-  color: var(--text-secondary);
-  font-size: var(--fs-detail);
-  line-height: var(--leading-compact);
-}
-
 .site-nav-icon {
   display: block;
   flex: none;

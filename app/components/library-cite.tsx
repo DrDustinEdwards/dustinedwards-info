@@ -1,6 +1,6 @@
 import type { catalogDownloads } from "capsomer/behavior/catalog";
 
-import { countOf, type libraryCitation } from "~/kb/procedures/library.mjs";
+import type { libraryCitation } from "~/kb/procedures/library.mjs";
 
 /**
  * Download and cite (docs/PROCEDURES.md): the CSV and JSON of the view shown, the markdown of the whole library, and how
@@ -8,14 +8,9 @@ import { countOf, type libraryCitation } from "~/kb/procedures/library.mjs";
  * the same citation. Plain links and text: it works with no script.
  */
 export function LibraryCite({
-  count,
   downloads,
   citation,
-  noun = ["protocol", "protocols"],
 }: {
-  count: number;
-  /** What the library's entries are called: ["recipe", "recipes"]. */
-  noun?: [string, string];
   downloads: ReturnType<typeof catalogDownloads>;
   citation: ReturnType<typeof libraryCitation>;
 }) {
@@ -25,11 +20,9 @@ export function LibraryCite({
         Download and cite
       </h2>
       <p>
-        Download the {countOf(count, noun)} shown as <a href={downloads.csv}>CSV</a> or{" "}
-        <a href={downloads.json}>JSON</a>, with every fact the table shows, or the whole library as{" "}
-        <a href={downloads.markdown}>markdown</a>.
+        <a href={downloads.csv}>CSV</a> <a href={downloads.json}>JSON</a>{" "}
+        <a href={downloads.markdown}>Markdown</a>
       </p>
-      <h3 className="library-subtitle">Cite the library</h3>
       <p className="library-cite-text">{citation.library}</p>
       <p>{citation.access}</p>
       <p>{citation.protocol}</p>

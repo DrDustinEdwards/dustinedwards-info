@@ -54,7 +54,7 @@ export default function LabMembers({ loaderData, actionData }: Route.ComponentPr
     <>
       <PageHead
         title="Members"
-        lead="Who may sign in to the lab. Adding a person here puts them on the lab's Cloudflare Access list; removing them takes them off."
+        lead="Adding or removing a person here changes the Cloudflare Access list."
       />
       {syncNotice ? (
         <Banner tone="warn" title="Cloudflare Access is not synced">

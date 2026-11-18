@@ -14,13 +14,7 @@ import { hasFilters } from "@drdustinedwards/site-helpers/search";
 import { askAvailable } from "~/lib/search/ask.server";
 import { recordZeroResult } from "~/lib/search/zero-result.server";
 import { SEARCH_BASES, baseLabel } from "~/kb/search-bases.mjs";
-import {
-  parseSort,
-  search,
-  zeroState,
-  type MatchReason,
-  type SearchHit,
-} from "~/lib/search/search.server";
+import { parseSort, search, zeroState, type SearchHit } from "~/lib/search/search.server";
 import {
   EDGE_CACHE_HEADER,
   NO_STORE_CACHE_CONTROL,
@@ -255,14 +249,6 @@ function FacetSection({
   );
 }
 
-/** Keyed by the union with no fallback: a reason without a label is a typecheck failure, not a raw value shown to readers. */
-const WHY_LABEL: Record<MatchReason, string> = {
-  title: "title",
-  tag: "tag",
-  body: "body",
-  filter: "filter",
-};
-
 function Result({ hit }: { hit: SearchHit }) {
   const published = hit.publishAt ? new Date(hit.publishAt * 1000) : null;
   return (
@@ -279,15 +265,9 @@ function Result({ hit }: { hit: SearchHit }) {
       }
       snippet={hit.snippet}
       why={
-        <>
-          matched on {hit.why.map((reason) => WHY_LABEL[reason]).join(", ")}
-          {published ? (
-            <>
-              {" "}
-              / <time dateTime={published.toISOString()}>{published.getUTCFullYear()}</time>
-            </>
-          ) : null}
-        </>
+        published ? (
+          <time dateTime={published.toISOString()}>{published.getUTCFullYear()}</time>
+        ) : undefined
       }
     />
   );
@@ -309,7 +289,7 @@ function ZeroState({
       {suggestions.nearestTags.length > 0 ? (
         <section aria-labelledby="search-related-tags">
           <h2 id="search-related-tags">Related tags</h2>
-          <nav className="cap-chips" aria-label="Related tags">
+          <nav className="cap-chips" aria-labelledby="search-related-tags">
             {suggestions.nearestTags.map((tag) => (
               <Link key={tag} to={`/search?tag=${encodeURIComponent(tag)}`} className="cap-chip">
                 {tag}

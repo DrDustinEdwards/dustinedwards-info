@@ -224,11 +224,6 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
           <h1 className="list-label cap-layout-grid" id="publications-title">
             Publications
           </h1>
-          <p className="list-dek">
-            Peer-reviewed work on retroviruses, bacteriophage genomics, and how undergraduate
-            research is taught. Full text is hosted here where I have the publisher version, with
-            links out to the record of version otherwise.
-          </p>
           <BibliographyReadings
             span={span}
             cited={items.reduce((sum, p) => sum + (p.doi ? (citations[p.doi]?.count ?? 0) : 0), 0)}

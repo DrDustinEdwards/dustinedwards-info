@@ -62,10 +62,7 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
   const submit = useKitSubmit(BASE);
   return (
     <div className="app-page">
-      <PageHead
-        title="Mentions"
-        lead="Webmentions about posts here, the same queue Carrel shows. Approving one shows it on the post within seconds."
-      />
+      <PageHead title="Mentions" />
       <MentionsList
         data={loaderData.mentions}
         action={BASE}

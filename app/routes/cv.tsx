@@ -423,9 +423,6 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
     <PageShell trail={<JsonLd data={jsonLd} />}>
       <div className="cv" data-cv="">
         <header className="cv-head">
-          <p className="cap-eyebrow cv-eyebrow" data-variant="mono">
-            {CV_PAGE.title} · {CV.edition}
-          </p>
           <h1 className="cv-name cap-layout-grid">
             {CV.person.name}, {CV.person.degree}
           </h1>
@@ -469,7 +466,6 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             <Stat
               label="Students mentored"
               value={String(counts.students)}
-              sub="summed across listings"
               spark={charts.students}
               name="students"
             />
@@ -481,8 +477,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
               dangerouslySetInnerHTML={markup(charts.timeline)}
             />
             <p className="cv-timeline-hint" data-cv-hint="">
-              Select a year&rsquo;s bar to show only that year, and select it again for every year.
-              The key filters by type.
+              Select a year to filter.
             </p>
           </div>
         </section>
@@ -593,13 +588,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                   </span>
                 </h2>
                 {group.key === "type-talk" ? (
-                  <p className="cv-group-note">
-                    The CV lists {CV.presentations.international} international and{" "}
-                    {CV.presentations.national} national and regional presentations,{" "}
-                    {CV.presentations.from}-{CV.presentations.to}, most of them posters and talks
-                    given by students with Dustin as senior author. Listed here: the invited talks,
-                    seminars and roundtables he leads.
-                  </p>
+                  <p className="cv-group-note">Invited talks, seminars and roundtables only.</p>
                 ) : null}
                 {group.key === "type-mentoring" ? (
                   <p className="cv-group-note">
@@ -639,8 +628,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
           })}
         </div>
         <p className="cv-foot">
-          {FACTS.length} entries from the {CV.edition} CV. Each paper follows its journal record at
-          Crossref and has its own page under <a href="/research/publications">Publications</a>.
+          {FACTS.length} entries, {CV.edition} CV.
         </p>
       </div>
       <template data-island="cv" />

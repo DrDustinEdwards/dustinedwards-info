@@ -153,11 +153,7 @@ export function KbFileEditor({
           onChange={setRaw}
           nonce={documentCspNonce()}
           lineNumbers
-          help={
-            file.target.type === "entry"
-              ? "The whole file: its fields between the --- lines, then the steps with their marks. Check runs every check a save runs and saves nothing."
-              : "The whole file: the item's fields between the --- lines, and nothing after them. Check runs every check a save runs and saves nothing."
-          }
+          help="Check saves nothing."
         />
         <KbCheckSave busy={busy} actionData={actionData} errors={errors} onFile />
       </Form>

@@ -22,18 +22,14 @@ export default function Gone() {
     <PageShell>
       <header className="page-head">
         <h1 className="cap-layout-grid">This page was removed</h1>
-        <p className="muted">
-          It belonged to the old version of this site and is not coming back. The research, the
-          protocols and the phages all have new homes.
-        </p>
+        <p className="muted">It is not coming back.</p>
       </header>
       <ul>
         <li>
-          <Link to="/research">Research</Link>: every area, protocol and publication, with a
-          sentence on each.
+          <Link to="/research">Research</Link>
         </li>
         <li>
-          <Link to="/search">Search the site</Link> for what you were looking for.
+          <Link to="/search">Search the site</Link>
         </li>
       </ul>
     </PageShell>

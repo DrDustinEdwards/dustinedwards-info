@@ -53,11 +53,6 @@ export default function FeaturesRoute() {
       }
     >
       <h1 className="page-title cap-layout-grid">{TITLE}</h1>
-      <p className="features-lead">
-        What this site and the programs behind it do, by job. Each card names the program that does
-        it. For how this one site is built, see the <a href="/colophon">colophon</a>; for how the
-        programs connect, the <a href="/systems">map of systems</a>.
-      </p>
 
       <div className="features" data-feature-filter="all">
         <div
@@ -95,7 +90,6 @@ export default function FeaturesRoute() {
             data-section
           >
             <h2 id={`${section.id}-title`}>{section.title}</h2>
-            <p className="features-intro">{section.intro}</p>
             <ul className="features-grid">
               {section.features.map((feature) => (
                 <li

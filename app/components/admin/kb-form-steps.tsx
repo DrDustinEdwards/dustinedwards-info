@@ -314,9 +314,6 @@ function StepCard({
           <pre>
             <code>{rawLines.join("\n")}</code>
           </pre>
-          <p className="cap-field-help">
-            Commands, output and wrapped notes are kept as written; edit them under Advanced.
-          </p>
         </details>
       ) : null}
     </div>

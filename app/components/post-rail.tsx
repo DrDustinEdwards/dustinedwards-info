@@ -4,7 +4,7 @@ import type { Route } from "../routes/+types/blog.$slug";
 
 type LoadedPost = Route.ComponentProps["loaderData"]["post"];
 
-export function ymd(value: Date | string | number) {
+function ymd(value: Date | string | number) {
   return new Date(value).toISOString().slice(0, 10);
 }
 
@@ -29,7 +29,7 @@ export function PostRail({
                 {ymd(post.publishAt)}
               </time>
             </b>
-            first published
+            Published
           </>
         )}
         {/* Conditional: emitting `updatedAt` regardless would publish a sync timestamp as an edit. */}

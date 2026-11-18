@@ -249,7 +249,7 @@ export const countOf = (n, noun) => `${n} ${n === 1 ? noun[0] : noun[1]}`;
  *
  * @param {ReturnType<typeof libraryOverview>} overview
  */
-export function overviewSentence(overview) {
+function overviewSentence(overview) {
   const parts = [
     `${countOf(overview.total, ["protocol", "protocols"])} across ${countOf(overview.methods, ["method", "methods"])}`,
     overview.organisms > 0 ? `${countOf(overview.organisms, ["organism", "organisms"])}` : "",

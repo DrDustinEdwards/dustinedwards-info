@@ -54,10 +54,7 @@ export default function LabInventory({ loaderData, actionData }: Route.Component
   const { lots, locations, items, canEdit, canUse } = loaderData;
   return (
     <>
-      <PageHead
-        title="Inventory"
-        lead="The lots on the shelf: which lot of each reagent, how much is left, and where it is. Every change is recorded."
-      />
+      <PageHead title="Inventory" />
       <LabStatus result={actionData} />
       {lots.length === 0 ? (
         <p className="cap-muted">No lots recorded yet.</p>

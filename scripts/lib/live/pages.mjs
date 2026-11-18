@@ -238,7 +238,7 @@ export async function run() {
       );
       check(
         `colophon ${section.id}: the descriptor lead is on the page verbatim`,
-        region.includes(section.lead),
+        !section.lead || region.includes(section.lead),
         `lead absent from the ${region.length}-byte region`,
       );
 

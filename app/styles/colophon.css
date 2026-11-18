@@ -3,15 +3,10 @@
  * a chip filters, the two statements sit side by side, bindings and choices not made are tables, and the three long lists
  * scroll in their own boxes. All of it is in the HTML with script off; the side index is Capsomer's.
  */
-.colophon-versions,
-.colophon-intro {
+.colophon-versions {
   max-inline-size: 46rem;
   margin-block: var(--space-3) 0;
   color: var(--text-secondary);
-}
-
-.colophon-intro {
-  margin-block-end: var(--space-6);
 }
 
 .colophon-body h2[id] {

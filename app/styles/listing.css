@@ -47,15 +47,6 @@
   line-height: var(--t-h1-leading);
 }
 
-.list-dek {
-  margin: 0 0 var(--space-6);
-  max-width: 54ch;
-  color: var(--text);
-  font-family: var(--font-prose);
-  font-size: var(--title-4);
-  line-height: 1.45;
-}
-
 /* No bottom margin: .tracks > * + * already sets the gap, and a second one stacked into a 68px hole. */
 .list-head .evidence {
   margin-block-end: 0;
@@ -88,9 +79,5 @@
   .list-label {
     font-size: var(--title-1);
     letter-spacing: -0.028em;
-  }
-  .list-dek {
-    max-width: none;
-    font-size: var(--fs-page);
   }
 }

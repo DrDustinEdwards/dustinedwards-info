@@ -164,11 +164,10 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         <header className="list-head">
           {/* Implied properties are skipped for a root containing nested microformats, so this class supplies the only name. */}
           <h1 className="list-label p-name cap-layout-grid">Writing</h1>
-          <p className="list-dek">Writing on building for the web, mostly on Cloudflare.</p>
           <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 
-        <SearchForm label="Search the blog" labelHidden placeholder="Search the blog">
+        <SearchForm label="Search the blog" labelHidden>
           <input type="hidden" name="type" value="post" />
         </SearchForm>
 

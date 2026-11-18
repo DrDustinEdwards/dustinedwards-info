@@ -4,7 +4,7 @@ import { can } from "@dustinedwards/site-runtime/members";
 
 import { PageHead } from "capsomer/react/page-head";
 import { labActorContext } from "~/lab/actor.server";
-import { PERMISSION, titleLabel } from "~/lab/titles.mjs";
+import { PERMISSION } from "~/lab/titles.mjs";
 import type { Route } from "./+types/workspace._index";
 import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
@@ -17,7 +17,6 @@ export async function loader({ context }: Route.LoaderArgs) {
   const actor = context.get(labActorContext);
   return data(
     {
-      title: titleLabel(actor.title),
       manages: can(actor, PERMISSION.manageMembers),
       reads: can(actor, PERMISSION.read),
       records: can(actor, PERMISSION.recordRun),
@@ -29,23 +28,20 @@ export async function loader({ context }: Route.LoaderArgs) {
 export default function LabOverview({ loaderData }: Route.ComponentProps) {
   return (
     <>
-      <PageHead title="Lab bench" lead={`You are signed in as ${loaderData.title}.`} />
+      <PageHead title="Lab bench" />
       {loaderData.reads ? (
         <p>
-          <Link to={`${LAB_BENCH_PATH}/inventory`}>Inventory</Link>: the lots on the shelf, how much
-          is left and where.
+          <Link to={`${LAB_BENCH_PATH}/inventory`}>Inventory</Link>
         </p>
       ) : null}
       {loaderData.records ? (
         <p>
-          <Link to={`${LAB_BENCH_PATH}/runs`}>Runs</Link>: record a run of a protocol with the lots
-          it used.
+          <Link to={`${LAB_BENCH_PATH}/runs`}>Runs</Link>
         </p>
       ) : null}
       {loaderData.manages ? (
         <p>
-          <Link to={`${LAB_BENCH_PATH}/members`}>Members</Link>: who may sign in to the lab, their
-          titles and when their access ends.
+          <Link to={`${LAB_BENCH_PATH}/members`}>Members</Link>
         </p>
       ) : null}
     </>

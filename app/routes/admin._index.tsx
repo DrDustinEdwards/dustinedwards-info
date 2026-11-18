@@ -11,7 +11,7 @@ import { StatTile, StatTiles } from "capsomer/react/stat-tile";
 import { PageHead } from "capsomer/react/page-head";
 import { timed } from "@dustinedwards/site-runtime/server-timing";
 import { timedLoader } from "~/lib/timing";
-import { humanCheck, statusSentence } from "~/lib/admin/check-copy.mjs";
+import { humanCheck } from "~/lib/admin/check-copy.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { syncStatus } from "~/lib/operator/api.server";
 import { getEnv } from "~/lib/context";
@@ -75,7 +75,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="app-page">
-      <PageHead title="Overview" lead={statusSentence(checks)} />
+      <PageHead title="Overview" />
 
       {/* A banner, not an alert: a standing condition is not announced on every load. */}
       {worst && worstCopy ? (
@@ -155,12 +155,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
       </Panel>
 
       <StatTiles label="Content">
-        <StatTile
-          label="In the repository"
-          figure={stores.artifactPosts}
-          unit="posts"
-          detail="posts written and committed"
-        />
+        <StatTile label="In the repository" figure={stores.artifactPosts} unit="posts" />
         <StatTile
           label="Live on the site"
           tone={lag ? "ok" : "warn"}
@@ -171,17 +166,13 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
         />
       </StatTiles>
 
-      <Disclosure summary="Everything else this page could show">
+      <Disclosure summary="More">
         <dl>
           <dt>Search records</dt>
           <dd>{stores.searchIndexDocs} entries.</dd>
           <dt>Connections</dt>
           <dd>{stores.askConfigured ? "Search is configured." : "Search is NOT configured."}</dd>
         </dl>
-        <p>
-          Both are read from the same function the operator tool calls. They sit here rather than at
-          the top because neither has ever been the answer to a question this page was opened with.
-        </p>
       </Disclosure>
 
       {/* No block is not evidence of health: `known: false` means unreadable, not empty. */}

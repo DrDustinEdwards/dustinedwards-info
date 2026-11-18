@@ -130,8 +130,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
       </h1>
       {empty ? (
         <DraftNotice label="Not public">
-          Only you can see this page: no {base.singular.toLowerCase()} is published yet. It goes
-          public with the first one.
+          No {base.singular.toLowerCase()} published yet.
         </DraftNotice>
       ) : null}
       <p className="library-counts">{lead(base, items)}</p>
@@ -151,8 +150,6 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
       {/* An empty library's downloads are not there yet (its twin and downloads answer 404 too). */}
       {empty ? null : (
         <LibraryCite
-          count={result.count}
-          noun={nounOf(base)}
           downloads={catalogDownloads(catalog, result)}
           citation={baseCitation(base, {
             name: SITE.name,

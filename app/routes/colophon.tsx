@@ -10,7 +10,6 @@ import type { Route } from "./+types/colophon";
 import features from "../../content/features.json";
 import {
   COLOPHON_DESCRIPTION,
-  COLOPHON_INTRO,
   COLOPHON_VERSIONS,
   COLOPHON_SECTIONS,
   AI_DISCLOSURE,
@@ -100,7 +99,7 @@ function SectionHead({ id }: { id: string }) {
   return (
     <>
       <h2 id={section.id}>{section.title}</h2>
-      <p>{section.lead}</p>
+      {section.lead ? <p>{section.lead}</p> : null}
     </>
   );
 }
@@ -244,7 +243,6 @@ function StackDiagram() {
           </ul>
         </li>
       </ol>
-      <figcaption>How a request moves through the stack, top to bottom.</figcaption>
     </figure>
   );
 }
@@ -344,7 +342,6 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
       <HealthPanel health={health} />
 
       <p className="colophon-versions">{COLOPHON_VERSIONS}</p>
-      <p className="colophon-intro">{COLOPHON_INTRO}</p>
 
       <StackDiagram />
 
@@ -384,8 +381,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
 
         <SectionHead id="features" />
         <p>
-          {features.features.length} entries. What the whole network does is on the{" "}
-          <Link to="/features">features page</Link>.
+          <Link to="/features">What the whole network does</Link>
         </p>
         <div
           className="cap-chips colophon-chips"
@@ -466,7 +462,6 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
         </dl>
 
         <SectionHead id="bindings" />
-        <p>{stack.bindings.length} resources.</p>
         <div
           className="cap-chips colophon-kinds"
           data-variant="solid"
@@ -516,7 +511,6 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
         <div className="colophon-lists">
           <div>
             <SectionHead id="schema" />
-            <p>{stack.migrations.length} migrations.</p>
             <ColophonFind label="Filter migrations" list="migrations" />
             <div className="colophon-scroll" tabIndex={0} role="region" aria-label="Migrations">
               <ul data-list="migrations">
@@ -530,7 +524,6 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           </div>
           <div>
             <SectionHead id="gates" />
-            <p>{stack.gates.length} checks.</p>
             <ColophonFind label="Filter checks" list="checks" />
             <div className="colophon-scroll" tabIndex={0} role="region" aria-label="Checks">
               <ul data-list="checks">
@@ -544,7 +537,6 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           </div>
           <div>
             <SectionHead id="dependencies" />
-            <p>{stack.dependencies.length} runtime dependencies.</p>
             <ColophonFind label="Filter runtime dependencies" list="dependencies" />
             <div
               className="colophon-scroll"
@@ -576,7 +568,6 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
         </ul>
 
         <SectionHead id="not-adopted" />
-        <p>{stack.notAdopted.length} entries.</p>
         <table className="colophon-table">
           <thead>
             <tr>
