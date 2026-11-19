@@ -194,12 +194,15 @@ function card(post) {
           flex: 1,
           minHeight: 120,
           overflow: "hidden",
-          padding: `40px ${PAD_X}px`,
           background: SKY,
         },
       },
       scene(),
-      el("div", { style: { display: "flex", position: "relative" } }, markElement()),
+      el(
+        "div",
+        { style: { display: "flex", position: "absolute", top: 40, left: PAD_X } },
+        markElement(),
+      ),
     ),
     el(
       "div",
