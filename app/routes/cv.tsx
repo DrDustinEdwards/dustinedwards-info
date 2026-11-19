@@ -587,9 +587,6 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                     {visible}
                   </span>
                 </h2>
-                {group.key === "type-talk" ? (
-                  <p className="cv-group-note">Invited talks, seminars and roundtables only.</p>
-                ) : null}
                 {group.key === "type-mentoring" ? (
                   <p className="cv-group-note">
                     Counts only: the CV names each student, and this page never does.
