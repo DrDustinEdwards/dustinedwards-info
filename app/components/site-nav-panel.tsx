@@ -295,9 +295,6 @@ export function SiteNavPanel({ menu, pathname }: { menu: Menu; pathname: string 
             className="site-nav-spot"
             aria-current={current(spotlight.to, pathname)}
           >
-            {spotlight.eyebrow ? (
-              <span className="site-nav-spot-eyebrow">{spotlight.eyebrow}</span>
-            ) : null}
             {spotlight.kind === "map" ? <MapDrawing /> : null}
             {spotlight.icon ? (
               <span className="site-nav-badge" aria-hidden="true">
