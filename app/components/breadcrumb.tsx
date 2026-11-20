@@ -1,20 +1,14 @@
-import { Link } from "react-router";
+import { Breadcrumb as CapBreadcrumb } from "capsomer/react/breadcrumb";
+import { crumbLink } from "~/components/admin/shell-parts";
 
-/** Visible trail. The last step is the current page. Hubs (one step) render nothing. */
+/** Visible trail, `[name, path]` steps as the head's BreadcrumbList takes them, drawn by Capsomer. Hubs (one step) render nothing. */
 export function Breadcrumb({ trail }: { trail: Array<[string, string]> }) {
-  if (trail.length < 2) return null;
   return (
-    <nav className="cap-direction page-breadcrumb" aria-label="Breadcrumb">
-      <ol>
-        {trail.map(([name, path], i) => {
-          const last = i === trail.length - 1;
-          return (
-            <li key={`${path}-${i}`}>
-              {last ? <span aria-current="page">{name}</span> : <Link to={path}>{name}</Link>}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
+    <CapBreadcrumb
+      variant="direction"
+      className="page-breadcrumb"
+      items={trail.map(([label, href]) => ({ label, href }))}
+      renderLink={crumbLink}
+    />
   );
 }
