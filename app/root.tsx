@@ -7,6 +7,7 @@ import {
   useMatches,
   useRouteLoaderData,
 } from "react-router";
+import { SITE_SCRIPT } from "virtual:islands";
 
 import { iconLinks } from "@drdustinedwards/site-helpers/icons";
 import { errorTitle } from "capsomer/react/error-page";
@@ -104,8 +105,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             would lift the element above the color-scheme meta. */}
         {linksMath ? <link rel="stylesheet" href={katexCssUrl} /> : null}
         {/* Starts every <template data-island> once the document is parsed (devkit's startIslands, app/site.ts).
-            Same-origin, so 'self' allows it with no hash; it carries the render's nonce like every script. */}
-        <script src="/site.js" defer nonce={nonce} />
+            Same-origin, so 'self' allows it with no hash; it carries the render's nonce like every script, and the
+            build's integrity, which Integrity-Policy needs of it (devkit's SITE_SCRIPT). */}
+        <script {...SITE_SCRIPT} defer nonce={nonce} />
       </head>
       <body>
         {adminPlane ? null : (

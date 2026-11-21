@@ -21,7 +21,7 @@ export function islandsPlugin() {
 
 /**
  * `virtual:islands` as a build serves it, every URL replaced by `url` so a rendered page does not change each
- * time an island's hash does.
+ * time an island's hash does; the same for `SITE_SCRIPT`, a fixed path and integrity.
  *
  * @param {string} url
  * @returns {Promise<string>}
@@ -30,13 +30,18 @@ export async function islandsModuleSource(url) {
   const plugin = /** @type {any} */ (islandsPlugin());
   plugin.configResolved({ command: "build" });
   const source = await plugin.load.call({ addWatchFile() {} }, "\0virtual:islands");
-  return source.replace(
-    /^export const ISLAND_URLS = (.*);$/m,
-    (/** @type {string} */ _, /** @type {string} */ json) => {
-      const urls = Object.fromEntries(Object.keys(JSON.parse(json)).map((name) => [name, url]));
-      return `export const ISLAND_URLS = ${JSON.stringify(urls)};`;
-    },
-  );
+  return source
+    .replace(
+      /^export const ISLAND_URLS = (.*);$/m,
+      (/** @type {string} */ _, /** @type {string} */ json) => {
+        const urls = Object.fromEntries(Object.keys(JSON.parse(json)).map((name) => [name, url]));
+        return `export const ISLAND_URLS = ${JSON.stringify(urls)};`;
+      },
+    )
+    .replace(
+      /^export const SITE_SCRIPT = (.*);$/m,
+      `export const SITE_SCRIPT = ${JSON.stringify({ src: "/site.js", integrity: "sha384-test", crossOrigin: "anonymous" })};`,
+    );
 }
 
 /**
