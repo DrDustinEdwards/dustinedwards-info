@@ -62,7 +62,7 @@ function fuse(lists: string[][], k = 60): Map<string, number> {
 
 The reason k matters is easier to see than to describe. With k at 60, the gap between rank 1 and rank 2 is small, so appearing in both lists at moderate rank beats appearing in one list at the top; with k near zero, rank 1 dominates everything and the fusion degenerates into "whichever list you trust more." The curve below plots each rank's contribution at k equal to 60, computed directly from the formula:
 
-:::chart{type="line" x="rank" y="contribution" title="RRF contribution by rank position, k = 60" alt="Line chart of reciprocal rank fusion contribution per rank for k equal to 60, falling gently from 0.0164 at rank 1 to 0.0125 at rank 20. The curve is nearly flat, showing that k at 60 keeps top ranks from dominating the fusion."}
+:::chart{type="line" x="rank" y="contribution" title="RRF contribution by rank position, k = 60" alt="Line chart of reciprocal rank fusion contribution per rank for k equal to 60, falling gently from 0.0164 at rank 1 to 0.0125 at rank 20. The curve is nearly flat, showing that k at 60 keeps top ranks from dominating the fusion." source="Computed from 1 / (k + rank)"}
 ```csv
 rank,contribution
 1,0.01639

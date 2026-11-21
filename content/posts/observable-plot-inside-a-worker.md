@@ -75,7 +75,7 @@ Vega's runtime compiles its expression language via dynamic code generation, and
 
 ECharts has the best server-side story in the charting field on paper: a zero-dependency SSR mode, introduced in 5.3, that renders to an SVG string with no DOM at all. I expected it to win on bundle size for exactly that reason, since Plot drags a DOM implementation along. Measured, the intuition inverted: ECharts bundled for Workers at 2958 KiB raw and 634 KiB gzipped against Plot-plus-linkedom's 1070 and 254 in the same probe harness. The shim is small; the engine is not. I record the caveat that aggressive tree-shaking of ECharts' modular imports could narrow this, so treat the ECharts figure as worst-case, but the headline holds: needing no shim does not make a library light, and the only way to know a bundle size is to measure it.
 
-:::chart{type="bar" x="configuration" y="gzipped_kib" title="Worker bundle size by charting configuration" alt="Bar chart of gzipped Worker bundle sizes measured in the probe: Observable Plot with linkedom 254 KiB, Vega-Lite 412 KiB, Apache ECharts 634 KiB. Plot with linkedom is the smallest at less than half of ECharts."}
+:::chart{type="bar" x="configuration" y="gzipped_kib" title="Worker bundle size by charting configuration" alt="Bar chart of gzipped Worker bundle sizes measured in the probe: Observable Plot with linkedom 254 KiB, Vega-Lite 412 KiB, Apache ECharts 634 KiB. Plot with linkedom is the smallest at less than half of ECharts." source="The author's Worker bundle probe"}
 ```csv
 configuration,gzipped_kib
 Plot + linkedom,254
