@@ -39,11 +39,11 @@
     "legacy": {},
     "tests": {
       "files": 175,
-      "cases": 1099
+      "cases": 1098
     },
     "comments": {
-      "lines": 17044,
-      "code": 95678,
+      "lines": 17050,
+      "code": 95717,
       "percentage": 15.12
     }
   }

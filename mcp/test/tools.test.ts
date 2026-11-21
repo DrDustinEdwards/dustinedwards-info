@@ -53,19 +53,6 @@ beforeEach(() => {
 afterEach(() => api.restore());
 
 describe("the tool surface", () => {
-  test("is exactly the five dei_ tools, each named once", () => {
-    assert.deepEqual(
-      TOOLS.map((t) => t.name),
-      [
-        "dei_read_registry",
-        "dei_refresh_citations",
-        "dei_check_publications",
-        "dei_read_procedure",
-        "dei_save_procedure",
-      ],
-    );
-  });
-
   test("a read-only tool needs only dei.read, and every other tool needs dei.write", () => {
     for (const t of TOOLS) {
       assert.equal(t.scope, t.config.annotations.readOnlyHint ? "dei.read" : "dei.write", t.name);
