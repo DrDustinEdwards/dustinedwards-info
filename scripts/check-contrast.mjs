@@ -429,7 +429,8 @@ function contrastTierBlock(label, query, selector) {
       `${mode} prefers-contrast raises the default border` +
         ` (${contrast(base["--border"], base["--page-paper"]).toFixed(2)}` +
         ` -> ${contrast(tier["--border"], base["--page-paper"]).toFixed(2)})`,
-      contrast(tier["--border"], base["--page-paper"]) > contrast(base["--border"], base["--page-paper"]),
+      contrast(tier["--border"], base["--page-paper"]) >
+        contrast(base["--border"], base["--page-paper"]),
     );
     // The strong edge rides the popover step (the header menu cards), so it is measured there.
     assertPair(

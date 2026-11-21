@@ -74,7 +74,12 @@ export const MATRIX = [
     "warning text on paper, including the command bar dirty state",
   ],
   ["--on-tint-warning", "--tint-warning", TEXT, "text on warning tint"],
-  ["--border-warning", "--page-paper", UI, "a warning border on paper, including the dirty dot ring"],
+  [
+    "--border-warning",
+    "--page-paper",
+    UI,
+    "a warning border on paper, including the dirty dot ring",
+  ],
   ["--border-warning", "--tint-warning", UI, "warning border on its own tint"],
   // The dirty-state indicator in the command bar: amber text and an amber fill
   // dot, both on the shell surface rather than on the page.
