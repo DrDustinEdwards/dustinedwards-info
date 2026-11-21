@@ -11,6 +11,7 @@ import {
   aiOutcomeCheck,
   browserCheck,
   durableObjectCheck,
+  emailCheck,
   healthResponse,
   imagesCheck,
   kvCheck,
@@ -46,7 +47,8 @@ export function siteHealthResponse(env: Env): Promise<Response> {
   /* LEVELS (area 8, H3). Only `db` (the ping) is fail: without D1 no page renders, so that is the site down. Every
      binding below is warn, because the site still serves its pages without it: MEDIA and IMAGES fall back to the
      original or a missing figure, OG to no card, APP_KV to an uncached read, MEDIA_REVISIONS only a replace or a revert, AI only
-     serves an editor's suggestions, BROWSER only the CV PDF after a save, WEBMENTION_VERIFY only new mentions, and
+     serves an editor's suggestions, BROWSER only the CV PDF after a save, WEBMENTION_VERIFY only new mentions, EMAIL only the
+     publication notice, and
      ASK_BUDGET is the limiter this route already called above (a limiter that does not answer is the 503 refusal
      there, not a check here). LEFT OUT: AI_SEARCH, because Ask is optional and classic search never waits on it,
      and the instance has no read that is not a billed query; the queue consumers and the dead-letter queues,
@@ -69,6 +71,7 @@ export function siteHealthResponse(env: Env): Promise<Response> {
       browserCheck("browser", env.BROWSER),
       queueCheck("webmention-verify", env.WEBMENTION_VERIFY),
       durableObjectCheck("ask-budget", env.ASK_BUDGET),
+      emailCheck("email", env.EMAIL),
       // The last real Ask answer call failed (a spend cap, a revoked key): the binding checks above still pass then.
       aiOutcomeCheck("ask", env.APP_KV),
       aiOutcomeCheck("alt-text", env.APP_KV),
