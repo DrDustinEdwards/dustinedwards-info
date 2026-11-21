@@ -195,7 +195,7 @@
   --chart-gold: #9a7a0e;
   --chart-rust: #8a4a1b;
 
-  --paper: #fdfdfe;
+  --page-paper: #fdfdfe;
   /* dust never sets type */
   --text-secondary: #686471;
   /* a hint below the value that will replace it, NOT --text-secondary */
@@ -288,7 +288,7 @@
     --chart-gold: #efd99c;
     --chart-rust: #ce7f44;
 
-    --paper: #18161c;
+    --page-paper: #18161c;
     --text-secondary: #b7b5bf;
     --placeholder: #888690;
     --placeholder: color-mix(in srgb, #96949e 90%, #0e0c12);
@@ -374,7 +374,7 @@
   --chart-gold: #efd99c;
   --chart-rust: #ce7f44;
 
-  --paper: #18161c;
+  --page-paper: #18161c;
   --text-secondary: #b7b5bf;
   --placeholder: #888690;
   --placeholder: color-mix(in srgb, #96949e 90%, #0e0c12);
@@ -408,7 +408,7 @@
 
 /* Outside the palette blocks because it is translucent. */
 :root {
-  --glass-pane: color-mix(in srgb, var(--paper) 82%, transparent);
+  --glass-pane: color-mix(in srgb, var(--page-paper) 82%, transparent);
 }
 
 :root,
@@ -472,7 +472,7 @@ body {
   /* On body, not the token block (check:contrast parses those as colors), and not .admin, because the
      public chrome reads it. */
   --site-inset: var(--space-6);
-  background: var(--paper);
+  background: var(--page-paper);
   color: var(--text);
   font-family: var(--font-sans);
 }

@@ -62,7 +62,7 @@ const light = tokenBlock("light", THEME_SELECTORS.light);
 const darkMedia = tokenBlock("dark (prefers-color-scheme)", THEME_SELECTORS.darkSystem);
 const darkAttr = tokenBlock("dark (attribute)", THEME_SELECTORS.dark);
 
-/* Canary: the first selector match wins; `--paper` is only in the palette blocks. */
+/* Canary: the first selector match wins; `--page-paper` is only in the palette blocks. */
 /** @type {Array<[string, Record<string, string>]>} */
 const PALETTE_BLOCKS = [
   ["light", light],
@@ -70,9 +70,9 @@ const PALETTE_BLOCKS = [
   ["dark (attribute)", darkAttr],
 ];
 for (const [label, block] of PALETTE_BLOCKS) {
-  if (!("--paper" in block)) {
+  if (!("--page-paper" in block)) {
     throw new Error(
-      `${label}: the block parsed for this selector does not declare --paper, so it is not the palette ` +
+      `${label}: the block parsed for this selector does not declare --page-paper, so it is not the palette ` +
         `block. A theme block was almost certainly added above the palette; move it below.`,
     );
   }
@@ -402,7 +402,7 @@ function contrastTierBlock(label, query, selector) {
     ["light", tierLight, light],
     ["dark", tierDark, darkAttr],
   ])) {
-    for (const surface of ["--paper", "--surface-popover"]) {
+    for (const surface of ["--page-paper", "--surface-popover"]) {
       assertPair(
         `${mode} prefers-contrast: muted on ${surface}`,
         tier["--text-secondary"],
@@ -411,25 +411,26 @@ function contrastTierBlock(label, query, selector) {
       );
     }
     assertPair(
-      `${mode} prefers-contrast: border on --paper`,
+      `${mode} prefers-contrast: border on --page-paper`,
       tier["--border"],
-      base["--paper"],
+      base["--page-paper"],
       UI,
     );
 
     // The tier must be strictly better than the default, or it is a different mode, not a high-contrast one.
     assert(
       `${mode} prefers-contrast raises muted text` +
-        ` (${contrast(base["--text-secondary"], base["--paper"]).toFixed(2)}` +
-        ` -> ${contrast(tier["--text-secondary"], base["--paper"]).toFixed(2)})`,
-      contrast(tier["--text-secondary"], base["--paper"]) >
-        contrast(base["--text-secondary"], base["--paper"]),
+        ` (${contrast(base["--text-secondary"], base["--page-paper"]).toFixed(2)}` +
+        ` -> ${contrast(tier["--text-secondary"], base["--page-paper"]).toFixed(2)})`,
+      contrast(tier["--text-secondary"], base["--page-paper"]) >
+        contrast(base["--text-secondary"], base["--page-paper"]),
     );
     assert(
       `${mode} prefers-contrast raises the default border` +
-        ` (${contrast(base["--border"], base["--paper"]).toFixed(2)}` +
-        ` -> ${contrast(tier["--border"], base["--paper"]).toFixed(2)})`,
-      contrast(tier["--border"], base["--paper"]) > contrast(base["--border"], base["--paper"]),
+        ` (${contrast(base["--border"], base["--page-paper"]).toFixed(2)}` +
+        ` -> ${contrast(tier["--border"], base["--page-paper"]).toFixed(2)})`,
+      contrast(tier["--border"], base["--page-paper"]) >
+        contrast(base["--border"], base["--page-paper"]),
     );
     // The strong edge rides the popover step (the header menu cards), so it is measured there.
     assertPair(
@@ -503,7 +504,7 @@ for (const [mode, theme, block] of shikiCases) {
       assert(detail, ratio >= TEXT || unreachable);
       continue;
     }
-    for (const surfaceName of ["--paper", "--surface-popover"]) {
+    for (const surfaceName of ["--page-paper", "--surface-popover"]) {
       const surface = block[surfaceName];
       shikiTokensChecked += 1;
       assertPair(`${mode}: shiki ${rule.scope}`, rule.fg, surface, TEXT, {

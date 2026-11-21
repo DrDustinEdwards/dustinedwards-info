@@ -87,7 +87,7 @@ export async function run() {
          deployed sheet is the committed one; the two media tiers are accessibility. */
       for (const [label, needle] of [
         [`dark body text ${token("--text", "dark")}`, token("--text", "dark").slice(1)],
-        [`light paper ${token("--paper", "light")}`, token("--paper", "light").slice(1)],
+        [`light paper ${token("--page-paper", "light")}`, token("--page-paper", "light").slice(1)],
         ["prefers-contrast tier present", "prefers-contrast"],
         ["forced-colors policy present", "forced-colors"],
       ]) {

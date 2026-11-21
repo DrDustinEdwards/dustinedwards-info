@@ -231,7 +231,7 @@
   max-width: 48rem;
   margin: 0 auto;
   padding: var(--space-6) var(--space-5) var(--space-8);
-  background: var(--paper);
+  background: var(--page-paper);
   color: var(--text);
 }
 
@@ -339,7 +339,7 @@
   margin: 0 0 var(--space-5);
   padding: var(--space-4) var(--space-5);
   border: var(--line-w) solid var(--border);
-  background: var(--paper);
+  background: var(--page-paper);
   font-family: var(--font-sans);
 }
 

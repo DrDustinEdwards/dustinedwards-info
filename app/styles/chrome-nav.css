@@ -11,7 +11,7 @@
   --nav-rule: var(--line-w) solid var(--dust);
   /* A tint of the purple, so the card stands apart from the near-white page; dark
      keeps the popover step. */
-  --nav-card-bg: color-mix(in oklab, var(--brand) 6%, var(--paper));
+  --nav-card-bg: color-mix(in oklab, var(--brand) 6%, var(--page-paper));
   --nav-band-bg: color-mix(in oklab, var(--brand) 8%, var(--nav-card-bg));
   --nav-well-bg: color-mix(in oklab, var(--brand) 16%, var(--nav-card-bg));
   --nav-hover-bg: color-mix(in oklab, var(--brand) 7%, var(--nav-card-bg));
