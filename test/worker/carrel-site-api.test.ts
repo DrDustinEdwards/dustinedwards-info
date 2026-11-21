@@ -100,10 +100,32 @@ describe("the Carrel key reaches only its prefix", () => {
     const response = await get(`${PREFIX}/content`, testEnv.OPERATOR_TOKEN);
     expect(response.status).toBe(401);
   });
-  it("answers the key on its prefix", async () => {
+  it("answers the key on its prefix, where a list searches bodies and filters by author", async () => {
     const response = await get(`${PREFIX}/meta`);
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ site: { id: "dustinedwards-info" } });
+
+    const own = post("find-own", { body: "A zymurgy paragraph about brewing.\n" });
+    const guest = post("find-guest", { body: "Nothing special here.\n" }).replace(
+      /^tags:/m,
+      'authors: ["Guest Writer"]\ntags:',
+    );
+    for (const [slug, raw] of [
+      ["find-own", own],
+      ["find-guest", guest],
+    ] as const) {
+      await putSource(postPath(slug), raw);
+      await seedPost(slug);
+    }
+    const ids = async (query: string) => {
+      const response = await get(`${PREFIX}/content?${query}&limit=50`);
+      expect(response.status).toBe(200);
+      return ((await response.json()) as { items: { id: string }[] }).items.map((i) => i.id);
+    };
+
+    expect(await ids("q=zymurgy")).toEqual([expect.stringContaining("find-own")]);
+    expect(await ids("author=Guest%20Writer")).toEqual([expect.stringContaining("find-guest")]);
+    expect(await ids("author=Dustin%20Edwards")).toEqual([expect.stringContaining("find-own")]);
   });
 });
 
@@ -1440,31 +1462,5 @@ describe("the site-api conformance suite", () => {
     });
     expect(report.checks.filter((c) => !c.ok)).toEqual([]);
     expect(report.ok).toBe(true);
-  });
-});
-
-describe("the content list searches bodies and filters by author", () => {
-  it("lists a post for a word only its body has, and by the author it credits", async () => {
-    const own = post("find-own", { body: "A zymurgy paragraph about brewing.\n" });
-    const guest = post("find-guest", { body: "Nothing special here.\n" }).replace(
-      /^tags:/m,
-      'authors: ["Guest Writer"]\ntags:',
-    );
-    for (const [slug, raw] of [
-      ["find-own", own],
-      ["find-guest", guest],
-    ] as const) {
-      await putSource(postPath(slug), raw);
-      await seedPost(slug);
-    }
-    const ids = async (query: string) => {
-      const response = await get(`${PREFIX}/content?${query}&limit=50`);
-      expect(response.status).toBe(200);
-      return ((await response.json()) as { items: { id: string }[] }).items.map((i) => i.id);
-    };
-
-    expect(await ids("q=zymurgy")).toEqual([expect.stringContaining("find-own")]);
-    expect(await ids("author=Guest%20Writer")).toEqual([expect.stringContaining("find-guest")]);
-    expect(await ids("author=Dustin%20Edwards")).toEqual([expect.stringContaining("find-own")]);
   });
 });
