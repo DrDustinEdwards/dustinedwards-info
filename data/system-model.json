@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "as_of": "2026-10-23",
+  "as_of": "2026-11-21",
   "systems": [
     {
       "id": "capsid",
@@ -9,7 +9,7 @@
       "family": "system",
       "ring": "core",
       "private": false,
-      "description": "The store, the queue, and the credentials every other project runs through.",
+      "description": "Shared memory, the job queue and the GitHub access that every other project's agents work through.",
       "domain": "mcp.dustinedwards.info",
       "repos": [
         "https://github.com/DrDustinEdwards/capsid"
@@ -70,7 +70,7 @@
       "family": "system",
       "ring": "shared",
       "private": false,
-      "description": "The tokens, the shell, and the shared controls every app is drawn with, in plain CSS.",
+      "description": "Design tokens, the app shell and shared controls in plain CSS, used by every app.",
       "domain": "capsomer.dustinedwards.info",
       "repos": [
         "https://github.com/DrDustinEdwards/capsomer"
@@ -230,15 +230,6 @@
       ]
     },
     {
-      "id": "writing",
-      "name": "Writing",
-      "short": "Books",
-      "family": "writing",
-      "ring": "used",
-      "private": true,
-      "description": "Dustin's books: scenes, outlines and story bibles, which Carrel reads and commits through its own GitHub App."
-    },
-    {
       "id": "skills",
       "name": "Skills",
       "short": "Skills",
@@ -246,15 +237,6 @@
       "ring": "used",
       "private": false,
       "description": "The instructions AI sessions follow."
-    },
-    {
-      "id": "skills-private",
-      "name": "Private skills",
-      "short": "My skills",
-      "family": "plumbing",
-      "ring": "used",
-      "private": true,
-      "description": "Dustin's own session setup, which every AI session loads beside the public skills."
     },
     {
       "id": "capsid-bench",
@@ -301,7 +283,7 @@
       "name": "Five-minute tick",
       "kind": "cron",
       "technology": "Workers cron trigger",
-      "description": "Lease sweep, auto-merge, the watcher and the daily passes."
+      "description": "Auto-merge, the watcher and the daily passes."
     },
     {
       "id": "capsid-db",
@@ -312,12 +294,28 @@
       "description": "Documents, jobs, agents and the audit log."
     },
     {
+      "id": "capsid-search",
+      "system": "capsid",
+      "name": "Search index",
+      "kind": "database",
+      "technology": "Cloudflare AI Search",
+      "description": "A meaning index of every document, derived from D1 and rebuildable from it. D1 stays the record."
+    },
+    {
       "id": "capsid-media",
       "system": "capsid",
       "name": "capsid-media",
       "kind": "bucket",
       "technology": "R2",
       "description": "Media and the daily backups."
+    },
+    {
+      "id": "capsid-tool-calls",
+      "system": "capsid",
+      "name": "capsid-mcp-tool-calls",
+      "kind": "bucket",
+      "technology": "R2",
+      "description": "Copies of the tool-call log, kept a year under a lock rule after the log prunes them."
     },
     {
       "id": "capsid-kv",
@@ -392,12 +390,12 @@
       "description": "The posts and pages, with every saved version."
     },
     {
-      "id": "website-watchdog",
+      "id": "website-cron",
       "system": "dustinedwards-info",
-      "name": "Watchdog",
+      "name": "Scheduled jobs",
       "kind": "cron",
-      "technology": "Second Worker on a 15-minute cron",
-      "description": "Reads the site's /health over a service binding, stores it as the colophon's snapshot, runs the repair plan and the nightly D1 dump through the operator API, and emails an alert when the state changes."
+      "technology": "Workers cron trigger",
+      "description": "Every minute, due Carrel schedules; every fifteen minutes, the colophon's health snapshot; daily, the zero-result purge, the publication check that mails each new DOI once, and the nightly D1 and media backups."
     },
     {
       "id": "website-kv",
@@ -405,7 +403,7 @@
       "name": "APP_KV",
       "kind": "kv",
       "technology": "Workers KV",
-      "description": "The health snapshot, the drift cache, the Ask cache, the watchdog's alert state and other site state."
+      "description": "The health snapshot, the drift cache, the Ask cache, the DOIs already mailed and other site state."
     },
     {
       "id": "website-media",
@@ -461,7 +459,7 @@
       "name": "AskBudget",
       "kind": "database",
       "technology": "Durable Object with SQLite",
-      "description": "The whole site's exact rate limiter: sign-in, the operator API, webmention, health, CSP reports and Ask."
+      "description": "The whole site's exact rate limiter: sign-in, the operator API, webmention, health, CSP reports, preview links and Ask."
     },
     {
       "id": "website-ai-search",
@@ -520,20 +518,12 @@
       "description": "The pages a webmention names. The verifier fetches each one."
     },
     {
-      "id": "website-cf-analytics",
-      "system": "dustinedwards-info",
-      "name": "Cloudflare Analytics",
-      "kind": "external",
-      "technology": "GraphQL Analytics API",
-      "description": "The Worker's error rate, which the watchdog reads."
-    },
-    {
       "id": "website-email",
       "system": "dustinedwards-info",
       "name": "Alert email",
       "kind": "external",
       "technology": "Workers send_email binding",
-      "description": "Where the watchdog sends an alert when the site's state changes."
+      "description": "Where the daily publication check mails a new DOI."
     },
     {
       "id": "admin-mcp-worker",
@@ -576,6 +566,22 @@
       "description": "The append-only log of every tool call, written before and after it runs. A call that cannot be logged does not run."
     },
     {
+      "id": "admin-mcp-tool-calls",
+      "system": "dustinedwards-mcp",
+      "name": "dustinedwards-admin-mcp-tool-calls",
+      "kind": "bucket",
+      "technology": "R2",
+      "description": "Copies of the tool-call log, kept after the log prunes them."
+    },
+    {
+      "id": "admin-mcp-cron",
+      "system": "dustinedwards-mcp",
+      "name": "Scheduled job",
+      "kind": "cron",
+      "technology": "Workers cron triggers",
+      "description": "Daily, copies new tool-call log rows to the bucket, then drops copied rows older than 90 days."
+    },
+    {
       "id": "admin-mcp-github",
       "system": "dustinedwards-mcp",
       "name": "GitHub sign-in",
@@ -616,6 +622,14 @@
       "description": "The nightly D1 dumps."
     },
     {
+      "id": "carrel-tool-calls",
+      "system": "carrel",
+      "name": "carrel-desk-tool-calls",
+      "kind": "bucket",
+      "technology": "R2",
+      "description": "Copies of the tool-call log, kept after the log prunes them."
+    },
+    {
       "id": "carrel-access",
       "system": "carrel",
       "name": "Cloudflare Access",
@@ -637,7 +651,7 @@
       "name": "GitHub",
       "kind": "external",
       "technology": "Repos, Actions, a GitHub App",
-      "description": "The writing repository Carrel commits book files to through its App, and CI, which deploys the Worker."
+      "description": "The GitHub App Carrel commits book files to Writings through, and CI, which deploys the Worker."
     },
     {
       "id": "carrel-google",
@@ -952,6 +966,14 @@
       "description": "The nightly D1 dumps."
     },
     {
+      "id": "foxing-covers",
+      "system": "foxing",
+      "name": "foxing-covers",
+      "kind": "bucket",
+      "technology": "R2",
+      "description": "Book cover images."
+    },
+    {
       "id": "foxing-kv",
       "system": "foxing",
       "name": "APP_KV",
@@ -1024,6 +1046,22 @@
       "description": "The MCP door an operator's AI session uses, signed in through Cloudflare Access. It calls the foxing Worker over a service binding."
     },
     {
+      "id": "foxing-mcp-tool-calls",
+      "system": "foxing-mcp",
+      "name": "foxing-admin-mcp-tool-calls",
+      "kind": "bucket",
+      "technology": "R2",
+      "description": "Copies of the tool-call log, kept after the log prunes them."
+    },
+    {
+      "id": "foxing-mcp-cron",
+      "system": "foxing-mcp",
+      "name": "Scheduled job",
+      "kind": "cron",
+      "technology": "Workers cron triggers",
+      "description": "Daily, copies new tool-call log rows to the bucket, then drops copied rows older than 90 days."
+    },
+    {
       "id": "foxing-mcp-oauth-kv",
       "system": "foxing-mcp",
       "name": "OAUTH_KV",
@@ -1070,6 +1108,30 @@
       "kind": "bucket",
       "technology": "R2",
       "description": "The nightly D1 dumps."
+    },
+    {
+      "id": "foxhound-media",
+      "system": "foxhound",
+      "name": "foxhound-media",
+      "kind": "bucket",
+      "technology": "R2",
+      "description": "The blog's media library."
+    },
+    {
+      "id": "foxhound-evidence",
+      "system": "foxhound",
+      "name": "foxhound-dispute-evidence",
+      "kind": "bucket",
+      "technology": "R2",
+      "description": "Merchant dispute evidence files."
+    },
+    {
+      "id": "foxhound-tool-calls",
+      "system": "foxhound",
+      "name": "foxhound-tool-calls",
+      "kind": "bucket",
+      "technology": "R2",
+      "description": "Copies of the tool-call log, kept after the log prunes them."
     },
     {
       "id": "foxhound-money",
@@ -1168,6 +1230,22 @@
       "description": "The MCP door at admin-mcp.foxhoundapp.com, calling the foxhound Worker over a service binding."
     },
     {
+      "id": "foxhound-mcp-tool-calls",
+      "system": "foxhound-mcp",
+      "name": "foxhound-admin-mcp-tool-calls",
+      "kind": "bucket",
+      "technology": "R2",
+      "description": "Copies of the tool-call log, kept after the log prunes them."
+    },
+    {
+      "id": "foxhound-mcp-cron",
+      "system": "foxhound-mcp",
+      "name": "Scheduled job",
+      "kind": "cron",
+      "technology": "Workers cron triggers",
+      "description": "Daily, copies new tool-call log rows to the bucket, then drops copied rows older than 90 days."
+    },
+    {
       "id": "foxhound-mcp-oauth-kv",
       "system": "foxhound-mcp",
       "name": "OAUTH_KV",
@@ -1256,6 +1334,14 @@
       "description": "The nightly D1 dumps."
     },
     {
+      "id": "julie-media",
+      "system": "julieedwards-info",
+      "name": "julieedwards-media",
+      "kind": "bucket",
+      "technology": "R2",
+      "description": "The site's images."
+    },
+    {
       "id": "julie-cron",
       "system": "julieedwards-info",
       "name": "Nightly backup",
@@ -1313,19 +1399,11 @@
     },
     {
       "id": "writing-repo",
-      "system": "writing",
-      "name": "Books",
-      "kind": "package",
-      "technology": "Git repository",
+      "system": "carrel",
+      "name": "Writings",
+      "kind": "external",
+      "technology": "Private Git repository",
       "description": "One folder per book: chapters of scene files, outlines, characters, places and world rules, plus Dustin's own voice passages."
-    },
-    {
-      "id": "skills-private-repo",
-      "system": "skills-private",
-      "name": "Skills",
-      "kind": "package",
-      "technology": "Git repository",
-      "description": "The dustin-workflow skill and the script a session-start hook runs to print it."
     }
   ],
   "relationships": [
@@ -1339,6 +1417,12 @@
       "id": "capsid-worker--writes--capsid-media",
       "from": "capsid-worker",
       "to": "capsid-media",
+      "kind": "writes"
+    },
+    {
+      "id": "capsid-worker--writes--capsid-tool-calls",
+      "from": "capsid-worker",
+      "to": "capsid-tool-calls",
       "kind": "writes"
     },
     {
@@ -1412,6 +1496,24 @@
       "from": "capsid-tick",
       "to": "capsid-kv",
       "kind": "writes"
+    },
+    {
+      "id": "capsid-tick--writes--capsid-search",
+      "from": "capsid-tick",
+      "to": "capsid-search",
+      "kind": "writes"
+    },
+    {
+      "id": "capsid-worker--reads--capsid-search",
+      "from": "capsid-worker",
+      "to": "capsid-search",
+      "kind": "reads"
+    },
+    {
+      "id": "capsid-worker--reads--capsid-db",
+      "from": "capsid-worker",
+      "to": "capsid-db",
+      "kind": "reads"
     },
     {
       "id": "carrel-worker--writes--carrel-db",
@@ -1552,38 +1654,26 @@
       "kind": "deploys"
     },
     {
-      "id": "website-github--deploys--website-watchdog",
-      "from": "website-github",
-      "to": "website-watchdog",
-      "kind": "deploys"
-    },
-    {
-      "id": "website-watchdog--watches--website-worker",
-      "from": "website-watchdog",
-      "to": "website-worker",
-      "kind": "watches"
-    },
-    {
-      "id": "website-watchdog--writes--website-worker",
-      "from": "website-watchdog",
-      "to": "website-worker",
-      "kind": "writes"
-    },
-    {
-      "id": "website-watchdog--writes--website-kv",
-      "from": "website-watchdog",
+      "id": "website-cron--writes--website-kv",
+      "from": "website-cron",
       "to": "website-kv",
       "kind": "writes"
     },
     {
-      "id": "website-watchdog--reads--website-cf-analytics",
-      "from": "website-watchdog",
-      "to": "website-cf-analytics",
-      "kind": "reads"
+      "id": "website-cron--writes--website-db",
+      "from": "website-cron",
+      "to": "website-db",
+      "kind": "writes"
     },
     {
-      "id": "website-watchdog--writes--website-email",
-      "from": "website-watchdog",
+      "id": "website-cron--writes--website-backups",
+      "from": "website-cron",
+      "to": "website-backups",
+      "kind": "writes"
+    },
+    {
+      "id": "website-cron--writes--website-email",
+      "from": "website-cron",
       "to": "website-email",
       "kind": "writes"
     },
@@ -1609,6 +1699,12 @@
       "id": "admin-mcp-worker--writes--admin-mcp-tool-log",
       "from": "admin-mcp-worker",
       "to": "admin-mcp-tool-log",
+      "kind": "writes"
+    },
+    {
+      "id": "admin-mcp-cron--writes--admin-mcp-tool-calls",
+      "from": "admin-mcp-cron",
+      "to": "admin-mcp-tool-calls",
       "kind": "writes"
     },
     {
@@ -2002,6 +2098,12 @@
       "kind": "writes"
     },
     {
+      "id": "foxing-worker--writes--foxing-covers",
+      "from": "foxing-worker",
+      "to": "foxing-covers",
+      "kind": "writes"
+    },
+    {
       "id": "foxing-mobile--reads--foxing-supabase",
       "from": "foxing-mobile",
       "to": "foxing-supabase",
@@ -2054,6 +2156,12 @@
       "from": "foxing-mcp-worker",
       "to": "foxing-worker",
       "kind": "reads"
+    },
+    {
+      "id": "foxing-mcp-cron--writes--foxing-mcp-tool-calls",
+      "from": "foxing-mcp-cron",
+      "to": "foxing-mcp-tool-calls",
+      "kind": "writes"
     },
     {
       "id": "foxhound-worker--writes--foxhound-db",
@@ -2134,6 +2242,24 @@
       "kind": "writes"
     },
     {
+      "id": "foxhound-worker--writes--foxhound-media",
+      "from": "foxhound-worker",
+      "to": "foxhound-media",
+      "kind": "writes"
+    },
+    {
+      "id": "foxhound-worker--writes--foxhound-evidence",
+      "from": "foxhound-worker",
+      "to": "foxhound-evidence",
+      "kind": "writes"
+    },
+    {
+      "id": "foxhound-worker--writes--foxhound-tool-calls",
+      "from": "foxhound-worker",
+      "to": "foxhound-tool-calls",
+      "kind": "writes"
+    },
+    {
       "id": "foxhound-cron--writes--foxhound-cron-lock",
       "from": "foxhound-cron",
       "to": "foxhound-cron-lock",
@@ -2176,6 +2302,12 @@
       "kind": "reads"
     },
     {
+      "id": "foxhound-mcp-cron--writes--foxhound-mcp-tool-calls",
+      "from": "foxhound-mcp-cron",
+      "to": "foxhound-mcp-tool-calls",
+      "kind": "writes"
+    },
+    {
       "id": "txasm-worker--writes--txasm-db",
       "from": "txasm-worker",
       "to": "txasm-db",
@@ -2216,6 +2348,12 @@
       "from": "julie-worker",
       "to": "julie-db",
       "kind": "reads"
+    },
+    {
+      "id": "julie-worker--writes--julie-media",
+      "from": "julie-worker",
+      "to": "julie-media",
+      "kind": "writes"
     },
     {
       "id": "julie-cron--reads--julie-db",
@@ -2278,6 +2416,12 @@
       "kind": "reads"
     },
     {
+      "id": "carrel-worker--writes--carrel-tool-calls",
+      "from": "carrel-worker",
+      "to": "carrel-tool-calls",
+      "kind": "writes"
+    },
+    {
       "id": "carrel--publishes-to--txasm",
       "from": "carrel",
       "to": "txasm",
@@ -2311,12 +2455,6 @@
       "id": "capsid--coordinates--julieedwards-info",
       "from": "capsid",
       "to": "julieedwards-info",
-      "kind": "coordinates"
-    },
-    {
-      "id": "capsid--coordinates--writing",
-      "from": "capsid",
-      "to": "writing",
       "kind": "coordinates"
     },
     {
@@ -2672,11 +2810,12 @@
     {
       "id": "job-life",
       "name": "A job's life",
+      "description": "One job, from the moment a session posts it to the moment Capsid checks the agent's claims against GitHub.",
       "steps": [
         {
           "relationship": "capsid-worker--serves--capsid-agents",
           "toward": "capsid-worker",
-          "text": "Posted: a session posts a job over MCP. The Worker checks the caller's grant, picks the model, signs the body and stores the job.",
+          "text": "Posted: a session posts a job over MCP. The Worker checks that the caller may post, picks a model, signs the job and stores it.",
           "lights": [
             "capsid-db"
           ]
@@ -2684,7 +2823,7 @@
         {
           "relationship": "capsid-worker--serves--capsid-agents",
           "toward": "capsid-worker",
-          "text": "Claimed: an agent claims it. The Worker verifies the body's signature first and records who holds the job.",
+          "text": "Claimed: an agent claims the job. The Worker checks the signature first, then records which agent holds it.",
           "lights": [
             "capsid-db"
           ]
@@ -2700,7 +2839,7 @@
         {
           "relationship": "capsid-worker--serves--capsid-agents",
           "toward": "capsid-agents",
-          "text": "Blocked: at a push, a deploy, a secret or a merge the agent stops. The job waits with the exact command a person or the signed policy must approve, and resume hands it back.",
+          "text": "Blocked: before a push, a deploy, a secret or a merge, the agent stops. The job waits with the exact command until a person or the signed policy approves it, and resume hands it back.",
           "lights": [
             "capsid-db"
           ]
@@ -2708,103 +2847,177 @@
         {
           "relationship": "capsid-worker--writes--capsid-github",
           "toward": "capsid-github",
-          "text": "Pull request: the pull request opens through Capsid's GitHub App, and CI runs on it."
+          "text": "Pull request: the agent opens a pull request through Capsid's GitHub App, and CI runs on it."
         },
         {
           "relationship": "capsid-tick--writes--capsid-github",
           "toward": "capsid-github",
-          "text": "Merged: the five-minute tick merges a pull request whose CI is green on its exact head under the signed auto-merge policy, or the session that opened it merges it on green."
+          "text": "Merged: every five minutes, Capsid merges a pull request when CI passed on its latest commit and the signed auto-merge policy allows it. The session that opened it can also merge it once CI passes."
         },
         {
           "relationship": "capsid-github--deploys--capsid-worker",
           "toward": "capsid-worker",
-          "text": "Deployed: the merge to master runs CI on GitHub Actions, which deploys the Worker."
+          "text": "Deployed: the merge to master starts CI on GitHub Actions, which deploys the Worker."
         },
         {
           "relationship": "capsid-github--watches--capsid-worker",
           "toward": "capsid-github",
-          "text": "Verified: CI's live gate reads the Worker's /health and checks it reports the commit that was merged."
+          "text": "Verified: CI reads the Worker's /health page and checks that it reports the merged commit."
         },
         {
           "relationship": "capsid-worker--reads--capsid-github",
           "toward": "capsid-worker",
-          "text": "Claims checked: when the job completes, the Worker reads the pull request, its commits and CI from GitHub and records each claim beside what GitHub says.",
+          "text": "Claims checked: when the job finishes, the Worker reads the pull request, its commits and CI from GitHub, and saves each claim next to what GitHub says.",
           "lights": [
             "capsid-db"
           ]
         }
-      ],
-      "description": "One job from the moment it is posted to the moment GitHub's record is checked against what its agent claimed."
+      ]
     },
     {
-      "id": "nightly-backup",
-      "name": "The nightly backup",
+      "id": "doc-search",
+      "name": "A search",
+      "description": "One question to the knowledge base, searched by keyword and by meaning. Capsid checks every match against the database before it shows it.",
       "steps": [
         {
-          "relationship": "capsid-worker--writes--capsid-media",
-          "toward": "capsid-media",
-          "text": "Dumped: at 09:00 UTC a daily cron in the Worker dumps every table to R2 with d1-dump, one JSON file each plus the schema.",
-          "lights": [
-            "capsid-db"
-          ]
+          "relationship": "capsid-worker--serves--capsid-agents",
+          "toward": "capsid-worker",
+          "text": "Asked: an agent calls Find documents with a question. The Worker checks that the agent has read access and which namespaces it may see."
         },
         {
-          "relationship": "capsid-worker--writes--capsid-media",
-          "toward": "capsid-media",
-          "text": "Marked complete: a completion marker is written last, and only when the dumped tables match the ones the migrations create. A run without it is never counted as a backup.",
-          "lights": [
-            "capsid-db"
-          ]
+          "relationship": "capsid-worker--reads--capsid-db",
+          "toward": "capsid-worker",
+          "text": "By keyword: the Worker runs the question through SQLite's full-text search on D1 and ranks the matches with bm25."
         },
         {
-          "relationship": "capsid-worker--writes--capsid-media",
-          "toward": "capsid-media",
-          "text": "Mirrored: every document body is written beside the dump as plain markdown, one file per document.",
-          "lights": [
-            "capsid-db"
-          ]
+          "relationship": "capsid-worker--reads--capsid-search",
+          "toward": "capsid-worker",
+          "text": "By meaning: the same question goes to the AI Search index, which finds documents that use different words for the same idea."
         },
         {
-          "relationship": "capsid-worker--writes--capsid-media",
-          "toward": "capsid-media",
-          "text": "Pruned: the newest complete run of each of the last 14 days, 8 weeks and 6 months is kept, and every other run is deleted whole. The newest complete run is never deleted."
+          "relationship": "capsid-worker--reads--capsid-db",
+          "toward": "capsid-worker",
+          "text": "Re-checked: the Worker rereads every meaning match from D1, so it never serves a moved or deleted document. It leaves out closed and replaced documents unless the agent asks for them."
+        },
+        {
+          "relationship": "capsid-worker--serves--capsid-agents",
+          "toward": "capsid-agents",
+          "text": "Answered: the agent gets one list, core documents first, each marked keyword, meaning or both. If the index fails, the agent still gets the keyword results and the reason."
+        },
+        {
+          "relationship": "capsid-tick--writes--capsid-search",
+          "toward": "capsid-search",
+          "text": "Kept fresh: every five minutes, Capsid sends the index up to 100 documents changed since its last pass. A daily pass removes documents D1 no longer has."
+        }
+      ]
+    },
+    {
+      "id": "session-start",
+      "name": "A session starts",
+      "description": "How a coding session picks up where the last one stopped: it starts from the project's notes and writes back what it decides.",
+      "steps": [
+        {
+          "relationship": "capsid-worker--serves--capsid-agents",
+          "toward": "capsid-worker",
+          "text": "Started: a coding session calls Start a session with its project's namespace."
+        },
+        {
+          "relationship": "capsid-worker--reads--capsid-db",
+          "toward": "capsid-worker",
+          "text": "Gathered: the Worker reads the shared rules, the project's core.md, the decisions and rulings, the open tasks and the three latest session notes, each with the date it last changed."
+        },
+        {
+          "relationship": "capsid-worker--serves--capsid-agents",
+          "toward": "capsid-agents",
+          "text": "Handed over: the session gets one answer of about 40 KB. If the notes run over, the answer names what it cut."
         },
         {
           "relationship": "capsid-worker--writes--capsid-db",
           "toward": "capsid-db",
-          "text": "Trimmed: document versions older than 90 days and audit rows older than 180 are pruned, after the dump, so every pruned row is in a kept copy."
+          "text": "Written back: the session saves what it decides with Write a document. Capsid keeps the old version and logs who made the change."
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-db",
+          "toward": "capsid-db",
+          "text": "Guarded: when anyone but the admin or an agent allowed to merge edits the rules, a core.md or the decisions, Capsid holds the edit as a proposal until someone approves it."
+        },
+        {
+          "relationship": "capsid-worker--serves--capsid-agents",
+          "toward": "capsid-agents",
+          "text": "Remembered: the next session, on any machine, starts from the same notes."
+        }
+      ]
+    },
+    {
+      "id": "nightly-backup",
+      "name": "The nightly backup",
+      "description": "Once a day the Worker copies the whole store to R2, keeps daily, weekly and monthly copies, and trims old history only after a copy holds it. A watcher checks that the copy outside the account is fresh.",
+      "steps": [
+        {
+          "relationship": "capsid-worker--writes--capsid-media",
+          "toward": "capsid-media",
+          "text": "Dumped: at 09:00 UTC, a cron job in the Worker uses d1-dump to write every table to R2, one JSON file per table, plus the schema.",
+          "lights": [
+            "capsid-db"
+          ]
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-media",
+          "toward": "capsid-media",
+          "text": "Marked complete: the Worker writes a completion marker last, and only when the dumped tables match the ones the migrations create. A run without the marker never counts as a backup.",
+          "lights": [
+            "capsid-db"
+          ]
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-media",
+          "toward": "capsid-media",
+          "text": "Mirrored: the Worker also writes every document as a plain Markdown file beside the dump.",
+          "lights": [
+            "capsid-db"
+          ]
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-media",
+          "toward": "capsid-media",
+          "text": "Pruned: the Worker keeps the newest complete run from each of the last 14 days, 8 weeks and 6 months and deletes every other run. It never deletes the newest complete run."
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-db",
+          "toward": "capsid-db",
+          "text": "Trimmed: after the dump, the Worker deletes document versions older than 90 days and audit rows older than 180, so every deleted row is in a kept copy."
         },
         {
           "relationship": "capsid-worker--writes--capsid-kv",
           "toward": "capsid-kv",
-          "text": "Stamped: the run records its success, and /health warns once that stamp is more than 26 hours old."
+          "text": "Stamped: the run records its success, and /health warns once that record is more than 26 hours old."
         },
         {
           "relationship": "capsid-tick--reads--capsid-github",
           "toward": "capsid-tick",
-          "text": "Watched: every half hour the watcher reads the newest copy kept off the Cloudflare account and files a finding once it is more than 36 hours old."
+          "text": "Watched: every half hour, the watcher reads the newest copy stored outside the Cloudflare account and files a finding once it is more than 36 hours old."
         }
-      ],
-      "description": "Once a day the Worker copies the whole store to R2, keeps a graduated set of copies, trims old history only once a copy holds it, and the watcher checks that the copy kept off the account is fresh."
+      ]
     },
     {
       "id": "carrel-publish",
       "name": "Publishing a post",
+      "description": "A post goes from a private draft in Carrel to a live page on dustinedwards.info. Every site speaks the same contract, and the site decides what may go live.",
       "steps": [
         {
           "relationship": "carrel-worker--writes--carrel-db",
           "toward": "carrel-db",
-          "text": "Drafted: the writer works in Carrel's editor, which autosaves a working draft only that person can see."
+          "text": "Drafted: the writer works in Carrel's editor, which autosaves a draft only that person can see."
         },
         {
           "relationship": "carrel-worker--reads--website-worker",
           "toward": "carrel-worker",
-          "text": "Previewed: Carrel shows the site's own render of the draft in a sandbox, with the checks' flags and any reviewer's beside it."
+          "text": "Previewed: Carrel shows the draft as the site will render it, in a sandbox, next to any flags from the checks and reviewers."
         },
         {
           "relationship": "carrel-worker--publishes-to--website-worker",
           "toward": "website-worker",
-          "text": "Saved: an Editor or the Owner saves the draft to the site, naming the version it replaces. The site refuses a stale one, so nobody overwrites a newer save.",
+          "text": "Saved: an Editor or the Owner saves the draft to the site and names the version it replaces. The site refuses an out-of-date save, so nobody overwrites newer work.",
           "lights": [
             "website-db"
           ]
@@ -2812,7 +3025,7 @@
         {
           "relationship": "carrel-worker--publishes-to--website-worker",
           "toward": "website-worker",
-          "text": "Published: only the Owner publishes, and a first publish asks for confirmation. The site's own publish policy decides, so there is one authority.",
+          "text": "Published: only the Owner can publish, and a first publish asks for confirmation. The site's own publish policy makes the call, so one place decides.",
           "lights": [
             "website-db"
           ]
@@ -2820,7 +3033,7 @@
         {
           "relationship": "carrel-worker--publishes-to--website-worker",
           "toward": "website-worker",
-          "text": "Or by instruction: the Owner's AI session may publish through the MCP door, never while a flag is open. It sends no text, so only the saved version goes live, and Dustin is emailed an unpublish link.",
+          "text": "Or by instruction: the Owner's AI session can publish through MCP, but never while a flag is open. It sends no text, so only the saved version goes live, and Dustin gets an email with an unpublish link.",
           "lights": [
             "website-db"
           ]
@@ -2828,22 +3041,21 @@
         {
           "relationship": "carrel-worker--writes--carrel-db",
           "toward": "carrel-db",
-          "text": "Recorded: Carrel indexes the live post, records who published it (an AI session by its client name) and clears the draft that was sent."
+          "text": "Recorded: Carrel indexes the live post, records who published it (an AI session by its client name) and clears the sent draft."
         },
         {
           "relationship": "carrel-cron--watches--website-worker",
           "toward": "carrel-cron",
-          "text": "Watched: every 15 minutes Carrel runs site-api's conformance suite against the site and emails when its state changes."
+          "text": "Watched: every 15 minutes, Carrel runs site-api's conformance suite against the site and sends an email when the result changes."
         }
-      ],
-      "description": "A post goes from a private draft in Carrel to a live page on dustinedwards.info, through the one contract every site speaks, with the site deciding what may go live."
+      ]
     }
   ],
   "counts": {
-    "systems": 23,
+    "systems": 21,
     "public": 20,
-    "private": 3,
-    "containers": 131,
-    "relationships": 223
+    "private": 1,
+    "containers": 143,
+    "relationships": 233
   }
 }
