@@ -68,7 +68,7 @@ jobs:
     concurrency:
       group: code-map
       cancel-in-progress: false
-    uses: DrDustinEdwards/devkit/.github/workflows/code-map.yml@a1a0d42e4438f7bb9e4084c84889f4506a01f01d # v0.55.2
+    uses: DrDustinEdwards/devkit/.github/workflows/code-map.yml@ddbcabf74b664b47eb136d03b29be5528d29476a # v0.55.3
     with:
       tsconfig: tsconfig.cloudflare.json
       include: app/ workers/
