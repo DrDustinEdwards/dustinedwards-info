@@ -35,6 +35,13 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
         .map((s) => new URL(s.getAttribute("src") ?? "", location.href))
         .filter((u) => u.origin === location.origin)
         .map((u) => u.pathname),
+      /* The same-origin scripts without integrity and crossorigin, which Integrity-Policy needs of each. */
+      bare: [...document.querySelectorAll("script[src]")].filter(
+        (s) =>
+          new URL(s.getAttribute("src") ?? "", location.href).origin === location.origin &&
+          (!s.getAttribute("integrity")?.startsWith("sha384-") ||
+            s.getAttribute("crossorigin") !== "anonymous"),
+      ).length,
       /* The page's island markers, read by tag so this case is not a loader of its own (devkit's family check). */
       markers: [...document.getElementsByTagName("template")]
         .filter((t) => t.hasAttribute("data-island"))
@@ -79,8 +86,10 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
         `refused by the policy, or the island threw.`,
     );
     ok(
-      `${path}: the one same-origin script is /site.js, nothing runs inline, and each reader gets its own nonce`,
-      JSON.stringify(shape.srcs) === JSON.stringify(["/site.js"]) &&
+      `${path}: the one same-origin script is /site-<hash>.js with its integrity, nothing runs inline, and each reader gets its own nonce`,
+      shape.srcs.length === 1 &&
+        /^\/site-[\w-]+\.js$/.test(shape.srcs[0] ?? "") &&
+        shape.bare === 0 &&
         shape.inline.length === 0 &&
         shape.nonce !== "" &&
         again !== "" &&

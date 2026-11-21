@@ -28,6 +28,12 @@ declare module "virtual:islands" {
     | "tools";
   /** The built, content-hashed URL of each island (/islands/<name>-<hash>.js; the plain name in `vite dev`). */
   export const ISLAND_URLS: Readonly<Record<IslandName, string>>;
+  /** The page's script tag for /site.js: `src` is /site-<hash>.js with its `integrity` in a build, the plain /site.js in `vite dev`. */
+  export const SITE_SCRIPT: Readonly<{
+    src: string;
+    integrity?: string;
+    crossOrigin?: "anonymous";
+  }>;
   /** Gzip level 9 over each island and the chunks it imports, measured by the build because the Worker has no filesystem. */
   export const ISLAND_GZIP_BYTES: Readonly<Record<IslandName, number>>;
 }
