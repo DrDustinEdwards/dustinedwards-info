@@ -5,7 +5,7 @@ import { OWNER_ORCID, SITE } from "~/lib/seo";
 import { canonicalAuthor } from "./authors.mjs";
 import { doiKey } from "./validate.mjs";
 import { SITE_USER_AGENT } from "~/lib/site-origin.mjs";
-import { timedFetch } from "@dustinedwards/site-runtime/http";
+import { retryAfterSeconds, timedFetch } from "@dustinedwards/site-runtime/http";
 
 // Checks the publications list against ORCID and Crossref, so a DOI is caught the day one appears. It
 // reads both and writes nothing: a publication is written through Carrel, never from here.
@@ -48,7 +48,17 @@ type CrossrefItem = {
 };
 
 async function getJson(url: string, accept = "application/json"): Promise<unknown> {
-  const res = await timedFetch(url, { headers: { accept, "user-agent": SITE_USER_AGENT } });
+  const get = () => timedFetch(url, { headers: { accept, "user-agent": SITE_USER_AGENT } });
+  let res = await get();
+  // Crossref answers 429 when the poll is rate-limited (the daily check failed once on it): one more try after its
+  // Retry-After (at most 10 s), then the failure stands.
+  if (res.status === 429 || res.status >= 500) {
+    await res.body?.cancel();
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(retryAfterSeconds(res.headers) ?? 5, 10) * 1000),
+    );
+    res = await get();
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
