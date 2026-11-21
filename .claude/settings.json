@@ -1,26 +1,16 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "env": {
-    "OPERATOR_TOKEN_FILE": "C:\\Users\\email\\.dustinedwards-operator-token"
-  },
   "attribution": {
     "commit": "",
     "pr": ""
   },
-  "permissions": {
-    "allow": [
-      "Bash(git:*)",
-      "Bash(gh:*)",
-      "Bash(npm:*)",
-      "Bash(npx:*)",
-      "Bash(wrangler:*)",
-      "Bash(npx wrangler:*)"
-    ]
+  "env": {
+    "GIT_AUTHOR_NAME": "Dustin Edwards",
+    "GIT_AUTHOR_EMAIL": "204601333+DrDustinEdwards@users.noreply.github.com",
+    "GIT_COMMITTER_NAME": "Dustin Edwards",
+    "GIT_COMMITTER_EMAIL": "204601333+DrDustinEdwards@users.noreply.github.com",
+    "OPERATOR_TOKEN_FILE": "C:\\Users\\email\\.dustinedwards-operator-token"
   },
-  "deniedMcpServers": [
-    { "serverUrl": "https://admin-mcp.dustinedwards.info/mcp" },
-    { "serverUrl": "https://admin-mcp.foxing.app/mcp" }
-  ],
   "hooks": {
     "PreToolUse": [
       {
@@ -50,5 +40,38 @@
         ]
       }
     ]
-  }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npm test*)",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git show *)",
+      "Bash(git log *)",
+      "Bash(git branch*)"
+    ],
+    "ask": [
+      "Bash(npm run deploy*)",
+      "Bash(npx wrangler deploy*)",
+      "Bash(npx wrangler secret*)",
+      "Bash(npx wrangler d1 migrations apply*)",
+      "Bash(npx wrangler d1 execute *DELETE*)",
+      "Bash(npx wrangler d1 execute *DROP*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Read(**/.env*)",
+      "Read(**/.dev.vars)"
+    ]
+  },
+  "deniedMcpServers": [
+    {
+      "serverUrl": "https://admin-mcp.dustinedwards.info/mcp"
+    },
+    {
+      "serverUrl": "https://admin-mcp.foxing.app/mcp"
+    }
+  ]
 }
