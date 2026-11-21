@@ -35,6 +35,12 @@ export interface ContentKindHandler {
   list(query: Pick<ListQuery, "trashed">): Promise<ContentSummary[]>;
   /** True when `publish` takes `publishedAt` (site-api v0.17.0); a kind without it refuses one. */
   publishedAtSettable?: boolean;
+  /**
+   * Every item's credited authors and its text, by slug, for a list that asks for `q` or `author`: q then matches the
+   * body as well as the title and id, and `author` filters on the credit. Read only then, since it loads every
+   * source. A kind without it matches q on title and id and has no authors.
+   */
+  searchIndex?(): Promise<Map<string, { authors: string[]; text: string }>>;
   get(slug: string): Promise<ContentDoc | null>;
   saveDraft(slug: string, input: SaveDraftInput): Promise<WriteResult>;
   publish(slug: string, input: PublishInput): Promise<WriteResult>;
@@ -64,7 +70,7 @@ export interface ContentKindHandler {
 }
 
 /** The list filters the registry applies (site-api v0.17.0); `trashed` comes with the posts' trash. */
-const FILTERS = ["kind", "tag", "published"] as const satisfies readonly ContentFilter[];
+const FILTERS = ["kind", "tag", "author", "published"] as const satisfies readonly ContentFilter[];
 
 export type ContentRegistry = {
   adapter: ContentAdapter;
@@ -123,14 +129,22 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
       const needle = query.q?.toLowerCase();
       // q matches the kind's own slug, so the filters apply before the id is encoded.
       const lists = await Promise.all(
-        asked.map(async (h) =>
-          (await h.list({ trashed: query.trashed }))
+        asked.map(async (h) => {
+          const index = needle || query.author ? await h.searchIndex?.() : undefined;
+          return (await h.list({ trashed: query.trashed }))
             .filter((s) => !query.status || s.status === query.status)
             .filter(
-              (s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle),
+              (s) =>
+                !needle ||
+                s.title.toLowerCase().includes(needle) ||
+                s.id.includes(needle) ||
+                index?.get(s.id)?.text.toLowerCase().includes(needle),
             )
-            .map((s) => encoded(h.kind, s)),
-        ),
+            .filter((s) => !query.author || index?.get(s.id)?.authors.includes(query.author))
+            .map((s) =>
+              encoded(h.kind, query.author ? { ...s, authors: index?.get(s.id)?.authors } : s),
+            );
+        }),
       );
       const matching = lists
         .flat()
