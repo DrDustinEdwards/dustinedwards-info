@@ -12,7 +12,8 @@
 // health-snapshot stores the colophon's health verdict
 // every fifteen minutes (a health run takes about a second, so two minutes is hung); purge-zero-results removes
 // expired zero-result queries at 04:00 UTC (one DELETE, one minute); check-publications reads ORCID and Crossref at
-// 06:00 UTC and mails each new DOI once (two outside APIs, so five minutes).
+// 06:00 UTC and mails each new DOI once (two outside APIs, so five minutes); page-dates keeps the day each undated
+// page's text last changed, for the sitemap's lastmod, at 07:00 UTC (a render of each, so five minutes).
 
 /** How often the colophon's health verdict is taken; site-runtime ./health-snapshot derives its stale bound from it. */
 export const HEALTH_SNAPSHOT_EVERY_MINUTES = 15;
@@ -30,6 +31,7 @@ export const CRON_JOBS = Object.freeze([
   }),
   Object.freeze({ name: "purge-zero-results", everyMinutes: 1440, timeoutMs: 60_000 }),
   Object.freeze({ name: "check-publications", everyMinutes: 1440, timeoutMs: 5 * 60_000 }),
+  Object.freeze({ name: "page-dates", everyMinutes: 1440, timeoutMs: 5 * 60_000 }),
 ]);
 
 /** @param {string} name */
