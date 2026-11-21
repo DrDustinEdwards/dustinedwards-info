@@ -87,6 +87,12 @@ jobs:
       # site-runtime withAdminIdle's key, minted once by the deploy and never shown (devkit "generated-secrets").
       generated-secrets: ADMIN_IDLE_SECRET
       d1-database: dustinedwards
+      # Gradual rollout (devkit D4): the new version takes 10% of traffic for 10 minutes before the live gate judges it and it
+      # takes all traffic; a refused one goes back to the version it shared traffic with. The AskBudget migration (v1) is
+      # applied, and `exports` holds only worker entrypoints, so no Durable Object change needs a plain deploy; a deploy that
+      # adds one sets gradual-percent to 0 for that deploy.
+      gradual-percent: 10
+      gradual-minutes: 10
       health-url: https://dustinedwards.info/health
       sha-var: DEPLOY_SHA
       verify-command: node "$DEVKIT_DIR/bin/verify-deploy.mjs" https://dustinedwards.info --page / --page /colophon --health /health
