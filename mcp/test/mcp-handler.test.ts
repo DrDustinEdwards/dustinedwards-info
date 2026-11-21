@@ -6,6 +6,8 @@
 import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+import { toolListHash, toolListProblems } from "@dustinedwards/site-runtime/mcp-server";
+
 import { handleMcp } from "../src/mcp-handler.ts";
 import {
   AUDIT,
@@ -23,6 +25,8 @@ let ENV = freshEnv();
 
 const ctx = { waitUntil() {}, passThroughOnException() {} } as unknown as ExecutionContext;
 const ERA = "2025-11-25";
+/** The read grant's tools/list hash; the daily check pins the same (devkit live/areas.json, --tools-hash). Update after reviewing a tool change. */
+const READ_LIST_HASH = "060e3a5ae73daf539628c400d945819b23f2d972953f6680b277ede48baee565";
 
 let nextId = 1;
 async function rpc(
@@ -144,6 +148,21 @@ describe("handleMcp", () => {
     bodies.push((await callTool("dei_refresh_citations", {})).raw);
     for (const body of bodies) assert.ok(!body.includes(TOKEN));
     assert.ok(api.logs.every((line) => !line.includes(TOKEN)));
+  });
+
+  test("PLANT: both grants' tools/list pass the family's list check (T1-T4, T9), and the read list is pinned (T12)", async () => {
+    for (const caller of [WRITER, READER]) {
+      const { tools } = (await rpc("tools/list", {}, caller)).message.result;
+      assert.ok(tools.length > 0);
+      assert.deepEqual(
+        toolListProblems(tools)
+          .filter((p) => p.severity === "error")
+          .map((p) => `${p.item} ${p.tool}: ${p.detail}`),
+        [],
+      );
+    }
+    const read = (await rpc("tools/list", {}, READER)).message.result.tools;
+    assert.equal(await toolListHash(read), READ_LIST_HASH);
   });
 
   test("a read-only grant is listed no write tool, and a write it names anyway runs nothing", async () => {
