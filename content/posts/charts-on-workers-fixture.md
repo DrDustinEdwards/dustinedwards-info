@@ -19,7 +19,7 @@ The first attempt at a per-IP burst limit used Cloudflare's GA `ratelimit`
 binding, with a limit of five. Twelve concurrent requests were fired at it, four
 times. A limiter honoring its own limit refuses seven of twelve every time.
 
-:::chart{type=bar x=run y=refused title="Requests refused by the GA ratelimit binding" alt="Bar chart of four runs against a limit of five, twelve concurrent requests each. The binding refused 1, then 2, then 9, then 0 requests. A limiter honoring the limit would refuse 7 every time."}
+:::chart{type=bar x=run y=refused title="Requests refused by the GA ratelimit binding" alt="Bar chart of four runs against a limit of five, twelve concurrent requests each. The binding refused 1, then 2, then 9, then 0 requests. A limiter honoring the limit would refuse 7 every time." source="The author's test runs"}
 ```csv
 run,refused
 run 1,1
@@ -40,7 +40,7 @@ reports success whether or not it did anything.
 Three mechanisms, each given a ceiling and a burst larger than it. The question
 is how many requests each one actually let through.
 
-:::chart{type=bar x=mechanism y=allowed,ceiling labels="Allowed,Ceiling" title="Requests allowed against the ceiling each mechanism was given" alt="Grouped bar chart comparing allowed requests against the ceiling for three mechanisms. The GA ratelimit binding allowed 11 against a limit of 5. A Durable Object using async storage allowed 8 against a ceiling of 3. A Durable Object using the synchronous SQLite API allowed exactly 3 against a ceiling of 3."}
+:::chart{type=bar x=mechanism y=allowed,ceiling labels="Allowed,Ceiling" title="Requests allowed against the ceiling each mechanism was given" alt="Grouped bar chart comparing allowed requests against the ceiling for three mechanisms. The GA ratelimit binding allowed 11 against a limit of 5. A Durable Object using async storage allowed 8 against a ceiling of 3. A Durable Object using the synchronous SQLite API allowed exactly 3 against a ceiling of 3." source="The author's test runs"}
 ```csv
 mechanism,allowed,ceiling
 GA ratelimit,11,5
