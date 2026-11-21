@@ -5,6 +5,7 @@ import {
   getEnv,
   getExecutionContext,
   getNonce,
+  previewContext,
 } from "@dustinedwards/site-runtime/context";
 
 import type { previewBlogPost } from "~/db/posts";
@@ -28,6 +29,4 @@ export const documentHandlerContext = createContext<
  * Set only for a Carrel preview render: the post row built from submitted source, which the blog
  * route renders in place of the stored row for that slug. Never set on a request from outside.
  */
-export const postPreviewContext = createContext<Awaited<ReturnType<typeof previewBlogPost>> | null>(
-  null,
-);
+export const postPreviewContext = previewContext<Awaited<ReturnType<typeof previewBlogPost>>>();
