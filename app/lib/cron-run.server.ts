@@ -84,5 +84,11 @@ export function siteJobs(env: Env, ctx: ExecutionContext, at: Date): SiteJob[] {
       run: async () =>
         (await import("~/lib/publications/notify.server")).checkPublicationsDaily(env),
     },
+    // The day each undated page's text last changed, for /sitemap.xml's lastmod (app/lib/page-dates.server.ts).
+    {
+      ...cronJob("page-dates"),
+      due: (t) => isDailyAt(t, 7),
+      run: async () => (await import("~/lib/page-dates.server")).runPageDates(env, ctx),
+    },
   ];
 }

@@ -1,3 +1,4 @@
+import { pageRecordStore } from "~/lib/page-dates.server";
 import { listBlogPosts, listBlogSeries, listBlogTags, nextScheduledPublishAt } from "~/db";
 import { listPublishedPageSources, listPublishedPageTitles } from "~/db/pages";
 import { listPostsWithImages } from "~/db/posts";
@@ -141,10 +142,14 @@ const kindTitle = (kind: string) => {
  * `lastmod` is the day the page's content last changed, never a sync or deploy time, which would mark every
  * page changed together and teach crawlers to ignore the field. A post or procedure uses the `updated` date
  * its author wrote; any other page uses its source file's last commit (scripts/lib/source-dates.mjs); an index,
- * tag or series is as new as the newest page it lists. With no dated source, `lastmod` is left out.
+ * tag or series is as new as the newest page it lists. A page with no dated source (a deploy's shallow checkout has no
+ * git history for its route file) takes the day its text last changed, from the page-dates job's record
+ * (page-dates.server.ts); `tracked: false` skips that, which is how the job finds the pages it dates. With neither,
+ * `lastmod` is left out.
  */
 export async function gatherSiteUrls(
   env: Env,
+  options: { tracked?: boolean } = {},
 ): Promise<{ urls: SiteUrl[]; files: SiteFile[]; nextPublishAt: Date | null }> {
   /* No `kind = 'page'` read: both writers into `posts` write only 'post'. Recheck that before relying on it. */
   const [
@@ -298,6 +303,13 @@ export async function gatherSiteUrls(
         : [{ path: seriesPath(row.name), lastmod: row.lastmod, title: row.name }],
     ),
   ];
+  if (options.tracked !== false) {
+    const record = await pageRecordStore(env).load();
+    for (const url of urls) {
+      const day = record?.[url.path]?.lastmod;
+      if (!url.lastmod && day) url.lastmod = new Date(day);
+    }
+  }
   // The site map page lists every page, so it is as new as the newest of them.
   const siteMap = urls.find((url) => url.path === "/site-map");
   if (siteMap) siteMap.lastmod = latest(urls.map((url) => url.lastmod));
