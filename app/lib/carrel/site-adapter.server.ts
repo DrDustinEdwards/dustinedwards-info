@@ -16,7 +16,8 @@ import {
   type SiteAdapter,
 } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
-import { SEARCH_FIELDS } from "@dustinedwards/site-api/frontmatter";
+import { postFieldsOf, SEARCH_FIELDS } from "@dustinedwards/site-api/frontmatter";
+import { splitSource } from "@drdustinedwards/site-helpers/frontmatter";
 import { d1ScheduledUpdates } from "@dustinedwards/site-api/schedules";
 import { notFoundReport } from "@dustinedwards/site-runtime/not-found";
 import { getTableColumns } from "drizzle-orm";
@@ -204,6 +205,23 @@ export function carrelSiteAdapter(options: {
 
   const postHandler: ContentKindHandler = {
     kind: "post",
+
+    // The posts are the site's prose: the body and the credit, which is the site's author unless a post names its own.
+    async searchIndex() {
+      const rows = await env.DB.prepare(
+        `SELECT path, content FROM source_files WHERE path GLOB 'content/posts/*.md' AND path NOT GLOB 'content/posts/*/*'`,
+      ).all<{ path: string; content: string }>();
+      return new Map(
+        (rows.results ?? []).map(({ path, content }) => {
+          const { front, body } = splitSource(content);
+          const authors = postFieldsOf(front).authors;
+          return [
+            path.slice("content/posts/".length, -".md".length),
+            { authors: authors.length > 0 ? authors : [SITE.name], text: body },
+          ];
+        }),
+      );
+    },
 
     async list(query) {
       const now = Date.now();
