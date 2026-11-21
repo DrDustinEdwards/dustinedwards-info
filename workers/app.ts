@@ -88,7 +88,11 @@ const site = defineSite<Env>({
   publicCookies: [THEME_COOKIE],
   // The signed-in planes are rendered for their reader alone. A request that negotiates away from HTML (a Markdown twin,
   // search's JSON) is too: the key holds no Accept, so a stored HTML page would answer it.
-  cacheable: (request, url) => !isPrivatePath(url.pathname) && !negotiatesAwayFromHtml(request),
+  // /media is not a page: the Renderer's settle step marks anything but a shared page edge no-store, so a size sent through
+  // it was never a cache HIT. It is answered live by the gateway, its own immutable Cache-Control and the route's
+  // caches.default copy (site-runtime ./image) keep it, as on germomics.com.
+  cacheable: (request, url) =>
+    !isPrivatePath(url.pathname) && !isMediaPath(url.pathname) && !negotiatesAwayFromHtml(request),
   preloads: PAGE_PRELOADS,
   // The admin's media and mentions kit (app/lib/admin-kit.server.ts) previews a post through the same routes in-process,
   // never through the Renderer, whose response is the one the edge stores. Carrel's own preview uses the step's kit.
