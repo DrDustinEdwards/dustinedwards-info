@@ -8,18 +8,7 @@ import { islandsPlugin } from "./scripts/lib/islands.mjs";
 /**
  * The Worker test layer: real modules, real workerd, real bindings.
  *
- * ## WHAT WAS MISSING, and it is the reason this file exists
- *
- * The repo had 487 pure-function tests under `test/` and a real-browser gate,
- * and NOTHING BETWEEN THEM. No test ran a loader, an action, D1, KV, R2 or the
- * Cache API, so every route-level fact had to be established by probing
- * production. Three defects reached the wire that this layer catches offline in
- * seconds: the uncached markdown twin, the unguarded health endpoint, and the
- * `/theme` origin gap. Each of those has a named case here that says so.
- *
- * ## THE INSTRUMENT, and what it can and cannot see
- *
- * OBSERVATION BOUNDARY. These tests import the module the Worker imports and
+ * These tests import the module the Worker imports and
  * run it inside workerd against miniflare-local D1, KV, R2, a Durable Object
  * and `caches.default`. So they see BEHAVIOR: what a function does to a
  * database, what headers a response carries, which branch a refusal takes.
@@ -181,32 +170,9 @@ export default defineConfig({
     /**
      * THE CASE BUDGET, FOR THE WHOLE LAYER RATHER THAN FIVE CASES.
      *
-     * ## Why it is not vitest's 5s default
-     *
-     * MEASURED THE HARD WAY, 2026-08-29: three health endpoint cases failed
-     * inside `ship` at 5065ms, 5777ms and 5218ms, which is the default timeout
-     * and not a defect in anything they assert. Every one of them was green
-     * minutes earlier on an idle machine. `ship` runs the whole offline tier,
-     * so the machine underneath this layer is the busiest it ever gets, and
-     * that is exactly when it must not lie.
-     *
-     * A budget is only ever paid by a case that HANGS, and a case that hangs is
-     * a failure either way. What it buys is that a slow machine reports what
-     * the code did rather than how long the machine took.
-     *
-     * ## Why it is HERE and not on the cases
-     *
-     * The 2026-08-29 repair was a `HEALTH_CASE_TIMEOUT` constant applied to
-     * five `it()` calls in `routes.test.ts`. That fixed the cases it was
-     * written for and left every other case in the layer on the 5s default,
-     * including the shiki and WASM render paths in `publish.test.ts` and the R2
-     * paths in `media.test.ts`, which do comparable work. A per-case budget
-     * grades the cases somebody already watched fail.
-     *
-     * The generalization also makes the constant a MIRROR: five call sites
-     * carrying a value equal to the default they sit beside, free to drift from
-     * it. The one-owner rule, one owner per fact. This is the owner; the constant and
-     * its call sites were deleted in the same commit.
+     * Three health endpoint cases failed inside `ship` at about 5s, the default, while the machine was busiest; each
+     * was green on an idle one. A budget is only ever paid by a case that HANGS, so what it buys is that a slow
+     * machine reports what the code did rather than how long it took. One owner here, not a constant on five cases.
      */
     testTimeout: 30_000,
   },

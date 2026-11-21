@@ -1,5 +1,5 @@
 /**
- * The site's terms are the license on every data set it publishes (Dustin, 2026-10-04): no open license for
+ * The site's terms are the license on every data set it publishes: no open license for
  * now, so what may be done with the data is stated in one place. The address is stored once, here; the
  * Dataset JSON-LD names it as `license` (app/lib/seo.ts LICENSE_URL), and every download carries it as a
  * `Link: rel="license"` header, relative so a plain-node caller needs no origin.

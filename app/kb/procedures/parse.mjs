@@ -12,7 +12,6 @@ import { readConditions, segmentText, tokenize } from "./marks.mjs";
 
 export const PROCEDURES_DIR = "content/procedures";
 
-/** The repository path of a procedure's file. */
 export function procedurePath(/** @type {string} */ slug) {
   return `${PROCEDURES_DIR}/${slug}.md`;
 }

@@ -33,8 +33,6 @@ function sameAsStated(actual, mantissa, exponent) {
   );
 }
 
-/* ------------------------------------------------------------ titer, by hand */
-
 await test("titer: hand arithmetic, 111 plaques in 10 µl of 10^-6", () => {
   // 111 / 10 = 11.1 pfu/µl; x 1,000 = 11,100 pfu/ml; x 10^6 = 1.11 x 10^10.
   const { perUl, perMlDiluted, pfuPerMl } = titer({
@@ -131,8 +129,6 @@ await test("titer: refuses inputs it cannot compute, naming the field", () => {
   }
 });
 
-/* ------------------------------------------------------------ dilution, by hand */
-
 await test("dilution: 10 µl into 90 µl is 10-fold, and 10 µl into 100 µl is 11-fold", () => {
   // The FAQ's recipe and its recorded error.
   assert.equal((10 + 90) / 10, 10);
@@ -200,8 +196,6 @@ await test("dilution: refuses a target at or above the start", () => {
   const result = runTool("dilution", { start: "1e6", target: "1e7", transfer: "10", needed: "" });
   assert.equal(result.ok, false);
 });
-
-/* ------------------------------------------------------------ webbed plate, by hand */
 
 await test("webbed plate: the FAQ's example, 11,100 pfu from a 1.11 x 10^10 lysate", () => {
   // 111 plaques in 10 ul of 10^-6 is 1.11 x 10^10 pfu/ml, and 11,100 / 1.11 x 10^10 x 1,000 = 1.00 x 10^-3 µl.
@@ -281,8 +275,6 @@ await test("flooding: 20 ml at 5 ml per plate is 4 plates, as the FAQ works it",
   assert.deepEqual(platesForLysate({ mlWanted: 35 }), { fewest: 5, most: 7 });
 });
 
-/* ------------------------------------------------------------ MOI, by hand */
-
 /** Equal to a relative 1e-9: floating point, not rounding, is all this allows. */
 function close(actual, expected) {
   assert.ok(
@@ -345,8 +337,6 @@ await test("MOI: refuses zero, empty and non-numeric inputs, naming the field", 
     assert.match(result.ok ? "" : result.error, message);
   }
 });
-
-/* ------------------------------------------------------------ EOP, by hand */
 
 await test("EOP: the page's worked example, 2 x 10^8 over 1 x 10^10 is 0.02", () => {
   // 2 x 10^8 / 1 x 10^10 = 2 x 10^-2 = 0.02, which is 2% of the reference titer.
@@ -428,8 +418,6 @@ await test("EOP: refuses a reference with nothing to divide by, and bad counts, 
   }
 });
 
-/* ------------------------------------------------------------ lysate volume, by hand */
-
 await test("lysate volume: the page's worked example, 10,000 pfu on 6 plates from 1 x 10^7", () => {
   // pfu: 10,000 x 6 = 60,000. Lysate: 60,000 / 1 x 10^7 x 1,000 = 6 µl. Per plate: 6 / 6 = 1 µl.
   // 6 plates x 10 µl = 60 µl to plate, so 6 µl lysate + 54 µl buffer.
@@ -485,8 +473,6 @@ await test("lysate volume: refuses zero, empty, fractional and non-numeric input
     assert.match(result.ok ? "" : result.error, message);
   }
 });
-
-/* ------------------------------------------------------------ numbers in and out */
 
 await test("parseNumber reads the ways the bench writes a number", () => {
   assert.equal(parseNumber("1.1e10"), 1.1e10);

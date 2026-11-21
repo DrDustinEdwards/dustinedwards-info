@@ -31,7 +31,7 @@ import { thing } from "@drdustinedwards/site-helpers/schema";
  * }} DictionaryEntry
  */
 
-/** The subject label on each software sense (Dustin, 2026-09-28), set in italics before it. */
+/** The subject label on each software sense, set in italics before it. */
 export const SOFTWARE_LABEL = "software";
 
 /** @param {string | null | undefined} label */

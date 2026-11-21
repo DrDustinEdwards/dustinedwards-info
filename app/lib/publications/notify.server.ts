@@ -1,5 +1,4 @@
-// The daily publication check (the site Worker's check-publications cron job, 06:00 UTC; until 2026-11-06 the
-// watchdog Worker's): ORCID and Crossref are read (sources.server.ts) and each DOI they list that no publication
+// The daily publication check (the site Worker's check-publications cron job, 06:00 UTC): ORCID and Crossref are read (sources.server.ts) and each DOI they list that no publication
 // file carries is mailed to ALERT_EMAIL once, so a paper waiting to be added through Carrel is not mailed daily.
 
 import { checkPublicationSources, type PublicationCheck } from "./sources.server";

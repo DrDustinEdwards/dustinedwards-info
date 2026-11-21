@@ -21,7 +21,7 @@ import { markup } from "capsomer/behavior/trusted-html";
  * One system at /systems/<id>: its address, its repo (or that the repo is private) and its page in the Capsid
  * explorer, then Capsomer's system map at level 2: what uses it, its parts, what it uses, and the flows over its
  * parts, each a list Start, Next and Back step (app/enhance/system-map.ts). Every system is in the build, so an id
- * the model lacks answers 404. A private system is shown in full, without its repo link (Dustin, 2026-10-23).
+ * the model lacks answers 404. A private system is shown in full, without its repo link.
  */
 export function headers() {
   return publicHtmlHeaders();

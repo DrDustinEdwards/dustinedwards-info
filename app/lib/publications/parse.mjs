@@ -8,7 +8,6 @@ import { yamlPlain } from "../yaml-plain.mjs";
 
 export const PUBLICATIONS_DIR = "content/publications";
 
-/** The repository path of a publication's file. */
 export function publicationPath(/** @type {string} */ slug) {
   return `${PUBLICATIONS_DIR}/${slug}.md`;
 }

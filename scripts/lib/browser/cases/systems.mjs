@@ -2,7 +2,7 @@
 /// <reference lib="dom.iterable" />
 
 // /systems and /systems/<id> (app/routes/systems.tsx, app/routes/system.tsx): the network as hexagons, the plain map
-// of cards a tab away, and one system at level 2 (Dustin, 2026-11-03), measured in a real Chromium over the committed model. Each check names what it holds.
+// of cards a tab away, and one system at level 2, measured in a real Chromium over the committed model. Each check names what it holds.
 //
 // What a browser cannot prove is said where it is skipped: a real phone's frame rate (the release PR's remote
 // DevTools run) and a screen reader (VoiceOver and NVDA by hand).

@@ -127,7 +127,7 @@ if (target) {
 
 console.log(`  ${LLMS_PATH}: ${fileBytes.length} bytes, sha ${sha(fileBytes)}`);
 
-/* Measured 15 on the pure tier by running this part on 2026-10-01, floor a little under. --local and
+/* Measured 15 on the pure tier by running this part, floor a little under. --local and
    --remote add the D1 comparison on top, so the pure count bounds every mode. */
 const floorBreach = assertFloor(
   "check:content/llms",

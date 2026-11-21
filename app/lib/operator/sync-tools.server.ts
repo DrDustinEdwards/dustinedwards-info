@@ -139,7 +139,7 @@ export async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
 
 // Derives its work from the same comparison the health check uses, and every drifted slug goes through
 // the one render door. An empty listing is refused as convergeKind refuses it: content/posts answering
-// with no markdown is a fault, and honoring it would delete every post row (Grok audit 2026-10-21, DE-1).
+// with no markdown is a fault, and honoring it would delete every post row.
 export async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
   const before = await readContentSides(env);
   if (before.files.length === 0) {

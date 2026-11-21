@@ -108,5 +108,5 @@ ok(
   );
 }
 
-/* Measured 10 by running this part on 2026-10-20, after the PDF redirect map went; the floor sits a little under it. */
+/* Measured 10 by running this part; the floor sits a little under it. */
 export const outcome = closePart(tally, "paths", 9);

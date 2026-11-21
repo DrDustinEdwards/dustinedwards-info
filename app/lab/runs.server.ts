@@ -2,7 +2,7 @@
  * /lab-bench/runs: run records with the lots they used (docs/KNOWLEDGE-BASE.md step 7, finding P2), so a bad lot traces to
  * every run that used it.
  *
- * Append-only (Dustin, 2026-10-11): a saved run is never edited. A correction is a new run naming the one it replaces,
+ * Append-only: a saved run is never edited. A correction is a new run naming the one it replaces,
  * recorded by the run's own author or by someone who reads all runs, and a run is replaced at most once. The tables'
  * triggers refuse any UPDATE or DELETE whatever the code does.
  *

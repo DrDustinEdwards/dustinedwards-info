@@ -10,8 +10,7 @@ import type { Route } from "./+types/publications.$slug[.md]";
  * (app/lib/publications/twin.mjs builds it), so an agent reads the facts a person does and an edit through
  * Carrel reaches both at once. A draft answers 404 like its page.
  *
- * It was a static asset until publications moved to D1, which is why its headers lived in public/_headers.
- * They are here now, with the cache tag a save purges. NOINDEX because a paper page is a Scholar submission
+ * The headers carry the cache tag a save purges. NOINDEX because a paper page is a Scholar submission
  * and a second indexable URL with the same title and abstract is the duplicate that costs it its ranking;
  * the twin is for agents, and llms.txt is where they are told about it. The canonical link names the page.
  */

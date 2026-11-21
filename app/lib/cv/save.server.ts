@@ -149,7 +149,6 @@ export type CvPdfReport =
   | { rendered: CvPdfOutcome }
   | { failed: string };
 
-/** The CV save. */
 export async function saveCvFile(
   env: CvEnv,
   options: {

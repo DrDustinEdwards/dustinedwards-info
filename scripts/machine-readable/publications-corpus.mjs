@@ -111,5 +111,5 @@ ok(
   shown(refusalsFor("csl", "csl.DOI")),
 );
 
-/* Measured by running this part on 2026-09-30; the floor sits a little under it. */
+/* Measured by running this part; the floor sits a little under it. */
 export const outcome = closePart(tally, "corpus", 14);

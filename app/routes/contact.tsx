@@ -5,7 +5,7 @@ import { OWNER_FACULTY_PAGE, publicHtmlHeaders, siteHead } from "~/lib/seo";
 import "~/styles/prose.css";
 import { PROSE } from "~/lib/prose-context";
 
-/** The site's general address (Dustin, 2026-09-28); the About page publishes the same one. */
+/** The site's general address; the About page publishes the same one. */
 const EMAIL = "contact@dustinedwards.info";
 
 export function headers() {

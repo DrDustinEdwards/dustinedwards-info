@@ -86,7 +86,6 @@ async function rowIsCurrent(env: LlmsEnv, raw: string) {
   return (await getSetting(env, LLMS_SETTING_KEY)) === raw;
 }
 
-/** The llms.txt save. */
 export async function saveLlms(
   env: LlmsEnv,
   options: {

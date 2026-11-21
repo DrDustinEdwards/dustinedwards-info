@@ -17,9 +17,7 @@
  *   a path the gateway 301s, to a page that exists           ok, and FLAGGED: link the target directly
  *   a post that is a draft or scheduled, from a public page  FAIL: every reader gets a 404
  *   anything else, a 410, or an anchor with no heading       FAIL
- *
- * Takes over the further_reading check that was in check:content, which covered one field of one
- * source; this covers it with the rest.
+
  */
 
 import { readFileSync } from "node:fs";
@@ -73,9 +71,7 @@ console.log("\ncheck:links\n");
 const tally = createTally({ print: false });
 const { ok } = tally;
 
-/* ---------------------------------------------------------------------------------------------------
- * The address book: every path the site answers, from the sources.
- * ------------------------------------------------------------------------------------------------ */
+/* The address book: every path the site answers, from the sources. */
 
 /** @type {Set<string>} */
 const served = new Set();
@@ -194,9 +190,7 @@ for (const { post } of posts) {
   }
 }
 
-/* ---------------------------------------------------------------------------------------------------
- * The anchors: the ids each page carries, from its rendered markdown and the components that draw it.
- * ------------------------------------------------------------------------------------------------ */
+/* The anchors: the ids each page carries, from its rendered markdown and the components that draw it. */
 
 /** @type {Map<string, Set<string>>} */
 const renderedIds = new Map();
@@ -348,9 +342,7 @@ function resolvePath(path, hops = []) {
   return { kind: served.has(path) ? "ok" : "missing", path, hops };
 }
 
-/* ---------------------------------------------------------------------------------------------------
- * The links.
- * ------------------------------------------------------------------------------------------------ */
+/* The links. */
 
 /**
  * @typedef {{ where: string, href: string, page: string | null, isPublic: boolean,
@@ -610,9 +602,7 @@ add("redirect targets", {
   isPublic: true,
 });
 
-/* ---------------------------------------------------------------------------------------------------
- * Judge each link.
- * ------------------------------------------------------------------------------------------------ */
+/* Judge each link. */
 
 /** @type {string[]} */
 const flags = [];
@@ -707,9 +697,7 @@ for (const link of links) {
   ok(label, true);
 }
 
-/* ---------------------------------------------------------------------------------------------------
- * Scope, so an empty sweep cannot read as a clean one.
- * ------------------------------------------------------------------------------------------------ */
+/* Scope, so an empty sweep cannot read as a clean one. */
 
 const SCOPES = [
   "posts",
@@ -753,7 +741,7 @@ if (flags.length > 0) {
   for (const flag of flags) console.log(`  FLAG  ${flag}`);
 }
 
-// Measured by running it in CI on 2026-09-29: 1477 checks. The slack is smaller than any source but the
+// Measured by running it in CI: 1477 checks. The slack is smaller than any source but the
 // few that each carry their own scope line above, so a source that stops contributing is caught. The
 // count moves with the content: lower it to a count a run printed, never by arithmetic.
 tally.floor("check:links", "checks", 1450);

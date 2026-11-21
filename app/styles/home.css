@@ -23,7 +23,7 @@
 }
 
 /* The leading is 0.88 because the name breaks over two lines at every width. Light, as every title on the
-   network is (Dustin, 2026-11-05); the footer name stays bold. */
+   network is; the footer name stays bold. */
 .intro-name {
   margin: 0 0 var(--space-4);
   /* NOT a <br>: the h-card's p-name is this element's text, and check:content would read
@@ -305,7 +305,7 @@
   }
 
   /* The name fills the column under the rule: "Edwards" is 3.7075 times the font size wide, so the size is the
-     column's width over that (Dustin, 2026-11-08). The plate's box ends level with the last line of the organization,
+     column's width over that. The plate's box ends level with the last line of the organization,
      and its caption hangs below it, over the gap above the key row. */
   .home-hero {
     container-type: inline-size;
@@ -376,7 +376,7 @@
 }
 
 /* Where the key row is six boxes (Capsomer's, from a 64rem key) they are short: the drawing beside the numeral
-   and the name, the note under, so the cover and the key share one screen (Dustin, 2026-11-08). */
+   and the name, the note under, so the cover and the key share one screen. */
 @container (inline-size >= 64rem) {
   .home-key .cap-annotated-key-entry {
     display: grid;

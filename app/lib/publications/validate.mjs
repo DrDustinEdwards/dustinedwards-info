@@ -121,7 +121,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
     if (!FRONT_MATTER_FIELDS.has(key)) bad(key, "is not a publication field");
   }
 
-  // ---- identity: slug, id, DOI, status
+  // identity: slug, id, DOI, status
   const status = data.status ?? "published";
   if (!STATUSES.includes(/** @type {any} */ (status))) {
     bad("status", `${JSON.stringify(status)} is not one of ${STATUSES.join(", ")}`);
@@ -184,7 +184,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
   if (data.draft !== undefined && typeof data.draft !== "boolean")
     bad("draft", "must be true or false");
 
-  // ---- the citation
+  // the citation
   if (!isFilled(data.type) || !TYPES.includes(/** @type {any} */ (data.type))) {
     bad("type", `${JSON.stringify(data.type)} is not one of ${TYPES.join(", ")}`);
   }
@@ -258,7 +258,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
     });
   }
 
-  // ---- identifiers
+  // identifiers
   if (
     data.pmid !== undefined &&
     data.pmid !== null &&
@@ -296,7 +296,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
   if (data.selected !== undefined && typeof data.selected !== "boolean")
     bad("selected", "must be true or false");
 
-  // ---- access: where the reader gets the paper
+  // access: where the reader gets the paper
   const access = data.access;
   if (!ACCESS.includes(/** @type {any} */ (access))) {
     bad("access", `${JSON.stringify(access)} is not one of ${ACCESS.join(", ")}`);
@@ -366,7 +366,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
       bad("externalUrl", "an external published paper links out through a DOI or an externalUrl");
   }
 
-  // ---- rights: hosting a paper whose license does not permit it is Dustin's call, per DOI
+  // rights: hosting a paper whose license does not permit it is Dustin's call, per DOI
   if (access === "self-hosted") {
     const license = isString(data.license) ? data.license : null;
     if (!permitsRedistribution(license) && !(isString(doi) && HOSTED_WITHOUT_LICENSE.has(doi))) {
@@ -384,7 +384,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
     }
   }
 
-  // ---- the plain-language line
+  // the plain-language line
   if (data.summary !== undefined && data.summary !== null) {
     const summary = data.summary;
     if (!isString(summary) || summary.trim() === "") {
@@ -398,7 +398,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
     }
   }
 
-  // ---- the abstract and the raw record
+  // the abstract and the raw record
   if (data.abstract !== undefined && data.abstract !== null) {
     if (!isString(data.abstract)) bad("abstract", "must be text");
     else if (data.abstract.includes("<"))
@@ -421,7 +421,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
     }
   }
 
-  // ---- update notice and accessions
+  // update notice and accessions
   const noticeProblem = updateNoticeProblem(data.updateNotice);
   if (noticeProblem) bad("updateNotice", noticeProblem);
 

@@ -84,9 +84,6 @@ async function main() {
   // from a reshaped post that could disagree with them.
   const postRecords = (records ?? []).filter((/** @type {any} */ r) => r.type === "post");
 
-  // About is a page file now: buildArtifact above compiled it through the page validator (docs/PAGES.md),
-  // which holds it to the render floor check:content used to check here.
-
   // Every cohort file through the roster validator, the code the Carrel save runs (docs/ROSTER.md); it throws
   // on the first file that does not compile, which main's catch reports.
   const roster = await buildRoster();

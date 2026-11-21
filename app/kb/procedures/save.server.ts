@@ -216,7 +216,6 @@ async function rowIsCurrent(env: ProcedureEnv, slug: string, blobSha: string) {
   return true;
 }
 
-/** save_procedure. */
 export async function saveProcedure(
   env: ProcedureEnv,
   options: {

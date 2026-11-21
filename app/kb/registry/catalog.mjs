@@ -72,8 +72,6 @@ function itemTwin(name, lines) {
     .trim()}\n`;
 }
 
-/* ------------------------------------------------------------------------------------------------ primers */
-
 /**
  * A primer as the pages read it: the record's own fields, the literature as read (and what could not be), and what is
  * computed: from its sequence, its length, GC content, Tm and reverse complement; from its reference, its placement; and by
@@ -281,8 +279,6 @@ export function protocolsUsing(primer, protocols) {
     .map((protocol) => ({ path: protocol.path, title: protocol.title }));
 }
 
-/* ------------------------------------------------------------------------------------------------ strains */
-
 /**
  * A strain as the pages read it: the record's own fields, and what is computed from elsewhere: its designation (from its
  * fields), and the phages isolated on it, read from the phages table by the host key that is the strain's own id. Nothing
@@ -431,8 +427,6 @@ export function strainMarkdown(strain, usedBy, origin) {
   ];
   return itemTwin(strain.name, lines);
 }
-
-/* ------------------------------------------------------------------------------------------------ reagents */
 
 /**
  * Whether a kind has a page for each item. Every kind does today (docs/KNOWLEDGE-BASE.md, A1); a kind that is only ever one table
@@ -631,8 +625,6 @@ export function reagentItemMarkdown(r, origin) {
   return itemTwin(r.name, lines);
 }
 
-/* ------------------------------------------------------------------------------------------------ equipment */
-
 /**
  * What the protocols do with an item, read from the protocols that name it in their equipment list (`equipment: <id>`). Nothing is
  * stored on the item, so a protocol that names it later is listed with no edit to the record.
@@ -771,8 +763,6 @@ export function equipmentItemMarkdown(e, origin) {
   ];
   return itemTwin(e.name, lines);
 }
-
-/* ------------------------------------------------------------------------------------------------ inventory */
 
 /** A phage's host as plain words: the table's short form without its emphasis marks. @param {string | null} host */
 function hostWords(host) {
@@ -916,8 +906,6 @@ export const INVENTORY = defineCatalog(
     ],
   }),
 );
-
-/* ------------------------------------------------------------------------------------------------ markdown twins */
 
 /**
  * A site on a reference in words, as the page and the twin state it: its span in the accession's own coordinates, its

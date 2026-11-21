@@ -17,7 +17,7 @@ import "capsomer/panel.css";
 import "~/styles/features.css";
 
 /**
- * What the whole network does (Dustin, 2026-11-07), laid out as Foxhound's features page is: a row of chips that filter by
+ * What the whole network does, laid out as Foxhound's features page is: a row of chips that filter by
  * program, a contents list beside the sections, and a card for each thing a program does. The cards are in the HTML, so the
  * page is complete with script off; app/enhance/features.ts makes a chip hide the cards of the other programs (and the
  * sections left empty), and without it every card shows. The markdown twin (/features.md) is drawn from the same list.

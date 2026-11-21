@@ -39,8 +39,6 @@ function assertError(errors, pattern) {
   );
 }
 
-// ---------------------------------------------------------------- marks.mjs
-
 await test("a single-word mark ends at the word; a braced mark runs to its brace", () => {
   assert.deepEqual(tokenize("Add @salt."), [
     { type: "text", value: "Add " },
@@ -152,8 +150,6 @@ await test("readConditions reads spins in rpm and in x g, including a range", ()
   );
 });
 
-// ---------------------------------------------------------------- parse.mjs
-
 const BODY = `---
 profile: protocol
 ---
@@ -264,8 +260,6 @@ await test("headingId gives the id github-slugger gives the same words", () => {
     assert.equal(headingId(title), githubSlug(title), title);
   }
 });
-
-// ---------------------------------------------------------------- validate.mjs
 
 const PROTOCOL = `---
 profile: protocol

@@ -1,7 +1,6 @@
 // One door from a dictionary entry file to everything derived from it: parse, validate, the entry every
 // surface reads. check:content, build:content, sync:content and the Carrel adapter's save all call
-// compileDictionaryEntry, so a file CI passes is the file the save accepts and the page draws. The rules
-// below are the ones the CI tests used to read the entries for (docs/DICTIONARY.md).
+// compileDictionaryEntry, so a file CI passes is the file the save accepts and the page draws.
 
 import { contentIdFits } from "../carrel/content-id.mjs";
 import { gitBlobSha } from "../content/hashes.mjs";

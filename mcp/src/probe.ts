@@ -11,11 +11,6 @@
  * authentication would defeat it. It answers one no-op tool and has no route to
  * the operator API, so there is nothing here to protect.
  *
- * SCOPE NARROWED 2026-07-30. An earlier version also served RFC 9728 and RFC 8414
- * metadata at the root to capture the OAuth 2.1 discovery walk. Those routes now
- * belong to the real authorization server, and the walk has been measured and
- * recorded in the README, so the probe no longer serves them.
- *
  * MEASUREMENTS SO FAR
  *   Claude Code 2.1.203   2026-07-29   LEGACY: initialize, 2025-11-25, no
  *                                      Mcp-Method or Mcp-Name, opens a GET stream
@@ -179,7 +174,7 @@ async function record(env: ProbeEnv, request: Request, body: unknown): Promise<v
   });
 }
 
-/** The largest request body a capture reads (Grok audit 2026-10-21, DE-5). */
+/** The largest request body a capture reads. */
 const MAX_CAPTURED_BODY = 16_384;
 
 export async function handleProbe(

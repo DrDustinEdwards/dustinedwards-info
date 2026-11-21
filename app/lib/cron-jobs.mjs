@@ -9,8 +9,7 @@
 // prune-404 is one DELETE, so one minute; ask-index is a count and two or three AI Search calls, so one minute too. A
 // job past its timeout is recorded failed and the next one starts.
 //
-// Three jobs came from the retired watchdog Worker (2026-11-06; Capsid's watcher now reads /health, repairs drift and
-// runs the weekly citation refresh, as it does for every site): health-snapshot stores the colophon's health verdict
+// health-snapshot stores the colophon's health verdict
 // every fifteen minutes (a health run takes about a second, so two minutes is hung); purge-zero-results removes
 // expired zero-result queries at 04:00 UTC (one DELETE, one minute); check-publications reads ORCID and Crossref at
 // 06:00 UTC and mails each new DOI once (two outside APIs, so five minutes).

@@ -273,7 +273,7 @@ if (!existsSync(ARTIFACT)) {
   );
 }
 
-// Measured by running it, never summed: 322 checks and 179 declarations on 2026-11-09.
+// Measured by running it, never summed: 322 checks and 179 declarations.
 // The declarations are fill, stroke and font-size on the three inline drawings. A mermaid
 // drawing that is still an image adds its own color declarations on top of that.
 const MINIMUM_CHECKS = 320;

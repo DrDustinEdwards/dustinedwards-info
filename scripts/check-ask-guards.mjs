@@ -684,8 +684,7 @@ refuses(
   );
 }
 
-/* Measured by running this gate, and it moves with the measurement: slack is the defect. 112 on 2026-11-17,
-   when check:policy (75) folded in beside the Ask guards (37). */
+/* Measured by running this gate, and it moves with the measurement: slack is the defect. */
 const MINIMUM_CHECKS = 112;
 const floorBreach = assertFloor("check:ask-guards", "checks", tally.checks, MINIMUM_CHECKS);
 if (floorBreach) tally.fail(floorBreach);

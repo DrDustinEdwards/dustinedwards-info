@@ -1,7 +1,7 @@
 // The knowledge bases (docs/KNOWLEDGE-BASE.md): one entry per base, each the procedures of one profile with the
 // address root its entries live under and the address of its library. The software how-tos live under /software
 // (DECIDE 4), the library and its entries both. Declared once here; the procedure validator's roots and the route table read it,
-// so a base's address is never typed twice. A list in code, not a table (Dustin, 2026-10-09): a base is nothing
+// so a base's address is never typed twice. A list in code, not a table: a base is nothing
 // without its profile's components, and those are code.
 
 /**
