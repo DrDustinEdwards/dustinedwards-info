@@ -6,7 +6,7 @@
 // Token names, not colors: build:diagrams resolves them against app.css. Mermaid rejects var(--x) because khroma parses
 // every value, so each theme is a separate render. One token per role in Prelum's DIAGRAM_ROLE_NAMES.
 export const DIAGRAM_ROLE_TOKENS = {
-  paper: "--paper",
+  paper: "--page-paper",
   raised: "--surface-popover",
   text: "--text",
   heading: "--text-heading",

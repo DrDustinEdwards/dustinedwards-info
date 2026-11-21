@@ -37,7 +37,7 @@ const HEIGHT = 630;
 
 /**
  * Ink on paper, from the light block: a card is drawn once and shown in feeds with no idea of the
- * reader's theme, and the paper ground is the site's own. Every pair here is measured on --paper.
+ * reader's theme, and the paper ground is the site's own. Every pair here is measured on --page-paper.
  */
 const PAPER_BLOCK = tokenBlock("build:og", THEME_SELECTORS.light);
 const {
@@ -46,7 +46,7 @@ const {
   muted: MUTED,
 } = resolveTokens(
   {
-    ground: "--paper",
+    ground: "--page-paper",
     ink: "--text-heading",
     muted: "--text-secondary",
   },

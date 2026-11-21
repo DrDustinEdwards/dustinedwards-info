@@ -14,13 +14,13 @@ const resolve = (/** @type {Record<string, string>} */ block, /** @type {string}
 const light = tokenBlock("light", THEME_SELECTORS.light);
 const dark = tokenBlock("dark", THEME_SELECTORS.dark);
 
-/* The palette blocks are the ones declaring --paper. A theme block inserted
+/* The palette blocks are the ones declaring --page-paper. A theme block inserted
    above them would otherwise be read as the palette. */
 for (const [label, block] of /** @type {Array<[string, Record<string, string>]>} */ ([
   ["light", light],
   ["dark", dark],
 ])) {
-  if (!("--paper" in block)) throw new Error(`${label}: block does not declare --paper`);
+  if (!("--page-paper" in block)) throw new Error(`${label}: block does not declare --page-paper`);
 }
 
 const names = Object.keys(light);

@@ -61,7 +61,7 @@
   margin: 0;
   list-style: none;
   background: var(--text);
-  color: var(--paper);
+  color: var(--page-paper);
 }
 
 .library-start > li {
@@ -79,7 +79,7 @@
 
 .library-start-title,
 .library-start-title:visited {
-  color: var(--paper);
+  color: var(--page-paper);
   font-size: var(--fs-h3);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight-5);
@@ -87,7 +87,7 @@
 }
 
 .library-start-title:hover {
-  background: color-mix(in srgb, var(--paper) 18%, transparent);
+  background: color-mix(in srgb, var(--page-paper) 18%, transparent);
 }
 
 .library-start-why {

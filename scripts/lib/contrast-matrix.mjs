@@ -14,44 +14,44 @@ export const APCA_KEYSTONE = [
   ["#444", "#123", -7.526878460278154],
 ];
 
-// No --fill-* on --paper row: a fill always carries text.
+// No --fill-* on --page-paper row: a fill always carries text.
 export const TEXT = 4.5; // WCAG 1.4.3 AA, normal text
 export const UI = 3.0; // WCAG 1.4.11, non-text UI and graphical objects
 // No disabled floor: WCAG exempts inactive components.
 
 /** @type {Array<[string, string, number, string]>} fg, bg, min, note */
 export const MATRIX = [
-  ["--text", "--paper", TEXT, "body text on paper"],
-  ["--text-heading", "--paper", TEXT, "heading text on paper"],
-  ["--text-accent", "--paper", TEXT, "accent text on paper"],
+  ["--text", "--page-paper", TEXT, "body text on paper"],
+  ["--text-heading", "--page-paper", TEXT, "heading text on paper"],
+  ["--text-accent", "--page-paper", TEXT, "accent text on paper"],
   ["--text", "--surface-popover", TEXT, "body on popover"],
   ["--text-heading", "--surface-popover", TEXT, "heading on popover"],
   // No --text-disabled on --surface-popover row: it fails there, nothing ships it.
   ["--text", "--mark-bg", TEXT, "body on search highlight"],
   ["--text", "--selection-bg", TEXT, "body on selection"],
   ["--text", "--tint-brand", TEXT, "body on brand tint"],
-  ["--text-secondary", "--paper", TEXT, "quiet ink on paper"],
+  ["--text-secondary", "--page-paper", TEXT, "quiet ink on paper"],
   ["--text-secondary", "--surface-popover", TEXT, "muted on popover"],
   // No disabled row: WCAG exempts inactive controls. See NON_PARTICIPATING.
 
   // Borders are non-text UI
-  ["--border", "--paper", UI, "a hairline on paper"],
+  ["--border", "--page-paper", UI, "a hairline on paper"],
   // No --border on --surface-popover row: it fails there, so the popover step takes
   // --border-strong.
-  ["--border-strong", "--paper", UI, "a control edge on paper"],
+  ["--border-strong", "--page-paper", UI, "a control edge on paper"],
   ["--border-strong", "--surface-popover", UI, "strong border on popover"],
 
-  ["--brand", "--paper", TEXT, "a link, a focus ring and the header mark, all on paper"],
+  ["--brand", "--page-paper", TEXT, "a link, a focus ring and the header mark, all on paper"],
   ["--brand", "--surface-popover", TEXT, "a link and its focus ring on the popover step"],
   // The cover picker rings the chosen thumbnail in brand, on the drawer.
   ["--brand", "--tint-brand", TEXT, "brand on its own tint"],
-  ["--brand-hover", "--paper", TEXT, "a hovered link on paper"],
+  ["--brand-hover", "--page-paper", TEXT, "a hovered link on paper"],
   // The admin identity block hovers on the shell surface, not the page.
-  ["--brand-pressed", "--paper", TEXT, "a pressed link on paper"],
+  ["--brand-pressed", "--page-paper", TEXT, "a pressed link on paper"],
   ["--on-brand", "--brand", TEXT, "text on brand fill"],
   ["--on-brand", "--brand-hover", TEXT, "text on brand hover fill"],
   ["--on-brand", "--brand-pressed", TEXT, "the label on a pressed primary button"],
-  ["--visited", "--paper", TEXT, "a visited link on paper"],
+  ["--visited", "--page-paper", TEXT, "a visited link on paper"],
   ["--focus-ring-on-brand", "--brand", UI, "inner ring on brand fill"],
   // No --focus-ring-on-brand against --fill-danger. It measures 1.47:1 in dark,
   // so app.css does not draw that ring and this does not pretend it does.
@@ -59,53 +59,53 @@ export const MATRIX = [
   // The caption band is opaque, so the ratio ignores the picture.
   ["--on-scrim", "--scrim", TEXT, "tile caption over the image"],
 
-  ["--text-danger", "--paper", TEXT, "danger text on paper"],
+  ["--text-danger", "--page-paper", TEXT, "danger text on paper"],
   // Revert to draft, as a row in the overflow menu on the popover step.
   ["--text-danger", "--surface-popover", TEXT, "danger text on popover"],
   ["--on-tint-danger", "--tint-danger", TEXT, "text on danger tint"],
-  ["--border-danger", "--paper", UI, "danger border"],
+  ["--border-danger", "--page-paper", UI, "danger border"],
   ["--on-fill-danger", "--fill-danger", TEXT, "text on danger fill"],
   ["--on-fill-danger", "--fill-danger-hover", TEXT, "text on danger hover fill"],
 
   [
     "--text-warning",
-    "--paper",
+    "--page-paper",
     TEXT,
     "warning text on paper, including the command bar dirty state",
   ],
   ["--on-tint-warning", "--tint-warning", TEXT, "text on warning tint"],
-  ["--border-warning", "--paper", UI, "a warning border on paper, including the dirty dot ring"],
+  ["--border-warning", "--page-paper", UI, "a warning border on paper, including the dirty dot ring"],
   ["--border-warning", "--tint-warning", UI, "warning border on its own tint"],
   // The dirty-state indicator in the command bar: amber text and an amber fill
   // dot, both on the shell surface rather than on the page.
   ["--brand", "--tint-warning", UI, "brand fill edge on warning tint"],
   ["--on-fill-warning", "--fill-warning", TEXT, "text on warning fill"],
 
-  ["--text-success", "--paper", TEXT, "success text on paper"],
+  ["--text-success", "--page-paper", TEXT, "success text on paper"],
   ["--on-tint-success", "--tint-success", TEXT, "text on success tint"],
-  ["--border-success", "--paper", UI, "a success border on paper"],
+  ["--border-success", "--page-paper", UI, "a success border on paper"],
   ["--on-fill-success", "--fill-success", TEXT, "text on success fill"],
 
   // Accent, decorative but still read as text
 
   // Charts are graphical objects
-  ["--chart-cadet", "--paper", UI, "chart cadet"],
-  ["--chart-purple", "--paper", UI, "chart purple"],
-  ["--chart-claret", "--paper", UI, "chart claret"],
-  ["--chart-sage", "--paper", UI, "chart sage"],
-  ["--chart-gold", "--paper", UI, "chart gold"],
-  ["--chart-rust", "--paper", UI, "chart rust"],
+  ["--chart-cadet", "--page-paper", UI, "chart cadet"],
+  ["--chart-purple", "--page-paper", UI, "chart purple"],
+  ["--chart-claret", "--page-paper", UI, "chart claret"],
+  ["--chart-sage", "--page-paper", UI, "chart sage"],
+  ["--chart-gold", "--page-paper", UI, "chart gold"],
+  ["--chart-rust", "--page-paper", UI, "chart rust"],
 
-  ["--text-destructive", "--paper", TEXT, "destructive text on paper"],
+  ["--text-destructive", "--page-paper", TEXT, "destructive text on paper"],
   ["--text-destructive", "--surface-popover", TEXT, "destructive text in a popover"],
   ["--text-destructive", "--tint-destructive", TEXT, "destructive text on its own tint"],
 
   ["--text", "--glass-fill-paper", TEXT, "body on paper glass, composited"],
   ["--text-secondary", "--glass-fill-paper", TEXT, "muted copy on paper glass"],
   // The placeholder must sit below the value that replaces it.
-  ["--placeholder", "--paper", TEXT, "placeholder in a field"],
+  ["--placeholder", "--page-paper", TEXT, "placeholder in a field"],
 
-  // The header mark's purple paths take --brand, measured by the --brand on --paper row. Its three
+  // The header mark's purple paths take --brand, measured by the --brand on --page-paper row. Its three
   // warm paths would fail (2.72, 1.93, 1.58:1 on limestone) but are logotype ink, which 1.4.11 exempts.
   ["--brand", "--glass-fill-paper", TEXT, "link on paper glass"],
   ["--visited", "--glass-fill-paper", TEXT, "visited link on paper glass"],
@@ -113,15 +113,15 @@ export const MATRIX = [
   // No bar rows: a pair against a surface nothing paints is not coverage.
 
   // No --dust row on paper: it cannot identify a control; --line-strong does.
-  ["--line-strong", "--paper", UI, "a control edge on paper"],
+  ["--line-strong", "--page-paper", UI, "a control edge on paper"],
   // The underline is what marks a paragraph link, since link and body text sit under 3:1.
 
-  ["--error", "--paper", TEXT, "error text on paper"],
-  ["--warning", "--paper", TEXT, "warning text on paper"],
-  ["--success", "--paper", TEXT, "success text on paper"],
+  ["--error", "--page-paper", TEXT, "error text on paper"],
+  ["--warning", "--page-paper", TEXT, "warning text on paper"],
+  ["--success", "--page-paper", TEXT, "success text on paper"],
 
   // Oxide 400 draws the plate's figure numbers and leaders on paper in light (home.css), so 1.4.11 applies.
-  ["--fig-oxide-400", "--paper", UI, "plate figure numbers and leaders on paper"],
+  ["--fig-oxide-400", "--page-paper", UI, "plate figure numbers and leaders on paper"],
   // A leader identifies which label names which plaque, so 1.4.11 applies. Oxide 300 is measured in
   // every theme because it is the weaker on the light lawn (3.2:1 against 400's 4.3:1).
   ["--fig-oxide-300", "--fig-lawn", UI, "plate leader on the lawn"],

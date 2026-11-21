@@ -35,7 +35,7 @@ function plaque(id: string) {
 }
 
 const FILL = {
-  paper: "var(--paper)",
+  paper: "var(--page-paper)",
   lawn: "var(--fig-lawn)",
   turbid: "var(--fig-turbid)",
   none: "none",
@@ -83,7 +83,7 @@ function Drawing({ layout, variant }: { layout: PlateLayout; variant: "wide" | "
             cx={cx}
             cy={cy}
             r={rim}
-            fill="var(--paper)"
+            fill="var(--page-paper)"
             stroke="var(--text)"
             strokeWidth="1.6"
           />

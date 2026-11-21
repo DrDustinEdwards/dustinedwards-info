@@ -14,7 +14,7 @@
   --prose-heading-weight: var(--weight-heading);
   --prose-h2-size: var(--t-h2-size);
   --prose-h3-size: var(--fs-h3);
-  --prose-code-bg: var(--paper);
+  --prose-code-bg: var(--page-paper);
   font-family: var(--prose);
   font-size: var(--fs-prose);
   line-height: var(--leading);
@@ -23,7 +23,7 @@
 /* The diagram tones in the site's colors (capsomer/prose-blocks.css reads them; it sizes the SVG, which keeps its own
    width and only shrinks). One drawing for both themes: an inline SVG inherits these, and an <img> cannot. */
 .blog-diagram {
-  --diagram-neutral: var(--paper);
+  --diagram-neutral: var(--page-paper);
   --diagram-neutral-line: var(--border);
   --diagram-neutral-ink: var(--text);
   --diagram-accent: var(--tint-brand);
@@ -35,7 +35,7 @@
   --diagram-warning: var(--tint-warning);
   --diagram-warning-line: var(--border-warning);
   --diagram-warning-ink: var(--on-tint-warning);
-  --diagram-info: color-mix(in srgb, var(--chart-cadet) 14%, var(--paper));
+  --diagram-info: color-mix(in srgb, var(--chart-cadet) 14%, var(--page-paper));
   --diagram-info-line: var(--chart-cadet);
   --diagram-info-ink: var(--text);
   --diagram-arrow: var(--border-strong);
