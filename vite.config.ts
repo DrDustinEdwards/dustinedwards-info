@@ -1,3 +1,4 @@
+import { nativeBuiltins } from "@dustinedwards/devkit/vite/native-builtins";
 import { reactRouter } from "@react-router/dev/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { readFileSync } from "node:fs";
@@ -67,6 +68,7 @@ export default defineConfig({
     __BUILD_ID__: JSON.stringify(BUILD_ID),
   },
   plugins: [
+    nativeBuiltins(),
     cloudflare({
       viteEnvironment: { name: "ssr" },
       config: PREVIEW_LOCAL

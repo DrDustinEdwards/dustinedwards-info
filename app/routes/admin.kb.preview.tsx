@@ -1,7 +1,7 @@
 import { ADMIN_FORM_BYTES } from "~/lib/body.server";
 import { readForm } from "@dustinedwards/site-runtime/body";
 import { isSlug } from "@drdustinedwards/site-helpers/slug";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToReadableStream } from "react-dom/server";
 
 import { ProcedureView } from "~/components/procedure";
 import { getEnv } from "~/lib/context";
@@ -40,7 +40,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     if (!compiled.ok) return Response.json({ errors: compiled.errors });
     const { record } = compiled;
     const count = record.profile === "recipe" ? (record.servings ?? 1) : (record.scale?.count ?? 1);
-    const html = renderToStaticMarkup(
+    const stream = await renderToReadableStream(
       <main className="page">
         <div className="page-inner">
           <h1 className="page-title cap-layout-grid">{record.title}</h1>
@@ -48,6 +48,8 @@ export async function action({ request, params, context }: Route.ActionArgs) {
         </div>
       </main>,
     );
+    await stream.allReady;
+    const html = await new Response(stream).text();
     return Response.json({ html, styles: STYLES });
   } catch (error) {
     console.error(JSON.stringify({ alert: "kb-preview-failed", detail: errorMessage(error) }));
