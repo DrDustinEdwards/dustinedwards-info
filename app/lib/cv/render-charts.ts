@@ -57,6 +57,7 @@ export function renderCvCharts(
       selected: timeline.selected,
       hrefForYear: (year) => `/cv${yearHref(state, year) || "?"}`,
       yLabel: "Entries",
+      source: "Dustin Edwards, CV",
       emptyText: timelineEmptyText(timeline) ?? "There is nothing to chart for these filters.",
       ...(options.width === undefined ? {} : { width: options.width }),
     }),
