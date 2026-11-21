@@ -1,4 +1,3 @@
-import "capsomer/eyebrow.css";
 import { plural } from "@drdustinedwards/site-helpers/text";
 import { Catalog } from "capsomer/react/catalog";
 import type { CatalogResult } from "capsomer/behavior/catalog";
@@ -106,9 +105,7 @@ export function LabPrimers({ result }: { result: CatalogResult<PrimerListRow> })
 function Fact({ term, children }: { term: string; children: React.ReactNode }) {
   return (
     <>
-      <dt className="cap-eyebrow" data-variant="mono">
-        {term}
-      </dt>
+      <dt>{term}</dt>
       <dd>{children}</dd>
     </>
   );

@@ -50,7 +50,6 @@ import {
 
 import type { Route } from "./+types/cv";
 
-import "capsomer/eyebrow.css";
 import "capsomer/tokens.css";
 import "capsomer/status.css";
 import "capsomer/copy.css";
@@ -599,11 +598,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                     data-cv-part={part.key}
                     hidden={!part.ids.some((id) => shown.has(id))}
                   >
-                    {part.heading ? (
-                      <h3 className="cap-eyebrow cv-part-title" data-variant="mono">
-                        {part.heading}
-                      </h3>
-                    ) : null}
+                    {part.heading ? <h3 className="cv-part-title">{part.heading}</h3> : null}
                     <ol className="cv-list cap-timeline">
                       {part.ids.map((id) => {
                         const entry = BY_ID.get(id);

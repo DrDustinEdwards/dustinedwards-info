@@ -56,7 +56,6 @@ export const SITE = {
   // The university and its system, for the home hero and the About panel. `affiliation` stays the short form worksFor needs.
   org: IDENTITY.org,
   department: IDENTITY.department,
-  eyebrow: IDENTITY.role,
   tagline: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.affiliation}.`,
   description: `${HONORIFIC}${IDENTITY.name}, ${IDENTITY.role}. Research on retroviruses and bacteriophage genomics, and on how undergraduate research is taught.`,
 } as const;

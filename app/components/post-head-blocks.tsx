@@ -1,4 +1,3 @@
-import "capsomer/eyebrow.css";
 // None of these may name a person: the missing byline is deliberate (a hidden `p-author` h-card
 // carries it). No `p-` or `dt-` classes either, so a status like "draft" never reaches parsers as data.
 
@@ -28,27 +27,21 @@ export function PostHeadBlocks({
     <dl className="post-blocks">
       {writingStatus ? (
         <div className="post-block">
-          <dt className="cap-eyebrow" data-variant="mono">
-            Writing status
-          </dt>
+          <dt>Writing status</dt>
           <dd>{STATUS_LABEL[writingStatus]}</dd>
         </div>
       ) : null}
 
       {assumedAudience ? (
         <div className="post-block">
-          <dt className="cap-eyebrow" data-variant="mono">
-            Assumed audience
-          </dt>
+          <dt>Assumed audience</dt>
           <dd>{assumedAudience}</dd>
         </div>
       ) : null}
 
       {takeaways.length > 0 ? (
         <div className="post-block">
-          <dt className="cap-eyebrow" data-variant="mono">
-            Key takeaways
-          </dt>
+          <dt>Key takeaways</dt>
           <dd>
             <ul>
               {takeaways.map((item) => (

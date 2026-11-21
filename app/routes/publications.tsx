@@ -43,7 +43,6 @@ import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
 import "capsomer/author-list.css";
-import "capsomer/eyebrow.css";
 import "~/styles/listing.css";
 import "~/styles/publications.css";
 
@@ -139,7 +138,7 @@ function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
   const { slug } = p;
   return (
     <div className="paper-row">
-      <p className="cap-eyebrow paper-marks" data-variant="mono">
+      <p className="paper-marks">
         {p.type !== "article" ? <span className="paper-kind">{p.type}</span> : null}
         {p.isOpenAccess ? <span className="paper-open">open access</span> : null}
       </p>

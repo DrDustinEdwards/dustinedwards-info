@@ -76,8 +76,6 @@ export type MenuRow = {
 /** The one block of the right half. */
 type Spotlight = {
   kind: "text" | "map";
-  /** Names the audience when the title alone does not (Join the lab). */
-  eyebrow?: string;
   /** An icon in a round well above the title (Join the lab). */
   icon?: NavIcon;
   title: string;
@@ -242,7 +240,6 @@ function teachingMenu(): Menu {
     ],
     spotlight: {
       kind: "text",
-      eyebrow: "Prospective students",
       icon: "users",
       title: "Join the lab",
       to: "/teaching#join-the-lab",

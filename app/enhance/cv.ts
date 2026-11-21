@@ -121,7 +121,7 @@ export default function start(): void {
       for (const part of group.parts) {
         const wrap = el("div", "cv-part", { "data-cv-part": part.key });
         if (part.heading) {
-          const h3 = el("h3", "cap-eyebrow cv-part-title", { "data-variant": "mono" });
+          const h3 = el("h3", "cv-part-title");
           h3.textContent = part.heading;
           wrap.appendChild(h3);
         }

@@ -1,4 +1,3 @@
-import "capsomer/eyebrow.css";
 import { Signs } from "capsomer/react/manual";
 import type { workflowContext } from "~/kb/procedures/library.mjs";
 
@@ -21,9 +20,7 @@ export function ProtocolWorkflow({ context }: { context: ReturnType<typeof workf
       />
       {context.tools.length > 0 ? (
         <dl className="procedure-workflow-links">
-          <dt className="cap-eyebrow" data-variant="mono">
-            Calculators
-          </dt>
+          <dt>Calculators</dt>
           <dd>
             {context.tools.map((t) => (
               <a key={t.id} href={t.href}>
