@@ -7,9 +7,9 @@ import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 import type { Route } from "./+types/cv-pdf";
 
 /**
- * The CV's PDF at /dustin-edwards-cv.pdf, the address it has always had. It was a committed static file; it is now
- * the one object the Worker renders after each CV save and keeps in R2 (app/lib/cv/pdf.server.ts, docs/CV.md). A
- * static file here would win over this route, so the committed PDF is gone.
+ * The CV's PDF at /dustin-edwards-cv.pdf, the address it has always had. The Worker renders
+ * the one object after each CV save and keeps it in R2 (app/lib/cv/pdf.server.ts, docs/CV.md). A
+ * static file here would win over this route.
  *
  * Served as the static file was (site-runtime r2ObjectResponse): `application/pdf`, with an ETag and byte ranges. The
  * cache tag `cv` is what a regenerate purges, with the page, its twin and its charts. The object is made by the first

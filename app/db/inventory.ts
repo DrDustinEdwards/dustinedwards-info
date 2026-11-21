@@ -91,7 +91,6 @@ export function lotChange(
 
 export type NewLot = Omit<LotRow, "id" | "location" | "status" | "opened">;
 
-/** A new lot and its insert audit row. */
 export function lotInsert(env: Env, actor: string, lot: NewLot): D1PreparedStatement[] {
   return [
     env.DB.prepare(

@@ -431,14 +431,6 @@ if (update) {
 }
 
 // Measured on a plain run: `--update` skips the per-binary baseline comparisons.
-// 512 after the playground stylesheets were retired with /playground (2026-09-28): their 8 checks
-// went with them, no block was skipped. 438 after Inter's latin faces were replaced by Schibsted Grotesk and
-// Martian Mono (2026-10-26): fewer faces and binaries, no block skipped. 321 after those two came from
-// Capsomer's fonts.css, one variable file each, and the unused type levels and metric fallbacks went (2026-10-28).
-// 297 after the site nav set its weights with font-weight, not bare "wght" font-variation-settings (2026-11-04):
-// each bare request was checked against every variable face, and three such requests went; no block skipped.
-// 243 after the serif's web faces and Inter's greek and math were Capsomer's, not copies here (2026-11-17): twelve
-// binaries and the split-range checks went with them.
 const MINIMUM_CHECKS = 243;
 tally.floor("check:fonts", "checks", MINIMUM_CHECKS);
 

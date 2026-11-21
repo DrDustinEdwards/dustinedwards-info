@@ -147,9 +147,7 @@ if (configSource.which === "wrangler.jsonc" && existsSync(join(ROOT, "wrangler.j
   );
 }
 
-// ---------------------------------------------------------------------------
 // A. Bindings are an allowlist, derived from the config rather than restated.
-// ---------------------------------------------------------------------------
 
 // Any of these would give the wrapper a second route to app data, which is the
 // one thing it must not have.
@@ -276,9 +274,7 @@ check(
   (config.compatibility_flags ?? []).includes("global_fetch_strictly_public"),
 );
 
-// ---------------------------------------------------------------------------
 // B. Credentials and vars the wrapper must never hold.
-// ---------------------------------------------------------------------------
 
 // GITHUB_TOKEN would be a repository WRITE credential. The site no longer holds one
 // (its content source is D1), and the wrapper must never hold one either: it could
@@ -308,9 +304,7 @@ for (const name of FORBIDDEN_NAMES) {
   }
 }
 
-// ---------------------------------------------------------------------------
 // C. No shared code with the app.
-// ---------------------------------------------------------------------------
 
 /*
  * NO APP MODULE AT ALL. The wrapper once imported the site's repair plan for
@@ -339,9 +333,7 @@ for (const f of files) {
   }
 }
 
-// ---------------------------------------------------------------------------
 // D. Outbound reach. Every network destination is deliberate.
-// ---------------------------------------------------------------------------
 
 // The Access sign-in host is built from the ACCESS_TEAM_DOMAIN var, so no
 // login host appears as a literal. The operator API is reached through the
@@ -387,9 +379,7 @@ check(
   "A literal host would survive a config change and reach the wrong environment.",
 );
 
-// ---------------------------------------------------------------------------
 // E. The tool surface mirrors the API and nothing more.
-// ---------------------------------------------------------------------------
 
 const toolsText = readFileSync(join(SRC, "tools.ts"), "utf8");
 /*
@@ -539,9 +529,7 @@ check(
   files.every((f) => f.name === "api-client.ts" || !/SITE\.fetch\(/.test(codeOnly(f.text))),
 );
 
-// ---------------------------------------------------------------------------
 // F. No policy DECISIONS. Describing a policy is required; enforcing one is not.
-// ---------------------------------------------------------------------------
 
 // The tool descriptions must MENTION the first-publish rule so an agent reads a
 // refusal as policy. But no code may BRANCH on it: that would be a second,
@@ -607,11 +595,9 @@ for (const f of files) {
   }
 }
 
-// ---------------------------------------------------------------------------
 // G. The prior-era shim stays behind one seam and keeps its removal condition.
 // The shim is site-runtime's routeMcpEra; this Worker's part is the one call
 // that hands it the SDK's isLegacyRequest.
-// ---------------------------------------------------------------------------
 
 {
   const handlerText = readFileSync(join(SRC, "mcp-handler.ts"), "utf8");
@@ -641,9 +627,7 @@ for (const f of files) {
   );
 }
 
-// ---------------------------------------------------------------------------
 // H. The door is site-runtime's adminMcpWorker, and only that.
-// ---------------------------------------------------------------------------
 
 /*
  * The door's guarantees (CIMD for claude.ai, measured 2026-07-30; DCR at /register for Grok's rmcp client, measured
@@ -712,8 +696,6 @@ check(
   "index.ts must never touch the API credential or the admin check. If the agent door chose a token, the API's actor " +
     "kind would become this Worker's decision and first-publish policy would move here with it.",
 );
-
-// ---------------------------------------------------------------------------
 
 console.log(`\ncheck:wrapper: ${assertions - failures}/${assertions} assertions passed`);
 if (failures) {

@@ -42,9 +42,9 @@ const DEFAULT_OG_IMAGE = shareCard(
 // content/cv/profile.md and appointments.md by app/lib/identity.mjs (written to identity.generated.mjs at build),
 // so a CV change reaches the site settings, the titles, the About text and the structured data.
 // `role` is the visible identity line; `jobTitle` is the Person record's, which also names the headship
-// (Dustin, 2026-09-28). `affiliation` is structured data (worksFor), so it stays short and literal; `org` is the full line for people to read.
+// `affiliation` is structured data (worksFor), so it stays short and literal; `org` is the full line for people to read.
 // The description is the name and the role, then what the work is about, so it is 70 to 155 characters, the length search
-// shows (area 1; it was the name and role alone, Dustin 2026-10-15, which was 44). "Dr." is the doctorate the CV states, so it follows the degree rather than being typed.
+// shows (area 1). "Dr." is the doctorate the CV states, so it follows the degree rather than being typed.
 const HONORIFIC = /^(Ph\.?D|M\.?D|D\.?V\.?M|Ed\.?D|D\.?Sc)\.?$/i.test(IDENTITY.degree)
   ? "Dr. "
   : "";
@@ -346,7 +346,7 @@ export const OWNER_PUBMED =
   "https://pubmed.ncbi.nlm.nih.gov/?term=Edwards+Dustin%5BAuthor%5D&sort=date";
 export const OWNER_FACULTY_PAGE = "https://faculty.tarleton.edu/dcedwards/";
 
-// Confirmed by Dustin, 2026-09-28 (#200); each ties to Tarleton.
+// Each ties to Tarleton.
 const OWNER_SEA_PHAGES = "https://seaphages.org/faculty/318/";
 const OWNER_SCOPUS = "https://www.scopus.com/authid/detail.uri?authorId=57204587587";
 const OWNER_LOOP = "https://loop.frontiersin.org/people/2520780";
@@ -354,7 +354,7 @@ const OWNER_GITHUB = "https://github.com/DrDustinEdwards";
 const OWNER_LINKEDIN = "https://www.linkedin.com/in/dustin-edwards-152235274/";
 const OWNER_WIKIDATA = "https://www.wikidata.org/wiki/Q141630373";
 
-// The headshot (Dustin, 2026-09-28), uploaded to MEDIA from Tarleton's file so nothing here links to
+// The headshot, uploaded to MEDIA from Tarleton's file so nothing here links to
 // another server. The square crop leads: search engines prefer it for a Person.
 export const OWNER_PHOTO = {
   key: "dustin-edwards-headshot-a4b25f04061613b9-1365x2048.jpg",

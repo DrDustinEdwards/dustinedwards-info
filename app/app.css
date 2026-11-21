@@ -19,7 +19,7 @@
 
 /* Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/
    paths immutable. */
-/* optional, not swap (Dustin, 2026-11-04, Google's advice: web.dev "Best practices for fonts"): a face that
+/* optional, not swap (Google's advice: web.dev "Best practices for fonts"): a face that
    misses its ~100 ms window leaves the visit in its size-matched fallback below, so text never moves once
    drawn. Under swap the fallbacks, within about 1% of each face, still re-wrapped a title or a control row
    now and then (D5). This replaces the earlier swap ruling, made when a first visit fell back to plain Arial;

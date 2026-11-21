@@ -122,7 +122,7 @@ await test("the twin cites every paper by DOI and keeps mentoring as counts", ()
   assert.match(doc, /Shown as counts; the CV names each student\./);
 });
 
-// The PDF is no longer a committed file this test could read back: the Worker renders it after each CV save and
+// The Worker renders the PDF after each CV save and
 // stores it with the fingerprint of the data it was drawn from (app/lib/cv/pdf.server.ts), and the cv-pdf-drift check
 // compares that fingerprint with D1's. What can be pinned offline is the fingerprint itself and the document it stamps.
 await test("the PDF's fingerprint is a deterministic function of the CV data, and moves with it", async () => {

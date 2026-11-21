@@ -4,8 +4,7 @@
 // the rows, so a file CI passes is the file the save accepts and the page draws. Pure and dependency-light, so
 // the Worker and the Node scripts import the same module.
 //
-// A phage is ONE record: the row's fields (name, year, host, county, notes) and the PhagesDB link fields that
-// used to be a second table in code (PHAGESDB_RECORDS). The validator REFUSES any other field, so nothing a
+// A phage is ONE record: the row's fields (name, year, host, county, notes) and the PhagesDB link fields. The validator REFUSES any other field, so nothing a
 // visitor cannot already read in the table can enter the repository or D1: no sample, location beyond the county
 // the table shows, or personal data.
 

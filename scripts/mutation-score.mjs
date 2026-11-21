@@ -97,7 +97,7 @@ function mutate(module, testFiles) {
     // No type checker runs here, so there is nothing to disable, and the default rewrite prepends `// @ts-nocheck` to
     // every .mjs in the sandbox, generated modules included: test/registry-align.test.mjs compares
     // references.generated.mjs byte for byte with what the FASTA files generate, so the dry run failed on align.mjs and
-    // reference.mjs and stopped their slices (the weekly runs of 2026-10-19 to 2026-11-02).
+    // reference.mjs and stopped their slices.
     disableTypeChecks: false,
   };
   const configFile = join(work, "stryker.config.json");

@@ -32,10 +32,7 @@ await healthSnapshot.run();
 console.log(`\n${tally.checks - tally.failures} passed, ${tally.failures} failed`);
 
 /* Floor on executed assertions, measured through a real run: skipped loops look like zero failures.
-   241 was measured on 2026-08-29 (d38a780) against 11 published posts and 1 draft, less the 7
-   script-set checks removed with the page-payload section on 2026-09-27, and less the 45 header and policy checks that
-   moved to site-runtime-security on 2026-10-30 (counted from the removed section, not measured). The corpus loops
-   add checks per post and per draft, so a fixed floor would let each new post's checks absorb a
+   The corpus loops add checks per post and per draft, so a fixed floor would let each new post's checks absorb a
    skipped section; the corpus part of the floor is derived instead. */
 const corpusChecks = (/** @type {number} */ live, /** @type {number} */ drafts) =>
   live +

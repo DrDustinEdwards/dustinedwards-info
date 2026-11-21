@@ -172,42 +172,6 @@ try {
 /* Only if something was measured: an unreachable subject would print `0 checks, 0 failures`. */
 if (subjectReachable) {
   /* Each floor sits `max(3, ceil(count * 0.05))` under a measured run; re-measure when touching this file. */
-  /* Less 3 on 2026-09-27: the per-path script-set "no framework chunk, no modulepreload" check went. */
-  /* Plus 7 on the preview on 2026-09-27: the media-svg case (it skips against a deployed origin). */
-  /*
-   * Less 39 on both on 2026-09-28, when /playground became a 301 to /: the playground case's 24
-   * (content/playground.json drove them), theme-cache's 7 per path for /playground and /playground/ui
-   * (14), and layout's one 320px overflow check on /playground (1).
-   */
-  /*
-   * Plus 9 on both on 2026-09-28: header-menus' card, veil, inert, shared-width, 200% zoom and phone
-   * sheet checks (7 wide, 2 phone). Plus 3 more: the one hover check became four (opens at once,
-   * switches at once, survives the trip into the card, closes after the grace).
-   */
-  /*
-   * Plus 2 on both on 2026-09-28: header-menus' safe triangle, the diagonal across Teaching that keeps
-   * Research open and the rest on the crossed word that switches to it.
-   */
-  /*
-   * Plus 9 on both on 2026-09-28: the cv case. Script off, the whole CV, its timeline and a filtered
-   * URL (3); live, the enhancement running, a type filter and its counts, a year's bar and the fading
-   * it keeps, and the written URL loading the same view with script off (6).
-   */
-  /*
-   * Less 5 on both on 2026-10-20, when the new site's own redirects went (Dustin: only the old site
-   * redirects to the new one): the four old-address checks of the case now named sitemap-feeds, and the
-   * systems case's one 301 check for the old /systems/<id> pages.
-   */
-  /*
-   * Less 11 on both on 2026-11-03, when /systems became cards with a page per system (Dustin's yes that day): the
-   * circles' zooming, the arrow keys, the ?system= address and its facts went (26 checks), and the cards, their
-   * lighting, the system pages, a flow's steps and the 404 came (15).
-   */
-  /*
-   * Less 10 on both on 2026-11-11: the checks Capsomer's lightbox and site-header specs now own (the
-   * lightbox's modal, name, close control, focus and Escape; the header's click, Enter and arrows,
-   * open card, hover and no-menu-role checks).
-   */
   const MINIMUM_CHECKS = DRIVES_PREVIEW ? 210 : 185;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +

@@ -1,7 +1,6 @@
 // After the deploy (deploy.yml's `converge` job, once devkit's worker-deploy has deployed the site and its live gate
-// passed): everything that brings the deployed site's data and its helpers into step with the build. These were the
-// second half of the retired `npm run ship`; the first half (the D1 bookmark, the migrations, the build and the deploy itself,
-// with the live gate and its rollback) is worker-deploy's, called as the network's other Worker sites call it.
+// passed): everything that brings the deployed site's data and its helpers into step with the build. The D1 bookmark, the migrations, the build and the deploy itself,
+// with the live gate and its rollback, are worker-deploy's, called as the network's other Worker sites call it.
 //
 // The order is ship's: readiness, the uptime monitors, the content build and its gate, the D1 sync, the
 // Ask index, the CV PDF, the share cards, the media index, the deferred drift checks, then the browser test. Deploy

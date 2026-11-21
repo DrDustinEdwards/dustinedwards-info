@@ -10,8 +10,7 @@ import type { Route } from "./+types/cv[.md]";
 
 /**
  * The CV's markdown twin at /cv.md, made from the same rows and the same resolved entries as the page
- * (app/lib/cv/markdown.mjs), so an agent reads the facts a person does and a CV save reaches both at once. It
- * was a static file under public/ until the CV moved to D1 (docs/CV.md); a static file at this address would
+ * (app/lib/cv/markdown.mjs), so an agent reads the facts a person does and a CV save reaches both at once. A static file at this address would
  * win over this route, so build:content deletes any left from an earlier build.
  */
 export async function loader({ context }: Route.LoaderArgs) {

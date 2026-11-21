@@ -74,8 +74,6 @@ const LAB = {
   plates: 6,
 };
 
-/* ---------------------------------------------------------------- numbers */
-
 /**
  * A number as the bench writes it: `1.1e10`, `1.1 x 10^10`, `1.1×10^10`, `11,100` or `10^-3`.
  * Returns NaN for anything else, including an empty field, so the caller names the field.
@@ -169,8 +167,6 @@ function count(n) {
   return WORDS[n] ?? String(n);
 }
 
-/* ---------------------------------------------------------------- titer */
-
 /**
  * titer (pfu/ml) = plaques counted / µl plated x 1,000 µl/ml x dilution factor, the FAQ's formula.
  * A spot titer is the same with the spot volume.
@@ -250,8 +246,6 @@ function runTiter(values) {
     sections: [{ heading: "Titer", steps, result: `${formatScientific(pfuPerMl)} pfu/ml`, notes }],
   };
 }
-
-/* ---------------------------------------------------------------- dilution */
 
 /**
  * @typedef {object} DilutionStep
@@ -414,8 +408,6 @@ function runDilution(values) {
   };
 }
 
-/* ---------------------------------------------------------------- webbed plate */
-
 /**
  * µl of lysate per plate = pfu wanted per plate / titer (pfu/ml) x 1,000 µl/ml, the FAQ's formula.
  *
@@ -537,8 +529,6 @@ function runFlood(values) {
   };
 }
 
-/* ---------------------------------------------------------------- MOI */
-
 /**
  * MOI = pfu added / cells, with pfu = titer (pfu/ml) x µl added / 1,000 µl/ml and cells = cells/ml x µl
  * of culture / 1,000 µl/ml. `infected` is the share of cells that receive at least one phage when phages
@@ -587,8 +577,6 @@ function runMoi(values) {
     ],
   };
 }
-
-/* ---------------------------------------------------------------- EOP */
 
 /**
  * EOP = titer on the test host / titer on the reference host.
@@ -696,8 +684,6 @@ function runEopCounts(values) {
   };
 }
 
-/* ---------------------------------------------------------------- lysate volume */
-
 /**
  * Lysate for a run of plates: (pfu per plate x plates) / titer (pfu/ml) x 1,000 µl/ml, the webbed
  * plate formula for all the plates at once.
@@ -765,8 +751,6 @@ function runLysateVolume(values) {
   }
   return { ok: true, sections: [{ heading: "Lysate needed", steps, result, notes }] };
 }
-
-/* ---------------------------------------------------------------- registry */
 
 /**
  * @typedef {object} ToolDefinition

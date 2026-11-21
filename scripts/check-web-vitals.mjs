@@ -2,13 +2,12 @@
 //
 //   node scripts/check-web-vitals.mjs [origin] [--runs N]
 //
-// Replaces the byte budgets (job_e89fda4818a6): bytes were a stand-in for speed, and this
-// measures the speed. Lighthouse, performance category only, with its DEFAULT config, which is
+// Lighthouse, performance category only, with its DEFAULT config, which is
 // the mobile form factor with its default simulated mobile throttling (slow 4G, 4x CPU). The
 // browser is puppeteer's bundled chrome-headless-shell (which `npm ci` already downloads beside
 // its Chrome), and Lighthouse drives it over its debugging port, so there is no second browser.
 //
-// WHY THE SHELL AND NOT puppeteer's DEFAULT HEADLESS: MEASURED on 2026-09-27, the default
+// WHY THE SHELL AND NOT puppeteer's DEFAULT HEADLESS: MEASURED, the default
 // (new) headless mode made Lighthouse fail on / with NO_NAVSTART on 3 runs of 3, and handing
 // Lighthouse a puppeteer page failed the same way 6 of 6. The shell measured 3 of 3.
 // chrome-launcher was not used: on Windows its kill() throws EPERM removing its temp profile.

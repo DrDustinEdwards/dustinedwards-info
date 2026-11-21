@@ -1,7 +1,7 @@
 /*
  * What the whole network does, for /features and its markdown twin (/features.md): one list, so the page and the twin cannot
  * disagree. A card is a thing a program does that a person can name. Every card was checked against the program's own README,
- * its tool list or this site's own pages (Dustin, 2026-11-07); the numbers a README gives are left out, since a number here
+ * its tool list or this site's own pages; the numbers a README gives are left out, since a number here
  * would go stale without a gate to catch it. Pure data and string building, so test/features.test.mjs runs it under plain node.
  */
 

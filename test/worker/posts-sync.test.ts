@@ -7,7 +7,7 @@ import { post } from "./fixtures";
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 
 /* sync_posts refuses a content/posts listing with no markdown instead of deleting every post row, as the
- * other kinds' syncs do (Grok audit 2026-10-21, DE-1). */
+ * other kinds' syncs do. */
 
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 const operator = { kind: "operator", id: "test" } as const;

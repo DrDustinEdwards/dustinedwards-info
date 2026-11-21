@@ -340,7 +340,7 @@ export function checkProjects(ctx) {
     /early alpha/.test(enarratioPage) && /active development/.test(enarratioPage),
   );
 
-  // Carrel has a page (Dustin, 2026-09-28) but the app is private: neither the page nor the hub links it.
+  // Carrel has a page but the app is private: neither the page nor the hub links it.
   const carrelPage = readPage("software-carrel.md");
   ok("the Carrel page does not link the app", !carrelPage.includes("carrel.dustinedwards.info"));
   ok("the hub does not link the Carrel app", !hub.includes("carrel.dustinedwards.info"));

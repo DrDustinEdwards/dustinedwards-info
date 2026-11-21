@@ -1,6 +1,5 @@
 // Builds a paper's markdown twin. compile.mjs calls it, and the twin is stored in D1 and served by
 // app/routes/publications.$slug[.md].ts, so a paper edited through Carrel changes its twin with no build.
-// It was a static asset until publications moved to files (an asset wins over a route for a .md path, measured).
 
 import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 

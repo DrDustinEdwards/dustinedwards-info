@@ -63,11 +63,6 @@ checkProjects(ctx);
 
 /* Whole-gate floor: section floors cannot see another section stopping. */
 /* Re-measure by running the gate. */
-/*
- * 848 on 2026-09-28, when the playground section went with /playground: measured 1219 before and 893
- * after (the section's 319 plus 7 elsewhere), and the floor sits max(3, ceil(893 * 0.05)) = 45 under
- * the measured run, as check:browser's floors do.
- */
 const MINIMUM_CHECKS = 848;
 tally.floor(
   "check:features",

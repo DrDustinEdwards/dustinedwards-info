@@ -61,7 +61,6 @@ function readYaml(key: string, text: string): { value: unknown } | { error: stri
   }
 }
 
-/** The form a file opens as. */
 export async function formFor(env: FormEnv, file: KbFile): Promise<KbForm> {
   const items = await listRegistry(env);
   const of = (kind: string) =>

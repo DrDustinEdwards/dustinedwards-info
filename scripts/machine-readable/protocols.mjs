@@ -115,10 +115,6 @@ console.log(
   `\n  ${sources.length} procedure(s), ${fixtures.length} fixture(s); ${recorded} value(s) recorded as missing.`,
 );
 
-/* 19 on 2026-09-30, measured by running the gate: two per procedure (five) and per fixture (two), two
-   fixture drafts, two on the directories and one on the profiles; 21 on 2026-10-04, one more for each procedure that
-   states a Start here position (two); 28 on 2026-10-10, measured by running the gate: the tutorial and variant fixtures
-   (two each, and a draft each) and one for the variant's lineage. */
 const MINIMUM_CHECKS = 28;
 tally.floor(
   "check:content/protocols",

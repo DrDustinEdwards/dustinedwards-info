@@ -216,7 +216,6 @@ async function rowIsCurrent(env: PageEnv, slug: string, blobSha: string) {
   return row?.source_blob_sha === blobSha;
 }
 
-/** The page save. */
 export async function savePage(
   env: PageEnv,
   options: {

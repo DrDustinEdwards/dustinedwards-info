@@ -552,7 +552,7 @@ for (const [label, html] of /** @type {Array<[string, string]>} */ ([
 
 await cleanup();
 
-/* Measured 230 by running this part on 2026-09-24; the floor sits a little under it. */
+/* Measured 230 by running this part; the floor sits a little under it. */
 const floorBreach = assertFloor(
   "check:content/microformats",
   "checks",

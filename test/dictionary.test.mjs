@@ -169,8 +169,7 @@ await test("front matter: an unknown field and a bad draft flag are refused, and
 });
 
 await test("sense 2 of each entry is the software, labeled software., in the page's twin and its JSON-LD", async () => {
-  // The old test pinned each sense to the owner's exact wording, which no Carrel edit could ever change. What
-  // survives an edit is the structure: the label, the twin's own line for it and the DefinedTerm's description.
+  // The structure survives an edit, the owner's wording does not: the label, the twin's own line and the DefinedTerm's description.
   for (const entry of await entries()) {
     assert.deepEqual(entry.senseLabels, [null, "software"], entry.term);
     const lines = dictionaryEntryMarkdown(entry).split("\n");

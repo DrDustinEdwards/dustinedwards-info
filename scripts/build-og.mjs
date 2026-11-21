@@ -181,7 +181,7 @@ function card(post) {
         flexDirection: "column",
         background: GROUND,
         // A share card is a standalone poster, so it is set wholly in Jost, the free Futura: NASA NHB
-        // 1430.2 section 5.4 allows Futura for a self-contained piece, headed in its Demibold (Dustin, 2026-11-04).
+        // 1430.2 section 5.4 allows Futura for a self-contained piece, headed in its Demibold.
         fontFamily: "Jost",
       },
     },

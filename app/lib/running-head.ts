@@ -8,7 +8,7 @@ type Section = { prefix: string; no: string; trail: string[] };
 
 const SECTIONS: Section[] = [
   { prefix: "/research", no: "1", trail: ["Research"] },
-  // A hub's pages carry the hub's part they are listed under, as the lab's pages do (Dustin, 2026-10-26).
+  // A hub's pages carry the hub's part they are listed under, as the lab's pages do.
   { prefix: "/research/retroviruses", no: "1.1", trail: ["Research", "Research areas"] },
   { prefix: "/research/bacteriophages", no: "1.1", trail: ["Research", "Research areas"] },
   { prefix: "/research/science-education", no: "1.1", trail: ["Research", "Research areas"] },

@@ -28,7 +28,7 @@ import { renderRoute, routeContext } from "./route-helpers";
 import { seedCv, seedDictionary, seedPages, seedPublications, seedRoster } from "./seed";
 
 /*
- * EVERY JSON-LD BLOCK THE PAGES EMIT, PARSED AND HELD TO ITS TYPE (2026-09-29). Each page is rendered
+ * EVERY JSON-LD BLOCK THE PAGES EMIT, PARSED AND HELD TO ITS TYPE. Each page is rendered
  * through its own route module, head and body, every <script type="application/ld+json"> is parsed, and every
  * node is checked against the properties schema.org and Google's rich-result documentation require and
  * recommend for its type. Each page has one breadcrumb list, and it says what the visible trail says.

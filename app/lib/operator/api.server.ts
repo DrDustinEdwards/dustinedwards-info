@@ -285,7 +285,7 @@ async function refreshCitationsTool(
     args.dois.every((d) => typeof d === "string" && d.trim() !== "")
   ) {
     // Only a paper the site lists has a count to show, so any other DOI would store an orphan row and
-    // spend an outbound call (Grok audit 2026-10-21, DE-7).
+    // spend an outbound call.
     const key = (doi: string) => doi.trim().toLowerCase();
     const listed = new Set(published.map(key));
     const unlisted = (args.dois as string[]).filter((d) => !listed.has(key(d)));

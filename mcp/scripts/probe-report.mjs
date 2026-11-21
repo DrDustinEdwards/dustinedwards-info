@@ -79,7 +79,7 @@ const agents = new Set(rows.map((r) => r.headers?.["user-agent"]).filter(Boolean
 for (const a of agents) console.log(`  ${a}`);
 if (!agents.size) console.log("  (none reported a user-agent)");
 
-// ---- Question 1: era -----------------------------------------------------
+// Question 1: era
 console.log("\nERA");
 const opened = rows.filter(
   (r) => r.rpcMethod === "initialize" || r.rpcMethod === "server/discover",
@@ -95,7 +95,7 @@ if (!opened.length) {
   }
 }
 
-// ---- 2026-07-28 required headers ----------------------------------------
+// 2026-07-28 required headers
 const posts = rows.filter((r) => r.method === "POST" && r.path === "/mcp");
 console.log(`\n2026-07-28 REQUIRED FIELDS (over ${posts.length} POSTs to /mcp)`);
 for (const key of ["mcp-protocol-version", "mcp-method", "mcp-name"]) {

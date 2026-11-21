@@ -129,7 +129,7 @@ export const SITE_OPERATION = Object.freeze([
 ]);
 
 /**
- * Carrel's one sentence. Its name links to its page on this site (Dustin, 2026-09-28), never to the
+ * Carrel's one sentence. Its name links to its page on this site, never to the
  * app, which is private; the footer's Workspace link is the separate sign-in.
  */
 export const CARREL_PAGE_PATH = "/software/carrel";

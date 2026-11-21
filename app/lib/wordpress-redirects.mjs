@@ -49,7 +49,7 @@ export function wwwRedirectTarget(hostname, pathname, search) {
 
 /**
  * Not kept, and not put in R2: its protocol is rewritten as a page, so the old PDF address, which
- * still earns clicks, points there (Dustin, 2026-09-27).
+ * still earns clicks, points there.
  */
 const BAYLOR_PDF = "/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.pdf";
 const CV_PDF = "/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf";
@@ -121,7 +121,7 @@ const PATTERNS = [
       ? GONE
       : null,
   // Every other student and author profile (146 in Search Console, 147 with Dustin's own) goes to the
-  // roster at the bottom of the Phage Discovery Program page, as on the old site (Dustin, 2026-09-27).
+  // roster at the bottom of the Phage Discovery Program page, as on the old site.
   (p) => (/^\/(?:user|author)(?:\/.*)?$/.test(p) ? moved(PROFILE_TARGET) : null),
   (p) =>
     /^\/(?:category\/phage-isolation-notes|microbiomes\/page|phages\/page)(?:\/.*)?$/.test(p)
@@ -139,7 +139,7 @@ const PATTERNS = [
       ? moved("/research/protocols/phage-dna-extraction")
       : null,
   (p) => (p.startsWith("/wp-content/uploads/") ? GONE : null),
-  // Nothing on the new site does these calculations (Dustin, 2026-09-27).
+  // Nothing on the new site does these calculations.
   (p) => (["/molarity-calculator", "/knowledge-base/metric-prefix"].includes(p) ? GONE : null),
 ];
 
