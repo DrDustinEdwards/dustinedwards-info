@@ -6,7 +6,7 @@ description: "Software Dustin Edwards builds: Foxhound, Foxing, Foxing Edu, Germ
 schema_type: WebPage
 ---
 
-Dustin Edwards builds software as well as doing the virology. This page is the index: three groups, and each product has a short page that links out rather than replacing the product's own site.
+Dustin Edwards builds software as well as doing the virology.
 
 ## Products
 
