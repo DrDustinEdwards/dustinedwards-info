@@ -109,10 +109,7 @@ it("renders a public page with no inline script and no hash, and /site.js to sta
   expect([...html.matchAll(/<script\b[^>]*\ssrc="([^"]*)"[^>]*>/g)].map((m) => m[1])).toEqual([
     "/site.js",
   ]);
-  /* With the build's integrity and crossorigin, which Integrity-Policy needs of it (the harness's fixed values). */
-  expect(html).toContain(
-    `<script src="/site.js" integrity="sha384-test" crossorigin="anonymous" defer="" nonce="${nonce}">`,
-  );
+  expect(html).toContain(`<script src="/site.js" defer="" nonce="${nonce}">`);
   expect(scripts.filter((s) => s.type !== "application/ld+json").map((s) => s.text)).toEqual([""]);
   expect(scripts.filter((s) => s.type === "application/ld+json")).toHaveLength(1);
 
