@@ -16,9 +16,9 @@
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.2.4",
-    "@drdustinedwards/site-helpers": "github:DrDustinEdwards/prelum#v0.63.2",
-    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.53.1",
-    "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.169.2",
+    "@drdustinedwards/site-helpers": "github:DrDustinEdwards/prelum#v0.63.3",
+    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.53.2",
+    "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.169.3",
     "@modelcontextprotocol/server": "2.4.0",
     "agents": "0.33.0",
     "zod": "4.6.7"
