@@ -1,4 +1,5 @@
 import { originalKey } from "@dustinedwards/site-runtime/image";
+import { retryR2Read } from "@dustinedwards/site-runtime/r2-object";
 
 import { getEnv } from "~/lib/context";
 import { bucketFor } from "~/lib/media/classify.mjs";
@@ -20,7 +21,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!key) return new Response("Not found", { status: 404 });
 
   const env = getEnv(context);
-  const read = () => bucketFor(env, key).get(key);
+  const read = () => retryR2Read(() => bucketFor(env, key).get(key));
   // `caches.default` is the Workers runtime's; the DOM lib does not declare it, hence the cast.
   const cache = (caches as typeof caches & { default: Cache }).default;
   return images.respond(request, {
