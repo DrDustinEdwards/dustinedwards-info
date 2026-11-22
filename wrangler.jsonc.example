@@ -24,7 +24,8 @@
 	// site-runtime reads (react-entry.mjs, log.mjs). It is on by default only from a
 	// compatibility date of 2026-11-17, and this date is earlier.
 	// nodejs_als: AsyncLocalStorage, which the Sentry SDK keeps each invocation's reports apart with (site-runtime ./sentry).
-	"compatibility_flags": ["enable_request_signal", "nodejs_als"],
+	// global_fetch_strictly_public: a Worker on a Custom Domain that fetches its own hostname gets a 522 (Cloudflare error 522 docs); with it the site API webmention hook reads the live page through the public front door.
+	"compatibility_flags": ["enable_request_signal", "nodejs_als", "global_fetch_strictly_public"],
 	"keep_vars": true,
 	// THE REAL DOMAIN, as Custom Domains and not route patterns: the zone has no A or CNAME for
 	// either name, because a Custom Domain creates its own proxied record. THIS LIST IS THE SOURCE OF
