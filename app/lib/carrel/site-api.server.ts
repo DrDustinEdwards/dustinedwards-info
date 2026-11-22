@@ -23,8 +23,8 @@ const CARREL_RATE_PERIOD_SECONDS = 60;
 
 /**
  * The site's own limiter, the ASK_BUDGET Durable Object, under a `carrel:` prefix. Not a `ratelimit`
- * binding: measured here, that binding refused 1, 2, 9 and 0 of twelve concurrent requests against a
- * limit of five (wrangler.jsonc.example). A missing limiter throws, which the package fails closed on.
+ * binding: it refused 1, 2, 9 and 0 of twelve concurrent requests against a limit of five when measured
+ * (wrangler.jsonc.example). A missing limiter throws, which the package fails closed on.
  */
 function carrelLimiter(env: Env): RateLimiter {
   return {

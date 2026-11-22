@@ -31,7 +31,7 @@ import { stubSources } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /*
- * THE AGENT PATH WITH NO VISIBLE LINK (job_5670dd43eef2, 2026-09-27): nothing a person sees points an
+ * THE AGENT PATH WITH NO VISIBLE LINK nothing a person sees points an
  * agent at the machine surfaces, so these cases walk the routes an agent actually takes. robots.txt (Prelum's
  * standardFiles, tested there) names the sitemap and llms.txt; the head of a page with a markdown twin declares it with
  * <link rel="alternate" type="text/markdown">; every twin and both llms files answer with a

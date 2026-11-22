@@ -55,7 +55,7 @@ await test("every old phage address Google knows lands on a heading of /research
     .map((p) => /^\/(?:discovery|annotation)-of-([a-z0-9-]+)\/$/.exec(p)?.[1])
     .filter((n) => n !== undefined);
   assert.ok(names.length > 30, `${names.length} phage addresses in the fixture`);
-  // Dustin's ruling (#291) removed these four from the table. Their old addresses still 301 to the page, which
+  // These four are not in the table. Their old addresses still 301 to the page, which
   // opens at the top, so they are named here and not silently allowed; a fifth removal is a new decision.
   const removed = new Set(["tarleton", "astrid", "jaykay", "muskman"]);
   assert.deepEqual(

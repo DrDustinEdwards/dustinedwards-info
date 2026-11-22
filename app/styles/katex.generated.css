@@ -12,7 +12,7 @@
  * app/styles/katex-overrides.css, which is hand written and is where a site
  * rule goes. The marker is not quoted here: a CSS comment ends at the first
  * close sequence, so reproducing it inside this one terminated the header
- * early and lightningcss refused the whole stylesheet (measured 2026-09-06).
+ * early and lightningcss refused the whole stylesheet.
  */
 @font-face {
   font-display: swap;

@@ -12,8 +12,7 @@ export default [
   // rebuild on Capsomer deletes it (routes/legacy-public.tsx says what goes with it).
   layout("routes/legacy-public.tsx", [
     index("routes/home.tsx"),
-    // Writing: the posts, at /writing since the 2026-09-27 site structure. The module files keep their
-    // blog.* names; only the addresses moved.
+    // Writing: the posts, at /writing. The module files keep their blog.* names.
     route("writing", "routes/blog._index.tsx"),
     // Ordered before the :slug routes so the feed is not read as a post slug.
     route("writing/rss.xml", "routes/blog.rss[.xml].ts"),
@@ -42,7 +41,7 @@ export default [
     route("blog/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts", {
       id: "legacy-series-feed",
     }),
-    // Under Research since the 2026-09-27 site structure; the old /publications addresses 301.
+    // Under Research; the old /publications addresses 301.
     route("research/publications", "routes/publications.tsx"),
     // The citation exports precede the page routes so a slug ending in `.bib` cannot collide. Paper pages
     // take a trailing slash: page and PDF in one directory is Scholar's condition for citation_pdf_url.

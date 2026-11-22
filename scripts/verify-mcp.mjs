@@ -1,6 +1,6 @@
 // The admin MCP's live gate (deploy.yml's `mcp` job, devkit's worker-deploy `verify-command`, run from mcp/ once its
 // /health reports this run's commit): the discovery documents describe this server. Exit 0 passes, 1 refuses (the
-// Worker is rolled back), 3 could not run. Ruling mcp-2026-10-10: the MCP lives in this repo and deploys as its own
+// Worker is rolled back), 3 could not run. The MCP deploys as its own
 // Worker, `dustinedwards-admin-mcp`.
 //
 //   node ../scripts/verify-mcp.mjs
@@ -10,8 +10,8 @@ import { join } from "node:path";
 
 /**
  * site-runtime's errorMessage, written out: the live gate runs in a fresh checkout with no install (devkit
- * worker-deploy's verify-command), so this file may import only node: builtins. Importing the package broke every
- * admin MCP deploy from #848 until this was restored.
+ * worker-deploy's verify-command), so this file may import only node: builtins. Importing the package would break the
+ * admin MCP deploy.
  * @param {unknown} error
  * @returns {string}
  */

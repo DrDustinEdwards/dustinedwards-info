@@ -134,7 +134,7 @@ for (const probe of fixture.frontmatterCases) {
 }
 
 // Behavior can pass while a field blocks a protocol only by accident, so the source must call the
-// shared predicate. Read off the syntax tree: the old regexes ended a block at its first `})`, so a
+// shared predicate. Read off the syntax tree: a regex would end a block at its first `})`, so a
 // nested object cut the scan short, and prose could not be told from code without a stripper.
 
 /** @param {ts.Node} root @param {(n: ts.Node) => boolean} test @returns {ts.Node[]} */

@@ -139,7 +139,7 @@ function scene() {
 
 /**
  * The poster over the title block: the scene with the mark on its sky, then the title, the description
- * and the meta line on the paper, as before. The title block keeps the side padding og-card-text.mjs's
+ * and the meta line on the paper. The title block keeps the side padding og-card-text.mjs's
  * ladder was measured against, and grows upward into the scene.
  *
  * @param {{

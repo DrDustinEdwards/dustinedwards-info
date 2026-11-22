@@ -12,8 +12,8 @@ import { paperPath } from "./publications/paths.mjs";
 import { EXPLORER_ORIGIN } from "capsomer/behavior/system-model";
 
 /*
- * The header's five destinations and the panels that hang from them ("structured panels", decided
- * 2026-10-11). Every panel has the same parts, top to bottom: a header band, a row of three tiles, a
+ * The header's five destinations and the panels that hang from them ("structured panels").
+ * Every panel has the same parts, top to bottom: a header band, a row of three tiles, a
  * band of grouped rows beside one spotlight, and three quick links. A link whose page does not exist is
  * left out (isLive), and so is a row or tile it empties, so no panel link answers 404.
  *

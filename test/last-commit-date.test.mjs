@@ -1,5 +1,5 @@
 /**
- * A failed git call used to read as "no history", which sync:content then wrote to D1 as a null
+ * A failed git call must not read as "no history", which sync:content would write to D1 as a null
  * revision date over every real one.
  */
 

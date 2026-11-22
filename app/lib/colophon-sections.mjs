@@ -145,9 +145,8 @@ export const CARREL_SENTENCE_REST = CARREL_SENTENCE.slice(CARREL_NAME.length);
 export const CAPSID_PAGE_PATH = "/software/capsid";
 
 /**
- * Capsomer's one sentence. Its name links to its public site, which answers 200 (checked 2026-10-02).
- * Capsid's public site, capsid.dustinedwards.info, did not answer then, so Capsid keeps its repository
- * link until it does (job_a8f7cfc629de).
+ * Capsomer's one sentence. Its name links to its public site. Capsid's public site,
+ * capsid.dustinedwards.info, does not answer, so Capsid keeps its repository link until it does.
  */
 export const CAPSOMER_NAME = "Capsomer";
 export const CAPSOMER_PAGE_PATH = "/software/capsomer";

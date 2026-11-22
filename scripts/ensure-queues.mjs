@@ -2,9 +2,8 @@
 /**
  * Create every Queue the site's wrangler config names that does not exist on the account yet.
  *
- * `wrangler deploy` refuses a producer or consumer whose queue is missing, so a PR that adds a
- * queue used to need a hand-run `wrangler queues create` before its merge could deploy. The
- * deploy workflow runs this first instead, with the deploy's own token, which already holds
+ * `wrangler deploy` refuses a producer or consumer whose queue is missing, so the
+ * deploy workflow runs this first, with the deploy's own token, which already holds
  * Queues Edit (the "Edit Cloudflare Workers" template; the probe step above it checks the read).
  *
  * It only ever CREATES, never deletes or edits: a queue the config stops naming stays on the

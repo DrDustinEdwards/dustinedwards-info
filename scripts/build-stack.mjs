@@ -66,7 +66,7 @@ function buildStack() {
       const [kind, name] = id.split(":");
       const what = notes.bindings?.[id]?.what;
       const whyLoadBearing = notes.bindings?.[id]?.whyLoadBearing;
-      // A binding without its note used to publish a colophon row that says nothing.
+      // A binding without its note would publish a colophon row that says nothing.
       if (!what || !whyLoadBearing) {
         throw new Error(`${NOTES_PATH} has no what or whyLoadBearing for binding ${id}`);
       }

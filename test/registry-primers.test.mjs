@@ -73,9 +73,8 @@ await test("the compile refuses what a protocol may not say about a primer, and 
   assert.match(none.errors.join("\n"), /no lab registry/);
 });
 
-/* The sizes the protocols STATED before they were computed (the text of the three primer protocols at 2026-10-05, from the
- * papers and the lab's gels). They are kept here as the test that the computed sizes agree with what each protocol states
- * today: a change to a primer, a reference or the alignment code that moves one fails this. Where a stated size is a
+/* The sizes the protocols state (the three primer protocols, from the
+ * papers and the lab's gels). They are the test that the computed sizes agree with what each protocol states: a change to a primer, a reference or the alignment code that moves one fails this. Where a stated size is a
  * paper's rounded figure or a gel's reading, the table records it as such and the computed size is held to its own number. */
 const STATED_TODAY = [
   { set: "PCR REV 3′ LTR", stated: 281, computed: [281, 281] },
@@ -84,7 +83,7 @@ const STATED_TODAY = [
   { set: "PCR LPDV p31/CA", stated: 458, computed: [458] },
   { set: "Pan-avian GAPDH PCR", stated: 534, computed: [534] },
   // Folmer et al. state "about 710 bp" and the lab's gels read about 708 bp; the computed product on X03240.1 is 709 bp, with
-  // three mismatches in the forward primer. Reported to the seat 2026-10-05; the protocol keeps its stated 710 and 708.
+  // three mismatches in the forward primer. The protocol keeps its stated 710 and 708.
   { set: "COI primers: LCO1490 and HCO2198", stated: 710, computed: [709], rounded: true },
 ];
 

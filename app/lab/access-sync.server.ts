@@ -13,7 +13,7 @@ import { LAB_CATALOG } from "./titles.mjs";
 
 /**
  * Asks Capsid to make the lab's Cloudflare Access group (`lab-members`) hold exactly the people /lab-bench/members says may
- * sign in (capsid docs/design/design-identity-roles.md, "The Cloudflare sync"; Dustin's ruling of 2026-10-09: Capsid
+ * sign in (capsid docs/design/design-identity-roles.md, "The Cloudflare sync"): Capsid
  * is the only holder of the Cloudflare token, and apps ask it). Capsid's POST /ops/access-sync takes this namespace's
  * whole list, writes the group it pinned for the namespace (never one this site names), frees the seats of the people
  * listed as removed and audits the call. Every change on the members page ends here.

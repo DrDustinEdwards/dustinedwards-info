@@ -174,7 +174,7 @@ describe("every write names the version it was loaded at", () => {
 });
 
 /* A post's version identifies that post's file, not the repository's head, so saving one post must not make
- * every other open post look changed (job_010ea9cff26c). */
+ * every other open post look changed. */
 describe("a post's version is its own", () => {
   const readVersion = async (id: string) => {
     const response = await get(`${PREFIX}/content/${id}`);
@@ -258,7 +258,7 @@ describe("a post's version is its own", () => {
 });
 
 /* The check lives in commitFiles, against the head the commit is parented on, so a change that lands between a
- * writer's read and its write is refused there whichever kind is writing (job_d0ed3f93a4d3). */
+ * writer's read and its write is refused there whichever kind is writing. */
 describe("commitFiles refuses a file that is not the one the writer loaded", () => {
   const commit = (expected: string | null) =>
     commitFiles(testEnv as never, {
@@ -556,7 +556,7 @@ describe("media: focal point, caption and replace", () => {
     expect(new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer())).toEqual(
       bytesFor("replace-case-2"),
     );
-    // The library keeps a copy at replaced/<key>/<sha256>; copies from before v0.24.0 are at replaced/<time>/<key>.
+    // The library keeps a copy at replaced/<key>/<sha256>.
     const [kept] = (await testEnv.MEDIA_REVISIONS.list({ prefix: `replaced/${id}/` })).objects;
     expect(kept, "the old bytes were not kept").toBeDefined();
     expect(
@@ -939,7 +939,7 @@ describe("media: the v0.13.0 library", () => {
       width: 4096,
       resizedFrom: { width: 8000, height: 6000, bytes: bytesFor("resize-case").length },
     });
-    // One history prefix for every earlier set of bytes since v0.24.0; originals before it are at resized/<time>/<key>.
+    // One history prefix for every earlier set of bytes.
     const [kept] = (await testEnv.MEDIA_REVISIONS.list({ prefix: `replaced/${shrunk.id}/` }))
       .objects;
     expect(kept, "the original was not kept").toBeDefined();
@@ -1185,7 +1185,7 @@ describe("media: a delete is decided by the site's reference check", () => {
   });
 });
 
-/* site-api v0.3.0: the source at a revision, and the optional content delete (job_3839c2d00cb6). */
+/* The source at a revision, and the optional content delete. */
 describe("a revision's source", () => {
   it("opens an old revision of a post, and answers 404 for a version the repository does not hold", async () => {
     await putSource(postPath("rev-open"), post("rev-open"));

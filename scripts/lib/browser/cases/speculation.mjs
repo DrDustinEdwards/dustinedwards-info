@@ -11,7 +11,7 @@ import { BASE, ok } from "../harness.mjs";
  * accepts the file under the enforced policy, and the site's own exclusions hold. The candidate list is Chrome's
  * own reading of the rules. Chrome refuses to prerender under CDP, so `activationStart` is always 0: never assert it.
  * The rules are one file for every page, so a page's links to itself are candidates too: a hover there costs one
- * cached document request, where the old per-page inline rule excluded the page's own path.
+ * cached document request.
  */
 /** @param {import("../harness.mjs").CaseContext} ctx */
 export async function run({ browser }) {

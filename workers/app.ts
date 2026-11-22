@@ -104,7 +104,7 @@ const site = defineSite<Env>({
   // Prelum's markdownCopies: every public page has a Markdown copy at its path plus .md and answers Accept: text/markdown,
   // which llms.txt promises. The site's own twins (posts, papers, research, the CV) and its own llms-full.txt win; the
   // wrapper only fills in the pages the site answers 404 or HTML for. The private planes get no copy. Then, on every exit:
-  // the workers.dev address keeps answering after the cutover (the browser tests and the sign-in fallback use it), so it
+  // the workers.dev address keeps answering (the browser tests and the sign-in fallback use it), so it
   // is kept out of the index here rather than redirected away. robots.txt must not disallow it, or a crawler never reads
   // this header.
   wrap: (handler) => {

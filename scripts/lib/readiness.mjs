@@ -191,8 +191,7 @@ const NOT_DEPLOY_CHECKS = {
 
 /**
  * Node's fetch says only "fetch failed" and keeps the reason in `cause`, so the cause is named too, its code and its
- * words ("UND_ERR_SOCKET: other side closed"): the 2026-11-11 sync_media miss and the 2026-11-17 /health miss said
- * "fetch failed" and nothing more.
+ * words ("UND_ERR_SOCKET: other side closed").
  * @param {unknown} error
  */
 export function transportFailure(error) {

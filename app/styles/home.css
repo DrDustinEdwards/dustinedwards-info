@@ -337,7 +337,7 @@
 }
 
 /* The key explains the plate, so the cover and the key row share one screen. In a window shorter than 43rem the
-   name keeps its two lines at the column's width and the spacing around it tightens (Dustin, 2026-11-08: his
+   name keeps its two lines at the column's width and the spacing around it tightens (a laptop
    screen is about 600px tall). */
 @media (min-width: 64rem) and (max-height: 43rem) {
   .cover-top {

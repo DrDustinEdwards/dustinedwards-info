@@ -1,12 +1,12 @@
 /**
  * The old WordPress site's addresses, answered on the apex host (and www) so they are live the moment
  * DNS moves: a 301 to the page that replaces each one, or 410 Gone for what was removed. The map is
- * cutover.md's "Redirect map" (Capsid, dustinedwards), decided 2026-09-27; this file is that record in
- * code, pattern rules first, then explicit rows.
+ * cutover.md's "Redirect map" (Capsid, dustinedwards); this file is that record in code, pattern rules
+ * first, then explicit rows.
  *
  * Host-scoped, because the workers.dev host serves the new site's own paths and must never see these.
- * These are the only moves the gateway answers: the new site's own old addresses do not redirect (Dustin,
- * 2026-10-20: "the only redirects should be from the old site to the new site").
+ * These are the only moves the gateway answers: the new site's own old addresses do not redirect; the only
+ * redirects are from the old site to the new site.
  *
  * Paths match with and without the trailing slash. The query is ignored: a 301 never carries it, since
  * WordPress's `?et_blog` and `?profiletab=` mean nothing on the new site.

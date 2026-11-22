@@ -17,7 +17,7 @@ const TRANSPORT_RETRY_MS = 5_000;
 
 /**
  * Returns a miss rather than throwing: every failure here happens after the deploy has landed. A call that got no
- * answer at all is tried once more, because every tool here is idempotent and the 2026-11-11 sync_media miss never
+ * answer at all is tried once more, because every tool here is idempotent and a no-answer miss never
  * reached the Worker; a timeout is not, since the Worker may still be working on the first call.
  * @param {string} tool
  * @param {OperatorTarget} target
@@ -59,7 +59,7 @@ async function operatorSync(tool, { origin, token }) {
 
   if (!miss && response && !response.ok) {
     // The token and the request are never echoed. A 401 here means the secret and the file disagree. The API's own
-    // error is: a bare status hid "AiSearchError: You are being rate limited" behind "500" (2026-11-11).
+    // error is shown: a bare status would hide "AiSearchError: You are being rate limited" behind "500".
     const said = body && typeof body.error === "string" ? `: ${body.error.slice(0, 300)}` : "";
     miss = `the operator API answered ${response.status} to ${tool}${said}`;
   }

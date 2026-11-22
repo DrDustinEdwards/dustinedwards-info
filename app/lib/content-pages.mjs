@@ -3,9 +3,6 @@
  * content/generated/pages.json like the About page, and served by one route module. This list is the
  * one place their paths are named: app/routes.ts registers a route per entry, the sitemap lists each,
  * and the build refuses a markdown file whose path is not here or an entry with no file.
- *
- * The 2026-09-27 cutover wrote them from the old WordPress site, its knowledge base and the lab's
- * notebooks (cutover.md, "Pages to build before the switch").
  */
 
 import { ogImageKey } from "./content/og-card-text.mjs";
@@ -24,7 +21,7 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   // Not in cutover.md's page list, but its redirect rows land old knowledge-base addresses here.
   "/research/protocols",
   // The protocols themselves are procedures (content/procedures/, docs/PROCEDURES.md), drawn from D1.
-  // The phage lab calculators (job_c2b88d76b3c1). Their addresses are fixed: the citable version
+  // The phage lab calculators. Their addresses are fixed: the citable version
   // (Zenodo DOI, JMBE) replaces them in place, so none of these may move.
   "/research/tools",
   "/research/tools/titer",
@@ -56,11 +53,11 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/devkit",
   // The CV. Its entries are the files in content/cv/ (docs/CV.md), not a markdown page kept in content/pages/.
   "/cv",
-  // The legal pages, in Carrel with the rest (job_044f96426efa). /terms is also the terms the site's data is
+  // The legal pages, in Carrel with the rest. /terms is also the terms the site's data is
   // published under: the `license` of every Dataset (app/lib/license.mjs).
   "/privacy",
   "/terms",
-  // The accessibility statement (job_fea2f94832b3): what the gates check, in Carrel with the legal pages but
+  // The accessibility statement: what the gates check, in Carrel with the legal pages but
   // not one of them. It ships as a draft until Dustin approves its text, and the footer links it once published.
   "/accessibility",
 ]);

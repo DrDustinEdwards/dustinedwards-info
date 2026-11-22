@@ -104,8 +104,8 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
     // Only an upload's content-addressed key is the library's to change or delete; an older key stays as it is.
     deletable: (record) => isManagedKey(record.key),
     // MEDIA_REVISIONS, which /media never serves (app/routes/media.$.ts reads MEDIA or OG through bucketFor) and nothing
-    // deletes from (check:destructive). Copies before v0.24.0 are at replaced/<time>/<key> and resized/<time>/<key>,
-    // and each revision row names its own, so a revert still finds them.
+    // deletes from (check:destructive). Each revision row names its own key,
+    // so a revert finds it.
     history: { bucket: env.MEDIA_REVISIONS, prefix: "replaced/" },
     httpMetadata: () => ({ cacheControl: IMMUTABLE_CACHE_CONTROL }),
     // The name is on the object too: a content-addressed key cannot yield it, and the R2 events re-derive the row from it.

@@ -1,4 +1,4 @@
-// The run records migration (drizzle/0031_kb_runs.sql, job_4409e06c39d4): runs are append-only on a real SQLite.
+// The run records migration (drizzle/0031_kb_runs.sql): runs are append-only on a real SQLite.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";

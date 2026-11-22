@@ -126,7 +126,7 @@ export async function run({ page, browser }) {
       )
       /*
        * The verdict is live too: a health run that lands between two fetches turns "14/15 passing" into
-       * "15/15 passing" (post-deploy run 196). Only the tile's link text is masked; the health-tile case
+       * "15/15 passing". Only the tile's link text is masked; the health-tile case
        * asserts the verdict.
        */
       .replace(/(data-health-age="A"><a href="\/health"[^>]*>)[^<]*/, "$1VERDICT");

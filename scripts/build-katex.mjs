@@ -102,7 +102,7 @@ function generateKatexCss() {
     ` * app/styles/katex-overrides.css, which is hand written and is where a site\n` +
     ` * rule goes. The marker is not quoted here: a CSS comment ends at the first\n` +
     ` * close sequence, so reproducing it inside this one terminated the header\n` +
-    ` * early and lightningcss refused the whole stylesheet (measured 2026-09-06).\n` +
+    ` * early and lightningcss refused the whole stylesheet.\n` +
     ` */\n`;
 
   // Appended rather than a second link, so a math post costs one request.

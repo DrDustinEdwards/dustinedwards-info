@@ -1,5 +1,5 @@
 /**
- * Coding sessions must not reach an admin MCP (job_4f42a57102fa). Claude Code lists the claude.ai connectors
+ * Coding sessions must not reach an admin MCP. Claude Code lists the claude.ai connectors
  * "Dustin Edwards Admin" and "Foxing Admin" in every session on this machine; an exact serverUrl deny in the
  * project settings drops them, and a deny matches by URL, not by the connector's display name. Removing an
  * entry silently restores the exposure, so this fails when one goes missing. The machine-level managed

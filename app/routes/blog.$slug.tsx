@@ -311,7 +311,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           />
 
           {/* The runway holding position marking (capsomer/manual.css .cap-hold): the post ends here; what follows is
-              about it. Drawn, with no words (Dustin, 2026-11-04). */}
+              about it. Drawn, with no words. */}
           <hr className="cap-hold" />
 
           <nav className="post-actions post-share" aria-label="Use this post elsewhere">

@@ -8,8 +8,8 @@
  *
  * REMOVAL CONDITION: stop passing `isLegacyRequest` when
  * `node scripts/probe-report.mjs` shows the target clients opening with
- * `server/discover` instead of `initialize` (last measured: Claude Code 2.1.203
- * on 2026-07-29 and claude.ai on 2026-07-30, both LEGACY). Delete it on the
+ * `server/discover` instead of `initialize` (Claude Code and claude.ai still
+ * open with `initialize`). Delete it on the
  * capture, never on a release note. Without it this is a modern-only server.
  */
 
@@ -60,7 +60,7 @@ function buildServer(env: ToolEnv, caller: Caller | undefined) {
   return () => {
     const server = new McpServer(SERVER_INFO, {
       instructions: INSTRUCTIONS,
-      // Bounds the elements a tool input may hold (GHSA-46jr-4wx8-v453; Grok audit 2026-10-21, DE-4).
+      // Bounds the elements a tool input may hold (GHSA-46jr-4wx8-v453).
       maxToolInputElements: 10_000,
       // Private, because the list depends on the grant (below); it changes only on deploy otherwise.
       cacheHints: mcpCacheHints({ ttlMs: 3_600_000 }),

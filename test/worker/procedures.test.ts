@@ -24,7 +24,7 @@ import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 /* The operator API's procedure tools against the real migrations and a stubbed repository: a save is
  * validated by the same compile CI runs, committed, and written to D1, and the NEXT request for the page
  * draws the edited step. No build and no deploy sit between the two, which is the procedure system's
- * whole claim (job_86709d790a73). */
+ * whole claim. */
 
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 const operator = { kind: "operator", id: "test" } as const;

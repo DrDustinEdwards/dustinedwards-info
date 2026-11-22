@@ -40,7 +40,7 @@ export const COURSES = Object.freeze({
 
 /**
  * Where a protocol stands in the lab, a closed list so the editor offers a choice and the page says it in one set of words
- * (Dustin, 2026-10-09, the form editor). Each is the protocol's `status`, or "MISSING: <why>" until someone sets it.
+ * (the form editor). Each is the protocol's `status`, or "MISSING: <why>" until someone sets it.
  */
 export const PROTOCOL_STATUSES = Object.freeze({
   "in-use": "In use",

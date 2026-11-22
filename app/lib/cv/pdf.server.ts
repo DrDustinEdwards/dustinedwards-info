@@ -27,7 +27,7 @@ import sansNormalUrl from "capsomer/fonts/inter-latin-wght-normal.woff2?url";
 import serifItalicUrl from "~/fonts/source-serif-4-latin-italic.woff2?url";
 import serifNormalUrl from "~/fonts/source-serif-4-latin-normal.woff2?url";
 
-/** The one key. `dustin-edwards-` is ruling 127's prefix for a file the site serves under a name. */
+/** The one key. `dustin-edwards-` is the prefix for a file the site serves under a name. */
 export const CV_PDF_KEY = "derived/dustin-edwards-cv.pdf";
 
 /** The custom-metadata field that carries the stamp of the CV data and print document the object was drawn from (cvPdfStamp). */

@@ -1,4 +1,4 @@
-// The Build command for Worker Previews (Cloudflare's Git integration, job_c5a6f3e8ce6d). Cloudflare
+// The Build command for Worker Previews (Cloudflare's Git integration). Cloudflare
 // runs it on every push to a PR branch, then `npx wrangler preview` publishes the result. It writes
 // ONLY the preview resources: the ids are looked up by the preview names, and no production id is
 // ever needed, so a missing lookup refuses rather than falling back to anything.

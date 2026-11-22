@@ -109,8 +109,7 @@ export default defineConfig({
      * preference.** The islands never reach this rule: the plugin above emits
      * them as named assets, which no inline limit applies to.
      *
-     * MEASURED 2026-09-06 on the first build after the math stylesheet landed:
-     * `KaTeX_Size3-Regular.woff2` is 3,624 bytes, under the default 4096-byte
+     * For example `KaTeX_Size3-Regular.woff2` is 3,624 bytes, under the default 4096-byte
      * inline limit, and Vite inlined it as a base64 `data:` URI inside
      * the stylesheet. `font-src` is `'self'` and does NOT carry `data:` (only
      * `img-src` does), so the browser would have refused that one face while

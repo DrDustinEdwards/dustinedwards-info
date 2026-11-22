@@ -2,9 +2,6 @@
 // its address and the fields it knows beyond the ones every item has (name and status). The compile
 // (compile.mjs), the save, the sync, the drift check and Carrel's handlers all read this one object, so a kind
 // added here is a kind every one of them serves.
-//
-// The registry shipped as a framework with no kind (job_915d43f44cee), and each kind arrives with its own records and
-// pages in its own change: primer, then strain, then reagent and equipment.
 
 import { EQUIPMENT } from "./equipment.mjs";
 import { PRIMER } from "./primer.mjs";

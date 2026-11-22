@@ -1,7 +1,7 @@
 /**
  * The MCP request layer, end to end: a JSON-RPC request into handleMcp, through
  * the real server and tool registration, out to the fake operator API, and back.
- * Driven at the 2025-11-25 era, the one every measured client opens at today.
+ * Driven at the 2025-11-25 era, the one every client opens at today.
  */
 import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";

@@ -304,7 +304,7 @@ export function lastCommitDate(file) {
   const pulled = readPullManifest()?.[file];
   if (pulled) return pulled.day;
   // A file with no history is git exiting 0 with no output, the null answer. A throw is git missing
-  // or not a repository, which used to write a null revision date over every real one in D1.
+  // or not a repository; writing a null revision date over every real one in D1 would be wrong.
   let out;
   try {
     out = execFileSync("git", ["log", "-1", "--format=%cd", "--date=format:%Y-%m-%d", "--", file], {

@@ -1,6 +1,6 @@
 /**
- * build:og used to default to --remote, so a bare run wrote and pruned production R2. The target is
- * now named on every run that touches R2.
+ * A bare build:og must not write and prune production R2. The target is
+ * named on every run that touches R2.
  */
 
 import test from "node:test";

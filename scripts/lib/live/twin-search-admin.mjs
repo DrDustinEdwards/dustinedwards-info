@@ -92,7 +92,7 @@ export async function run() {
   }
 
   {
-    // Each paper's PDF sits in its own folder (#199), so the listing recurses; a flat read found none.
+    // Each paper's PDF sits in its own folder, so the listing recurses; a flat read found none.
     const pdfs = readdirSync(join(root, "public", "research", "publications"), { recursive: true })
       .map((f) => String(f).replaceAll("\\", "/"))
       .filter((f) => f.endsWith(".pdf"));

@@ -4,7 +4,7 @@ import { combinePurges, purgePost, purgePosts } from "~/lib/cache-purge.server";
 
 describe("a purge outcome", () => {
   it("is null, SKIPPED, on a runtime with no purge API, never false", async () => {
-    /* Miniflare has no purge API: this is the local and test case that used to read as a failure. */
+    /* Miniflare has no purge API: this is the local and test case, not a failure. */
     expect(await purgePosts("test")).toBeNull();
     expect(await purgePost("a-post", "test")).toBeNull();
   });

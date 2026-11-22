@@ -35,7 +35,7 @@ const CASES = [
   ["further_reading: data url", furtherReading, "data:text/html,x", false],
   // Further reading is things to READ: http(s) or a `/writing/` path only, though `isAllowedUrl` permits mailto.
   ["further_reading: mailto", furtherReading, "mailto:a@b.c", false],
-  // Accepting paths means protocol-relative is no longer refused as a side effect, so it is pinned here.
+  // Accepting paths must not let protocol-relative through as a side effect, so it is pinned here.
   ["further_reading: protocol-relative host", furtherReading, "//evil.com/x", false],
   ["further_reading: a site path that is not a post", furtherReading, "/about", false],
   ["further_reading: /writing/ with no slug", furtherReading, "/writing/", false],

@@ -17,8 +17,8 @@ import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * The network of systems at /systems: Capsomer's system map at level 1, hexagons first (the core in the middle, the shared
- * packages around it, what people use by group outside, every tie a line), and the plain map of cards a tab away
- * (Dustin, 2026-11-03). A card's link opens the system's own page (app/routes/system.tsx).
+ * packages around it, what people use by group outside, every tie a line), and the plain map of cards a tab away.
+ * A card's link opens the system's own page (app/routes/system.tsx).
  * The data is the committed copy of Capsid's public model (data/system-model.json), checked when the module loads, so a
  * bad file fails the build and never reaches a reader. The whole map is in the HTML, lines included; the
  * script (app/enhance/system-map.ts) adds the tabs and lights a system's ties under the pointer or the focus.

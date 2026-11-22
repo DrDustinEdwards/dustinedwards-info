@@ -9,7 +9,7 @@
 // WHAT ELSE THE SITE HOLDS, AND HOW EACH IS COVERED (area 8, B6 and B7):
 // - MEDIA (R2): the uploaded originals, copied nightly to files/media/ by d1-dump's files backup (backupMedia below).
 // - MEDIA_REVISIONS (R2): every earlier set of a file's bytes, kept by site-api's media library under
-//   `replaced/<key>/<sha256>` before an overwrite (`replaced/<time>/<key>` and `resized/<time>/<key>` before v0.24.0),
+//   `replaced/<key>/<sha256>` before an overwrite,
 //   with a deleted file's last bytes, and never deleted (media-adapter.server.ts), copied nightly to files/revisions/ the same way. It is a bucket of its own
 //   because a revert reads it back and MEDIA's listing is the media index's truth (media-index-drift).
 // Not backed up, because each is derived or transient:

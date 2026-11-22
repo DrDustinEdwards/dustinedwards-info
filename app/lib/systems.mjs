@@ -1,11 +1,9 @@
 // The network of systems at /systems and each system at /systems/<id>: Capsid's public model
 // (data/system-model.json, the document Capsid serves at /public/model/v1.json) checked, then shown
 // by Capsomer's system map, the network as hexagons (the plain map of cards a tab away) and one system at level 2.
-// Ruling: capsid/rulings/system-explorer-2026-10-10.md, answer 9 (the same component as the explorer).
 //
-// Every system is drawn whole, a private repo's included (Dustin, 2026-10-23: "do not exclude
-// private repos", "fully wired just like the public ones"); a private system carries no repo
-// link. The file is refused unless every key is one the published shape allows and a private
+// Every system is drawn whole, a private repo's included, fully wired like the public ones; a private
+// system carries no repo link. The file is refused unless every key is one the published shape allows and a private
 // system names no repo, so a mistake upstream stops the build rather than reaching the page.
 // The shape, its checks, the explorer's addresses and the Markdown twin are Capsomer's
 // (capsomer/behavior/system-model); what is here is this site's paths and words.

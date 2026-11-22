@@ -21,8 +21,7 @@ import { testEnv } from "./test-env";
 
 /* A phage-table edit goes live with no build and no deploy: Carrel saves it through site-api's adapter (the one
  * write path), the save validates it with the code CI runs, commits it, re-derives the page the table is drawn
- * into and writes the phage's row, and the NEXT request for /research/phages and its markdown twin carries the edit
- * (job_005b85bf32fc, docs/PHAGES.md). The repository is the source and D1 is derived. */
+ * into and writes the phage's row, and the NEXT request for /research/phages and its markdown twin carries the edit (docs/PHAGES.md). The repository is the source and D1 is derived. */
 
 // The save's purge goes to the Renderer over the loopback (cache-purge.server.ts), replaced here with a recording one.
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));

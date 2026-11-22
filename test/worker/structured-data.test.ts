@@ -301,7 +301,7 @@ function visibleTrail(html: string): Array<{ name: string; href: string | null }
   ].map((m) => ({ name: decode(m[2] ?? m[3] ?? ""), href: m[1] ?? null }));
 }
 
-// The papers are D1 rows now, so the schema and the rows exist before the cases below are collected (setup.ts
+// The papers are D1 rows, so the schema and the rows exist before the cases below are collected (setup.ts
 // applies the same migrations again, which is a no-op).
 await applyD1Migrations(
   env.DB,

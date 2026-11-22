@@ -22,8 +22,7 @@
 /* optional, not swap (Google's advice: web.dev "Best practices for fonts"): a face that
    misses its ~100 ms window leaves the visit in its size-matched fallback below, so text never moves once
    drawn. Under swap the fallbacks, within about 1% of each face, still re-wrapped a title or a control row
-   now and then (D5). This replaces the earlier swap ruling, made when a first visit fell back to plain Arial;
-   the fallbacks are matched now, and lib/preloads.ts preloads each page's first face so it usually arrives. */
+   now and then (D5). lib/preloads.ts preloads each page's first face so it usually arrives. */
 /* Three rules on one name, from `capsomer fallback-font` (Capsomer 0.66): Georgia up to weight 549,
    scaled to the face at opsz 17 and weight 400 (the 17px body); Georgia Bold from 550, scaled to the
    face at opsz 22 and weight 600 or 700 (the 18 to 34px serif titles). Each rule covers its range, so

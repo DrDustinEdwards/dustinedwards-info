@@ -1,7 +1,7 @@
 /**
  * dustinedwards-mcp: the operator MCP wrapper (Dustin Edwards Admin).
  *
- * THE LAW (Capsid capsid/mcp-wrapper-standard.md, ratified 2026-07-30). This Worker contains NO policy, NO gates, and NO
+ * THE LAW (Capsid capsid/mcp-wrapper-standard.md). This Worker contains NO policy, NO gates, and NO
  * second write path. Every tool call becomes an authenticated HTTP request to POST /api/operator on the dustinedwards
  * Worker, where all rules live. If this Worker vanished, nothing about what is allowed would change.
  *
@@ -15,13 +15,13 @@
  * run now through /api/operator's run_job, behind OPERATOR_TOKEN, by Capsid Admin). What
  * is this server's own is below:
  *
- *   agentKeys              ruling 37: Grok cannot complete OAuth (measured 2026-09-07), so its AGENT_KEY_GROK secret is
+ *   agentKeys              Grok cannot complete OAuth, so its AGENT_KEY_GROK secret is
  *                          its door, read only unless AGENT_WRITE names it. The principal is the secret's name, never the
  *                          request's; it has its own rate limit, operator rights only (the API sees OPERATOR_TOKEN), and
  *                          the same handleMcp as the OAuth door, so one tool surface.
  *   /probe/*               the client measurement instrument (probe.ts), OUTSIDE the OAuth provider on purpose: it
  *                          observes unauthenticated client behavior. One no-op tool, no route to the operator API, and
- *                          every capture (a KV write anyone can trigger) metered per address (Grok audit, DE-5).
+ *                          every capture (a KV write anyone can trigger) metered per address.
  *   probe-kv               its /health check, warn level: only the instrument uses it.
  *
  * Access rather than dustinedwards.info's own Better Auth: this server's identity stays independent of the site's Google

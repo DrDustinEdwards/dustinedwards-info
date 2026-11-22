@@ -1,7 +1,6 @@
 /*
  * The site's own contents in Capsomer's site header (site-header.tsx): the structured panel each section
- * button opens, drawn to Dustin's "Option C: structured panels" mock (Site menu options.html, 2026-10-15):
- * its sizes, its rules and its colors mapped onto the site's tokens so dark follows. Capsomer places the
+ * button opens, with sizes, rules and colors mapped onto the site's tokens so dark follows. Capsomer places the
  * panel (--cap-popover-x and --cap-popover-y, under the header, lined up with its button and held inside the
  * window) and gives it light dismiss and the keys. These rules are unlayered and Capsomer's are layered, so
  * these win.
