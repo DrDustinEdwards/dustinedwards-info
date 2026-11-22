@@ -1,8 +1,7 @@
 // A brotli proxy in front of the preview server, for Lighthouse. The preview serves every response
 // uncompressed and Cloudflare serves the deployed site with brotli, so Lighthouse on the bare
-// preview charges a slow-4G phone for bytes no visitor downloads. Measured 2026-10-21: /systems is
-// 92.8 KB from the preview and 15.3 KB brotli from dustinedwards.info, and LCP on the bare preview
-// sat 70ms under its 2.5s budget.
+// preview charges a slow-4G phone for bytes no visitor downloads. /systems is
+// 92.8 KB from the preview and 15.3 KB brotli from dustinedwards.info.
 import { createServer, request } from "node:http";
 import { constants, createBrotliCompress } from "node:zlib";
 

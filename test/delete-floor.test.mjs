@@ -1,6 +1,6 @@
 /**
  * The floors in front of sync:content, build:diagrams and build:og. Each converges a store toward the
- * content artifact, so an empty or reshaped artifact used to converge production to nothing and then
+ * content artifact, so an empty or reshaped artifact must not converge production to nothing and then
  * verify the nothing against itself.
  */
 

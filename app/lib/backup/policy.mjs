@@ -3,7 +3,7 @@
 
 /**
  * The D1 tables that are NOT derived from the repository or the bucket, so the dump
- * is the only copy of their rows. Read off drizzle/*.sql on 2026-10-11; the reason names the source
+ * is the only copy of their rows. Read off drizzle/*.sql; the reason names the source
  * of each. Every other table converges toward the repository or a bucket and is repaired through
  * its derivation, so its absence from a dump would cost a rebuild, not data.
  *

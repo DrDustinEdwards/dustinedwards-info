@@ -187,7 +187,7 @@ for (const b of withFile) {
   );
 
   // Absent means `normal`, and the two keywords a face descriptor accepts are numbers in disguise; a
-  // value in none of these shapes used to fall through every branch unasserted.
+  // value in none of these shapes would fall through every branch unasserted.
   const WEIGHT_KEYWORDS = /** @type {Record<string, string>} */ ({
     "": "400",
     normal: "400",

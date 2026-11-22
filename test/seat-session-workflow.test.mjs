@@ -6,8 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 // The seat session's security properties, read from the workflow text. Kept in step with
-// capsid's test/seat-session-workflow.test.ts (capsid/research/design-seat-session-hardening.md,
-// PR 6), so the two workflows are hardened the same way and refuse the same things.
+// capsid's test/seat-session-workflow.test.ts (capsid/research/design-seat-session-hardening.md),
+// so the two workflows are hardened the same way and refuse the same things.
 
 const TEXT = readFileSync(
   new URL("../.github/workflows/seat-session.yml", import.meta.url),
@@ -255,8 +255,7 @@ await test("harden-runner is the first step, pinned, in block mode, and carries 
   assert.doesNotMatch(all[0], /egress-policy: audit/);
 });
 
-// The list capsid's audit canary recorded (capsid actions run 36296347138) and its block-mode
-// canary passed on (capsid actions run 36297801984). GitHub's Actions hosts are the agent's own.
+// The list capsid's audit and block-mode canaries use. GitHub's Actions hosts are the agent's own.
 const ALLOWED_ENDPOINTS = [
   "mcp.dustinedwards.info:443",
   "github.com:443",
@@ -410,9 +409,8 @@ await test("the prompt stops the session at once when the Capsid jobs tool is mi
   assert.match(actionStep(), /action "claim", namespace "dustinedwards"/);
 });
 
-// The first block-mode canary here (actions run 36308451713) never committed. CLAUDE.md then sent
-// every actor but the site session to a worktree, and the project hooks run outside the
-// sandbox, one of them running lint on every push.
+// CLAUDE.md sends every actor but the site session to a worktree, and the project hooks run
+// outside the sandbox, one of them running lint on every push.
 
 await test("the prompt tells the session its runner checkout is its own clone", () => {
   assert.match(

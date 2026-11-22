@@ -104,7 +104,7 @@ await test("media: an unreadable count is not a passing count", () => {
 });
 
 await test("media: a non-array missing, extra or failure list fails closed without a crash", () => {
-  // A report that cannot say what failed has not converged (Dustin's ruling, job_acaa730fcbc8).
+  // A report that cannot say what failed has not converged.
   const r = mediaSyncReport({ ...CLEAN, missing: "nope", extra: null, failures: 7 });
   assert.deepEqual(r.missing, []);
   assert.deepEqual(r.extra, []);

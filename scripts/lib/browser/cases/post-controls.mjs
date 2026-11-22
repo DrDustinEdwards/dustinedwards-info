@@ -262,7 +262,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
         );
         if (link && target) {
           /* Polled, not waitForNavigation: with script off, a click on a link the hover prefetched commits the
-           * navigation but Puppeteer's lifecycle watcher never sees domcontentloaded (measured 2026-10-29). */
+           * navigation but Puppeteer's lifecycle watcher never sees domcontentloaded. */
           await link.click();
           await pollUntil(
             () => Promise.resolve(new URL(noScript.url()).pathname),

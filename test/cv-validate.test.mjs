@@ -1,5 +1,4 @@
-// The CV's validation module (app/lib/cv/validate.mjs, compile.mjs) showing each rule fire: the tests that read
-// app/data/cv.ts are these rules now, held by the build, the sync and the CV save alike (docs/CV.md).
+// The CV's validation module (app/lib/cv/validate.mjs, compile.mjs) showing each rule fire: these rules are held by the build, the sync and the CV save alike (docs/CV.md).
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

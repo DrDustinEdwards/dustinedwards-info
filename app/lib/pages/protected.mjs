@@ -1,4 +1,4 @@
-// The pages that must always be published (job_044f96426efa). /terms is the dataset license: TERMS_PATH
+// The pages that must always be published. /terms is the dataset license: TERMS_PATH
 // is what the `Link: rel="license"` header on every download and the `license` of every Dataset point at,
 // so a /terms that 404s or answers as a draft breaks the license of every data set the site publishes.
 // Carrel already refuses to unpublish or delete it; this is the site's own refusal, in the doors every

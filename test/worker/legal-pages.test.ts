@@ -16,7 +16,7 @@ import { routeContext, carrelSend } from "./route-helpers";
 import { seedPages, seedProcedures } from "./seed";
 import { testEnv } from "./test-env";
 
-/* The site side of Carrel's legal pages (job_044f96426efa): /privacy is a page like /terms, the layout draws
+/* The site side of Carrel's legal pages: /privacy is a page like /terms, the layout draws
  * the banner and the date from the front matter, /terms can never be unpublished or deleted, and the license
  * wiring behind TERMS_PATH keeps working. */
 

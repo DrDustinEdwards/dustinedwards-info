@@ -88,7 +88,7 @@ await test("links: a link that provably goes nowhere is refused, and an address 
   assert.ok(errors.some((e) => e.includes("#Nope")));
 });
 
-/* The legal pages (job_044f96426efa): /privacy is a registered page like /terms, and the two alone may state a
+/* The legal pages: /privacy is a registered page like /terms, and the two alone may state a
  * `banner` (the one word "Draft") and a `last_updated` day, which the layout draws and the twin repeats. */
 const withFields = (/** @type {string} */ fields) => (/** @type {string} */ raw) =>
   raw.replace(/^---\n/, `---\n${fields}\n`);

@@ -74,8 +74,8 @@ export async function run({ browser }) {
 
   /*
    * The island runs after the first paint as often as before it (site.js is deferred and the island a dynamic
-   * import), and each thing it added or took away moved the page: the phone's filter fold measured CLS 0.41
-   * to 0.86, Apply 0.011. So the island is held until the page has painted with its fonts and is scrolled to
+   * import), and each thing it added or took away moved the page: the phone's filter fold moved CLS
+   * by 0.41 to 0.86. So the island is held until the page has painted with its fonts and is scrolled to
    * the filters, the shifts counted from there, and then let run. A held request that never comes is a failed case, not a pass.
    */
   const late = await browser.newPage();
@@ -179,8 +179,7 @@ export async function run({ browser }) {
       /*
        * Drawn is not still: Enarratio grows the redrawn bars in from nothing over about half a second, and
        * a reader clicks a bar once they can see it. Clicked in the first frames, the bar has no height and
-       * Puppeteer refuses it as "not clickable" (post-deploy run 196, where charts.json's round trip put
-       * the poll right after the draw), so the case waits for the bar's box to stop changing.
+       * Puppeteer refuses it as "not clickable", so the case waits for the bar's box to stop changing.
        */
       const bar = `[data-cv-timeline] [data-enarratio-x="${year}"]`;
       let lastHeight = -1;

@@ -177,7 +177,7 @@ s=s.replace('export default adminMcpWorker<Env>({','const local = new OAuthProvi
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "14. a local OAuthProvider beside site-runtime's door"
 
-# 15. Agent keys switched off: Grok (measured 2026-09-07) cannot complete OAuth, so its key is its only door.
+# 15. Agent keys switched off: Grok cannot complete OAuth, so its key is its only door.
 python3 -c "
 p='src/index.ts'; s=open(p,encoding='utf-8').read()
 s=s.replace('agentKeys: true,','agentKeys: false,',1)

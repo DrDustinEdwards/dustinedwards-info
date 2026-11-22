@@ -229,7 +229,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <template data-island="plate" />
 
         {/* The work in figures as an instrument panel, the Apollo DSKY's lit seven-segment readouts under
-            drafting legends (capsomer/manual.css form boxes, panel; Dustin, 2026-11-04). */}
+            drafting legends (capsomer/manual.css form boxes, panel). */}
         <dl className="cap-form-boxes home-readings" data-variant="panel">
           <div className="cap-form-boxes-box">
             <dt>Papers</dt>

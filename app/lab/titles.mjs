@@ -62,7 +62,7 @@ export function titleLabel(id) {
 }
 
 /**
- * Who may edit the semester end dates: the Primary Owner and Owners (layers 0 and 1), as the ruling says. A layer
+ * Who may edit the semester end dates: the Primary Owner and Owners (layers 0 and 1). A layer
  * question and not a permission one, because no title below an Owner may ever hold it.
  * @param {{ layer: number } | null} actor
  */

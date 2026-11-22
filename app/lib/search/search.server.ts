@@ -462,7 +462,7 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
  * is this database (https://developers.cloudflare.com/ai-search/configuration/data-source/d1/). One row per published
  * post section, then each published paper's markdown twin. Papers come from their twins, not their search_docs rows:
  * indexing both would let the shorter win questions the longer answers. A rendered row may take 64 KiB
- * (d1_document_too_large), and the longest twin was 113,814 bytes on 2026-11-14, so a twin is indexed in parts of
+ * (d1_document_too_large), and the longest twin is over 113,000 bytes, so a twin is indexed in parts of
  * PAPER_PART_CHARS characters, leaving room for multibyte text. AI Search puts each row's id on every chunk of it as
  * `row_id`, so the id is the URL a citation links to (ask-citations.mjs).
  *

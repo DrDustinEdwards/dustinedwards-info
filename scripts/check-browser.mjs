@@ -7,9 +7,8 @@
 // Two groups run beside that sequence, in a second browser, because they share nothing with it: theme-cache (which ran
 // first, before any console listener, and sets its cookies in contexts of its own) and the admin plane (another origin,
 // its credential on its own page, and run after the public console tally closed). Each was about a minute of a
-// five-minute run; their lines print together when each ends. A second browser and not a second page: MEASURED
-// 2026-11-06, a page opened beside the shared one took the window's focus, and the copy control's clipboard write,
-// which needs a focused document, then wrote no status.
+// five-minute run; their lines print together when each ends. A second browser and not a second page: a page opened beside the shared one takes the window's focus, and the copy control's clipboard write,
+// which needs a focused document, then writes no status.
 
 import puppeteer from "puppeteer";
 

@@ -213,7 +213,7 @@ for (const [table, longColumns] of Object.entries(LONG_TEXT_COLUMNS)) {
 }
 
 // wrangler d1 export writes a string holding a newline as replace('a\nb','\n',char(10)), CR as a second replace
-// around it. The first real drill (run 37221582504) died on exactly this in phage-isolation.
+// around it. A drill dies on exactly this in phage-isolation.
 await test("a value the export wrote with replace(..., '\\n', char(10)) is cut, and means what the original meant", () => {
   const prose = Array.from(
     { length: 4000 },

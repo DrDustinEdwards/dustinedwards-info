@@ -64,7 +64,7 @@ function refuse(why, remedy) {
  * spawnSync froze this process's event loop for a whole child (build:og runs over a minute). A connection the edge
  * closed meanwhile could not be noticed, nor could undici's own idle expiry (keepAliveTimeout, 4 s) retire it, so the
  * next request went out on a dead socket and failed in milliseconds without reaching the edge: sync_media's
- * UND_ERR_SOCKET after build:og and sync_ask's ECONNRESET after the sync (2026-11-13, -16, -17). With the loop free,
+ * UND_ERR_SOCKET after build:og and sync_ask's ECONNRESET after the sync. With the loop free,
  * the idle connection is retired after 4 s and the next call opens a fresh one.
  * @param {string} command @param {string[]} args
  * @param {{ capture?: boolean }} [options]

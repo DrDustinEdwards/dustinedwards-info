@@ -32,7 +32,7 @@ import { seedCitations, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
 
 /*
- * A PUBLICATION EDIT GOES LIVE WITH NO DEPLOY (the publications job, 2026-10-01). Everything below goes
+ * A PUBLICATION EDIT GOES LIVE WITH NO DEPLOY. Everything below goes
  * through the real Carrel route, so the package's guard, the registry's ids, the publication handler, the
  * shared validator, commitUnlessUnchanged, the D1 write and the cache purge are the ones that run in
  * production. GitHub is the recorded stub; nothing here builds anything. Each refusal also checks that the

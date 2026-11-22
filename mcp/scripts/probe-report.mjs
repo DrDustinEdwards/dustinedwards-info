@@ -30,7 +30,7 @@ const NS = JSON.parse(
 // Run wrangler's JS entry point with this node binary. Not `npx` (needs a shell,
 // which node warns about and which would need escaping), and not the
 // node_modules/.bin/wrangler.cmd shim, which node 24 refuses to spawnSync
-// without a shell and fails with EINVAL. Measured on Windows 2026-07-30.
+// without a shell and fails with EINVAL.
 const CLI = fileURLToPath(new URL("../node_modules/wrangler/bin/wrangler.js", import.meta.url));
 
 const wrangler = (...args) =>

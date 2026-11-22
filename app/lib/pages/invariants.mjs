@@ -181,9 +181,8 @@ function phageTableErrors({ path, html }, phages) {
 }
 
 /**
- * The named software pages: the explanation of the name comes after what the software does (Dustin,
- * 2026-09-29), the Capsid portal sentence stays, and the Carrel page names neither its address nor its
- * code repository (Dustin, 2026-09-28).
+ * The named software pages: the explanation of the name comes after what the software does, the Capsid
+ * portal sentence stays, and the Carrel page names neither its address nor its code repository.
  *
  * @param {InvariantPage} page
  */
@@ -224,8 +223,7 @@ function softwareNameErrors({ path, markdown }) {
 const ABOUT_HTML_FLOOR = 200;
 
 /**
- * About (check:content used to render it twice and hold it to this floor, and check:links held its links):
- * an empty or near-empty render is a valid row describing a blank page, which is the one failure here that
+ * About: an empty or near-empty render is a valid row describing a blank page, which is the one failure here that
  * looks like success.
  *
  * @param {InvariantPage} page

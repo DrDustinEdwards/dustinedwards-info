@@ -23,8 +23,7 @@ import { testEnv } from "./test-env";
 
 /* An entry edit goes live with no build and no deploy: Carrel saves it through site-api's adapter (the one
  * write path), the save validates it with the code CI runs, commits it, re-derives the page the entry opens and
- * writes the entry's row, and the NEXT request for the page and its markdown twin carries the edit (job_06a07623695b,
- * docs/DICTIONARY.md). The repository is the source and D1 is derived. */
+ * writes the entry's row, and the NEXT request for the page and its markdown twin carries the edit (docs/DICTIONARY.md). The repository is the source and D1 is derived. */
 
 // The save's purge goes to the Renderer over the loopback (cache-purge.server.ts), replaced here with a recording one.
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));

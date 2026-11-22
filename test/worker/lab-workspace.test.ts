@@ -16,9 +16,7 @@ import { routeContext, throughMiddleware } from "./route-helpers";
 
 /*
  * The /lab-bench workspace (docs/KNOWLEDGE-BASE.md step 5): its own Access application, a row in `members` for everyone
- * but the Primary Owner, and site-runtime's rules for every change. Each rule here was seen red once, by breaking
- * the code it names (see the pull request).
- */
+ * but the Primary Owner, and site-runtime's rules for every change. */
 
 const TEAM = "team.cloudflareaccess.com";
 const ADMIN_AUD = "admin-app-tag";

@@ -135,8 +135,8 @@ export const MATRIX = [
 ];
 
 /**
- * Tokens the site reads but never declares. Empty since the move to Capsomer's prose blocks (0.92.0): the per-span Shiki
- * pair and the :swatch chip color are read only by capsomer/prose-blocks.css now, which this gate does not scan.
+ * Tokens the site reads but never declares. Empty: the per-span Shiki
+ * pair and the :swatch chip color are read only by capsomer/prose-blocks.css, which this gate does not scan.
  *
  * @type {Map<string, string>} token -> why it is declared outside app.css
  */

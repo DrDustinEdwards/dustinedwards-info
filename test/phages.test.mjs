@@ -19,8 +19,8 @@ import { buildPhages } from "../scripts/lib/phages.mjs";
 /* The validation module every phage write runs (app/lib/phages/compile.mjs): build:content, sync:content, the
  * gates and the phage save. These cases show each rule firing, on a real phage file with one line changed, so a
  * rule that stopped firing would fail here instead of letting an edit through. They carry the checks that read
- * the rows and the PhagesDB map when those were code and a page (the table lists every phage, a link for exactly
- * the phages with a record, the sections, the order), now that the rows are files (docs/PHAGES.md). */
+ * the rows and the PhagesDB map (the table lists every phage, a link for exactly
+ * the phages with a record, the sections, the order), which are files (docs/PHAGES.md). */
 
 const dir = new URL("../content/phages/", import.meta.url);
 const read = (/** @type {string} */ slug) => readFileSync(new URL(`${slug}.md`, dir), "utf8");

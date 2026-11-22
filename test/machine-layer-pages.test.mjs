@@ -1,4 +1,4 @@
-/* The machine layer for the pages added the week of 2026-09-22 (the software pages, the lab calculators
+/* The machine layer for the later pages (the software pages, the lab calculators
  * and the CV): each is in the search index, has its markdown twin and its llms.txt line, and names its own
  * social card. The page list is every rendered page under their roots, so a calculator added under
  * /research/tools is held to all four with no edit here.

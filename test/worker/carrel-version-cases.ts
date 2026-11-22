@@ -6,7 +6,7 @@ import { source, versionOf, writes } from "./source-stub";
 import { testEnv } from "./test-env";
 
 /* One definition of what Carrel's version of an item means, run for every file-backed kind: it is the blob sha of
- * the item's own file at head, so only a change to THAT item moves it (job_d0ed3f93a4d3). Each kind's test file
+ * the item's own file at head, so only a change to THAT item moves it. Each kind's test file
  * calls this with its own repository, id and a valid edit. The kinds differ in how they save, not in this. */
 
 const PREFIX = "https://example.com/api/carrel/v1";

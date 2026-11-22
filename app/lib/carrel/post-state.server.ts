@@ -86,7 +86,7 @@ export async function movePost(
     db
       .prepare(`UPDATE content_trash SET content_id = ?2 WHERE content_id = ?1`)
       .bind(move.from, move.to),
-    // The new slug is a page of its own now, so it no longer redirects anywhere.
+    // The new slug is a page of its own, so it redirects nowhere.
     db.prepare(`DELETE FROM post_redirects WHERE from_slug = ?1`).bind(move.to),
     ...(move.redirect
       ? [

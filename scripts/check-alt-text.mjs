@@ -90,9 +90,8 @@ async function main() {
   const { documents, images, failures } = altTextFailures({ posts: readArtifact().posts, pages });
 
   /* The document floor proves the scan ran. The image count is not floored: the published corpus
-     has no <img> once the three architecture diagrams are inline SVG, and a floor of 1 failed on
-     that removal (those six mermaid images were the whole count on 2026-10-29). check:content
-     holds the drawings' names. */
+     has no <img> once the three architecture diagrams are inline SVG, and a floor of 1 would fail.
+     check:content holds the drawings' names. */
   const breaches = [assertFloor("check:alt-text", "published documents read", documents, 1)].filter(
     Boolean,
   );

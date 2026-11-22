@@ -25,7 +25,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = join(ROOT, "src");
 /*
- * THE SITE'S CHECKOUT, one level up since the move into dustinedwards-info.
+ * THE SITE'S CHECKOUT, one level up.
  * The gate READS two site files (the operator API's tool list and the site's
  * origin) so that what it checks against is derived rather than restated. It
  * reads them; the Worker imports nothing from them.
@@ -211,7 +211,7 @@ check(
   `Expected ${ALLOWED_DO_CLASSES.join(", ")} but found ${actualDo.join(", ") || "(none)"}.`,
 );
 
-// The limiter must be a SQLite-backed class. The async storage API was measured
+// The limiter must be a SQLite-backed class. The async storage API is
 // non-atomic across an await and let 8 through a ceiling of 3.
 check(
   "The rate limiter is registered as a new_sqlite_classes migration",
@@ -268,7 +268,7 @@ check(
   `Found main=${config.main}. test/conformance-entry.ts is a gate harness and must never deploy.`,
 );
 
-// CIMD needs this flag, and it is what the measured client actually uses.
+// CIMD needs this flag, and it is what the client actually uses.
 check(
   "global_fetch_strictly_public is enabled for CIMD",
   (config.compatibility_flags ?? []).includes("global_fetch_strictly_public"),
@@ -276,7 +276,7 @@ check(
 
 // B. Credentials and vars the wrapper must never hold.
 
-// GITHUB_TOKEN would be a repository WRITE credential. The site no longer holds one
+// GITHUB_TOKEN would be a repository WRITE credential. The site holds none
 // (its content source is D1), and the wrapper must never hold one either: it could
 // commit directly and bypass every gate, the second write path the law forbids.
 const FORBIDDEN_NAMES = [
@@ -383,9 +383,8 @@ check(
 
 const toolsText = readFileSync(join(SRC, "tools.ts"), "utf8");
 /*
- * THE SIX TOOLS, ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
- * section 6. Whole jobs, each prefixed dei_, regrouped from the eleven one-call
- * tools of the separate repo, with the post tools removed (Carrel owns
+ * THE SIX TOOLS (capsid/research/design-mcp-servers.md section 6). Whole jobs,
+ * each prefixed dei_, with no post tools (Carrel owns
  * writing, rule 11) and the mention tools too (Carrel moderates every site's
  * webmentions: carrel_review_mentions, carrel_decide_mention).
  */
@@ -438,7 +437,7 @@ for (const name of named) {
   );
 }
 
-// Post and page tools cannot come back: the operator API no longer offers them, which the check above enforces. The
+// Post and page tools cannot come back: the operator API does not offer them, which the check above enforces. The
 // site's jobs run now through Capsid Admin and the operator API's run_job, never through a tool here.
 check(
   "the wrapper never calls run_job",
@@ -630,8 +629,7 @@ for (const f of files) {
 // H. The door is site-runtime's adminMcpWorker, and only that.
 
 /*
- * The door's guarantees (CIMD for claude.ai, measured 2026-07-30; DCR at /register for Grok's rmcp client, measured
- * 2026-09-07, with the exact redirect allowlist and the per-address limit; tokens bound to PUBLIC_ORIGIN + /mcp and the
+ * The door's guarantees (CIMD for claude.ai; DCR at /register for Grok's rmcp client, with the exact redirect allowlist and the per-address limit; tokens bound to PUBLIC_ORIGIN + /mcp and the
  * audience re-checked; the administrator re-checked; agent keys matched by ./agent-keys from the SECRET NAME, limited
  * under `agent:<name>`, logged by principal with no key material) are site-runtime's adminMcpWorker, each with its
  * PLANT test in site-runtime's test/admin-mcp.test.mjs. What this server could still get wrong is a door of its own

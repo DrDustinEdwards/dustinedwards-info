@@ -6,14 +6,14 @@
  * and an API refusal mean different things and must read differently.
  *
  * Who the caller is, is settled by site-runtime's admin MCP door (index.ts) and never read from the request. Agent keys
- * (ruling 37) are site-runtime's ./agent-keys: one AGENT_KEY_<NAME> secret per agent, the principal taken from the
+ * are site-runtime's ./agent-keys: one AGENT_KEY_<NAME> secret per agent, the principal taken from the
  * secret's name, compared in constant time, failing closed.
  */
 
 import { mcpScopes, type McpCaller } from "@dustinedwards/site-runtime/mcp-server";
 
 /**
- * LEAST SCOPE FIRST. Ruling mcp-2026-10-10, rule 12.3.
+ * LEAST SCOPE FIRST.
  *
  * Read is what every connection gets. Write is ticked on the consent page, or named for an agent in AGENT_WRITE, and
  * only then do the tools that change the site run. There is no admin scope here because this Worker has no admin

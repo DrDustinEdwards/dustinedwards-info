@@ -11,7 +11,7 @@ import { seedProcedures, seedRegistry } from "./seed";
 /*
  * Step 7 (docs/KNOWLEDGE-BASE.md): lots and run records in /lab-bench. Runs are append-only, a correction is a new run naming
  * the one it replaces, and every change to a lot, by a person or by a run, writes a kb_audit row with the lot before
- * and after. Each rule here was seen red once, by breaking the code it names (see the pull request).
+ * and after.
  */
 
 const PRIMARY = "dustin@example.org";

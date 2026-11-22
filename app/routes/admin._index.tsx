@@ -96,7 +96,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
       ) : null}
 
       {/* Failures first and loud; the passing checks are a count in the heading and a list one click away
-          (Dustin's review, 2026-10-11: a green pill on every row hid the one red one). A repair sits with the
+          (a green pill on every row hid the one red one). A repair sits with the
           finding it repairs, so there is no column that is empty whenever nothing fails. */}
       <Panel
         title={

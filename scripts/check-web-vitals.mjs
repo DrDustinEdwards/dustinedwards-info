@@ -7,9 +7,8 @@
 // browser is puppeteer's bundled chrome-headless-shell (which `npm ci` already downloads beside
 // its Chrome), and Lighthouse drives it over its debugging port, so there is no second browser.
 //
-// WHY THE SHELL AND NOT puppeteer's DEFAULT HEADLESS: MEASURED, the default
-// (new) headless mode made Lighthouse fail on / with NO_NAVSTART on 3 runs of 3, and handing
-// Lighthouse a puppeteer page failed the same way 6 of 6. The shell measured 3 of 3.
+// WHY THE SHELL AND NOT puppeteer's DEFAULT HEADLESS: the default (new) headless mode makes
+// Lighthouse fail on / with NO_NAVSTART, and so does handing Lighthouse a puppeteer page.
 // chrome-launcher was not used: on Windows its kill() throws EPERM removing its temp profile.
 //
 // SIMULATED throttling scales the CPU time the host really spent, so a busy host inflates TBT.

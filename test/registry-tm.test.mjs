@@ -4,7 +4,7 @@ import test from "node:test";
 import { TM_MIN_LENGTH, primerTm, primerTmRounded } from "../app/kb/registry/tm.mjs";
 
 /* The reference is Biopython 1.88, Bio.SeqUtils.MeltingTemp.Tm_NN with nn_table=DNA_NN3 (SantaLucia 1998), Na=50 mM, no
- * K, Tris, Mg or dNTPs, dnac1=500 nM, dnac2=0 and saltcorr=5 (the 1998 entropy correction), run on 2026-10-04, with selfcomp=True for the two
+ * K, Tris, Mg or dNTPs, dnac1=500 nM, dnac2=0 and saltcorr=5 (the 1998 entropy correction), with selfcomp=True for the two
  * self-complementary sequences (Biopython does not detect them). These
  * are its outputs for the lab's twelve primers and three edge cases: two self-complementary sequences (the symmetry
  * term) and a homopolymer. A change to a nearest-neighbor value, an end term or the salt

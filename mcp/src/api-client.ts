@@ -7,11 +7,10 @@
  * first-publish policy, the atomic Git Data commit, the D1 sync and the AI
  * index sync all live.
  *
- * OVER THE `SITE` SERVICE BINDING since the move into dustinedwards-info
- * (ruling mcp-2026-10-10, design section 6 step 4). The public operator URL was
+ * OVER THE `SITE` SERVICE BINDING. The public operator URL would be
  * one hop through the internet for a call between two Workers on one account,
  * and on the dustinedwards.info zone it would also be the Worker-to-Worker
- * same-zone fetch measured answering Cloudflare error 1042 (2026-08-29). A
+ * same-zone fetch that answers Cloudflare error 1042. A
  * service binding is still HTTP: the request carries the same bearer, crosses
  * the same operator authentication and the same rate limiter, and the site
  * cannot tell it from any other operator call. It is not an in-process call.

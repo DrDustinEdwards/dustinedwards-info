@@ -8,8 +8,7 @@ import { dictionaryEntryMarkdown, definedTermJsonLd } from "../app/lib/dictionar
 import { compileAllDictionary, repoHost } from "../scripts/lib/dictionary.mjs";
 
 /* The validation module every dictionary write runs (app/lib/dictionary/compile.mjs): check:content,
- * build:content, sync:content and the dictionary save. The cases below are the two tests that read the entries
- * when they were code, ported to rules on the files, then one case per rule firing on a real entry with one line
+ * build:content, sync:content and the dictionary save. The cases below are one case per rule firing on a real entry with one line
  * changed, so a rule that stopped firing would fail here instead of letting an edit through. */
 
 const dir = new URL("../content/dictionary/", import.meta.url);
@@ -86,8 +85,7 @@ await test("every entry is complete: IPA between slashes, a respelling, two sens
 });
 
 await test("each clip is a small MP3 served from the site's own origin, and a referenced clip must exist", async () => {
-  // The repository's own clips: the host reads their first bytes, so the frame sync is judged here (CI), as the
-  // old test judged it. A clip that is missing, oversized or not MPEG is refused by the compile.
+  // The repository's own clips: the host reads their first bytes, so the frame sync is judged here (CI). A clip that is missing, oversized or not MPEG is refused by the compile.
   for (const entry of await entries()) {
     assert.match(entry.audio, /^\/audio\/[a-z]+\.mp3$/);
     const clip = await repoHost.audio(entry.audio);

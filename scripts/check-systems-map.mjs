@@ -34,10 +34,10 @@ import { median } from "./lib/web-vitals.mjs";
 
 /**
  * The design's budgets for /systems, in Lighthouse's units. LCP fails over the site's own "good"
- * line (check:web-vitals, 2.5s) and warns over the design's 1.5s: measured 2026-10-11 on the same
+ * line (check:web-vitals, 2.5s) and warns over the design's 1.5s: on the same
  * preview, /systems 2.31s, /colophon 2.28s, /research/lab 2.29s and / 2.75s, first paint 1.7s or
  * more on each, so 1.5s is the site's shared stylesheets and fonts to win, not this page's. Which
- * of the two to hold is Dustin's (the PR that added this gate asks).
+ * of the two to hold is Dustin's call.
  */
 const LCP_DESIGN_MS = 1500;
 const BUDGETS = [
@@ -62,7 +62,7 @@ let proxy;
 try {
   if (!(await waitForServer()))
     throw new Error(`the preview server did not answer. ${serverDiagnosis()}`);
-  // The case and Lighthouse each get a browser of their own. Measured 2026-10-11: after the case
+  // The case and Lighthouse each get a browser of their own. After the case
   // (throttling, emulated media, a bypassed policy) Lighthouse failed to record its trace on the
   // same browser twice running, and measured cleanly on a fresh one.
   browser = await puppeteer.launch({ headless: true });

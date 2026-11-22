@@ -99,7 +99,7 @@ export function desiredMonitors(origin) {
         type: "HTTP",
         interval: 300,
         timeout: 30,
-        // 3xx allowed here and not on health: the cutover puts a redirect in front of the home page.
+        // 3xx allowed here and not on health: a redirect may sit in front of the home page.
         successHttpResponseCodes: ["2xx", "3xx"],
       },
     },

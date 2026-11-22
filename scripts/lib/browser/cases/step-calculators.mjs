@@ -57,8 +57,8 @@ export async function run({ page }) {
       n.focus();
       /** @type {HTMLInputElement} */ (n).select();
     });
-    // What held focus as the keys went in, and whether the tools island had started: this check failed now and then in
-    // its first pass on CI (runs 615 and 617, 2026-11-17) and never in a local repeat, so a failure says which it was.
+    // What held focus as the keys went in, and whether the tools island had started: this check can fail
+    // in its first pass on CI and not in a local repeat, so a failure says which it was.
     const typedInto = await page.evaluate(() => {
       const active = document.activeElement;
       return {
@@ -106,7 +106,7 @@ export async function run({ page }) {
   }
 
   // Two different numbers, neither the worked example's: the second pass starts from the field the first left,
-  // so typing the first number again changes nothing and no recompute could show (run 37231091128).
+  // so typing the first number again changes nothing and no recompute could show.
   await exercise("before a run is started", "22200");
 
   await page.click(".cap-run-start");

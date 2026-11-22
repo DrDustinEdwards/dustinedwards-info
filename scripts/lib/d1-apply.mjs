@@ -1,8 +1,6 @@
 // The one way scripts write a statement file to D1. Local: wrangler's `--file` into Miniflare. Remote: D1's query
 // API, the file's statements sent as one batch. Never wrangler's `--remote --file`: that is D1's import API, and while
-// an import runs the database answers every other query with "Currently processing a long-running import." On
-// 2026-11-17 the deploy's converge sync ran twelve of them back to back (about 25 seconds a run), and a page, a
-// resource route and the carrel-schedules cron each failed inside that window (Sentry DUSTINEDWARDS-1, -3 and -4).
+// an import runs the database answers every other query with "Currently processing a long-running import."
 //
 // A batch is one SQL transaction (D1 docs, Workers Binding API, `batch()`; the REST query endpoint runs a `batch`
 // body the same way), so a file still lands whole or not at all, as the import did, and the site's own queries queue

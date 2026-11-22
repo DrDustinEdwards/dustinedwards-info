@@ -63,7 +63,7 @@ await test("every Search Console URL resolves: 200 kept, one 301, or 410, never 
 });
 
 /*
- * cutover.md's "Redirect map" (Capsid, dustinedwards, as of 2026-09-28), copied here as data so the code
+ * cutover.md's "Redirect map" (Capsid, dustinedwards), copied here as data so the code
  * is graded against the decision, not against itself. Every explicit row, and at least one concrete
  * address for every pattern rule, in the doc's words. When the doc changes, this table changes with it.
  * `null` is a kept page: the new site answers it and nothing redirects.
@@ -115,7 +115,7 @@ const CUTOVER_PATTERN_EXAMPLES = /** @type {Array<[string, string | null]>} */ (
     "/research/protocols/phage-dna-extraction",
   ],
   // /publications -> /research/publications. The doc's other new-site rename, /blog/{slug} ->
-  // /writing/{slug}, went on 2026-10-20: only the old site redirects to the new one (Dustin).
+  // /writing/{slug}, is not redirected here: only the old site redirects to the new one.
   ["/publications", "/research/publications"],
 ]);
 

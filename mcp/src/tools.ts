@@ -1,6 +1,5 @@
 /**
- * The five tools. Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
- * section 6.
+ * The five tools (capsid/research/design-mcp-servers.md section 6).
  *
  * WHOLE JOBS, NOT ENDPOINT MIRRORS (rule 4). Each finishes a job: read the
  * Knowledge Base registry, refresh citations, check the publications against

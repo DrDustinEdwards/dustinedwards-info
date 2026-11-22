@@ -16,7 +16,7 @@ export const PRELOADS = preloads(PAGE_PRELOADS);
 
 /**
  * The home page's other two faces, Source Serif (app.css, its Latin core) and Capsomer's mono, which it draws above
- * the fold; otherwise each is found only once its stylesheet has loaded (PageSpeed, 2026-10-30). Home only: preloaded
+ * the fold; otherwise each is found only once its stylesheet has loaded. Home only: preloaded
  * on every page they slowed /systems, which draws neither, from 2.0s to 2.5s LCP (check:systems-map, mobile profile).
  */
 export const HOME_PRELOADS = preloads([font(textFontUrl), font(monoFontUrl)]);

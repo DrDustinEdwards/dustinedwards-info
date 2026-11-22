@@ -298,9 +298,9 @@ export async function run({ browser }) {
     );
 
     /*
-     * What each width can reach, compared. Capsomer's AdminShell (#386) puts the wide layout's controls in its side strip and
+     * What each width can reach, compared. Capsomer's AdminShell puts the wide layout's controls in its side strip and
      * menu, with the account's links in the header's avatar panel, and the top bar holds a page's own actions. A phone hides
-     * the strip and menu; since Capsomer 0.9.0 the bottom bar holds up to five pages and no More, and the header's menu
+     * the strip and menu; the bottom bar holds up to five pages and no More, and the header's menu
      * button opens one sheet with the apps, every page and the account rows. So every part of the shell is measured at both
      * widths and what is displayed decides, with the avatar panel opened at the wide width and the menu sheet at the narrow
      * one, as a click and a tap would. A link is compared by where it goes and a button by its words, with aria-hidden marks

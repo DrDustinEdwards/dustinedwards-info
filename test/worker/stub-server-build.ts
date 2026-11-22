@@ -70,7 +70,7 @@ const routes: Record<string, StubRoute> = {
     parentId: "root",
     path: STUB_PATHS.negotiated.slice(1),
     module: {
-      /* The shipped regression's shape: one url, two representations, `Vary: Accept, Cookie`,
+      /* The regression's shape: one url, two representations, `Vary: Accept, Cookie`,
        * and a `private, no-store` markdown copy. One representation could not fail that way. */
       loader: ({ request }) => {
         const accept = request.headers.get("accept") ?? "";
