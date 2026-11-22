@@ -14,7 +14,7 @@ import {
   writes,
   type SourceStub,
 } from "./source-stub";
-import { recordPurges } from "./route-helpers";
+import { purgedTagsOf, recordPurges } from "./route-helpers";
 
 /* The registry framework, end to end, with no real kind: the registry ships with none (app/kb/registry/kinds.mjs),
  * so this file brings one, a "widget", and holds the save, sync_registry, the registry-drift check, the operator's
@@ -85,7 +85,7 @@ const count = async () =>
 const driftCheck = async () =>
   (await runHealthChecks(env as never)).checks.find((c) => c.name === "registry-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_registry", {});
-const purgedTags = () => purge.mock.calls.flatMap(([options]) => options.tags);
+const purgedTags = () => purgedTagsOf(purge);
 const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
 let gh: SourceStub;
@@ -149,7 +149,7 @@ describe("sync_registry and the registry-drift check", () => {
       });
       // The name and the status are columns; the record holds only the kind's own fields.
       expect(JSON.parse(row?.record ?? "{}")).toEqual({ color: "red", paper: null });
-      expect(purgedTags()).toEqual(["registry"]);
+      expect(await purgedTags()).toEqual(["registry"]);
       expect((await driftCheck())?.ok).toBe(true);
 
       const again = await sync();
@@ -252,7 +252,7 @@ describe("a registry save is held to what CI holds", () => {
         name: "A red widget",
         source_blob_sha: await gitBlobSha(RED),
       });
-      expect(purgedTags()).toEqual(["registry"]);
+      expect(await purgedTags()).toEqual(["registry"]);
       expect(await commits()).toHaveLength(1);
     },
   );

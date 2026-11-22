@@ -2,7 +2,7 @@ import { createExecutionContext, env } from "cloudflare:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RouterContextProvider, createRoutesStub } from "react-router";
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 
 import { carrelStep } from "~/lib/carrel/site-api.server";
 import { Renderer } from "../../workers/app";
@@ -93,6 +93,16 @@ export function recordPurges(
   vi.spyOn(Renderer.prototype, "purgePages").mockImplementation(
     async (_why: string, tags: string[] = []) => (await purge({ tags })).success,
   );
+}
+
+/**
+ * The tags the recorded purges asked for. A save starts its purge in the background (cache-purge.server.ts), so this
+ * waits for the first one and lets the rest land. Each tag is listed once: a purge the test before started can land late.
+ */
+export async function purgedTagsOf(purge: { mock: { calls: { tags: string[] }[][] } }) {
+  await vi.waitFor(() => expect(purge.mock.calls.length).toBeGreaterThan(0));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  return [...new Set(purge.mock.calls.flatMap(([options]) => options.tags))];
 }
 
 type Middleware = (args: never, next: () => Promise<unknown>) => Promise<unknown>;

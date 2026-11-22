@@ -19,7 +19,7 @@ import {
   writes,
   type SourceStub,
 } from "./source-stub";
-import { routeContext, recordPurges, carrelSend, carrelGet } from "./route-helpers";
+import { purgedTagsOf, routeContext, recordPurges, carrelSend, carrelGet } from "./route-helpers";
 import { seedPages, seedProcedures, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -144,7 +144,7 @@ describe("an edit through the adapter is live at the next request", () => {
       // The next request for /llms.txt carries it, and the row is exactly the file.
       expect(await (await served()).text()).toBe(EDITED);
       expect(await row()).toBe(EDITED);
-      expect(purge.mock.calls.flatMap(([options]) => options.tags)).toContain(LLMS_CACHE_TAG);
+      expect(await purgedTagsOf(purge)).toContain(LLMS_CACHE_TAG);
 
       // And the file read back through Carrel is the edit.
       const read = (await (await carrelGet(`${PREFIX}/content/${ID}`)).json()) as {
@@ -318,7 +318,7 @@ describe("get_llms, sync_llms and the llms-drift check", () => {
       expect(await row()).toBe(EDITED);
       expect(await gitBlobSha((await row()) ?? "")).toBe(await gitBlobSha(EDITED));
       expect((await driftCheck())?.ok).toBe(true);
-      expect(purge.mock.calls.flatMap(([options]) => options.tags)).toContain(LLMS_CACHE_TAG);
+      expect(await purgedTagsOf(purge)).toContain(LLMS_CACHE_TAG);
 
       purge.mockClear();
       const again = await sync();

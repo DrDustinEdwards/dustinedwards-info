@@ -9,7 +9,7 @@ import { rosterPath } from "~/lib/roster/compile.mjs";
 
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { SYNTHETIC_COHORTS, cohortFile } from "./seed";
-import { recordPurges } from "./route-helpers";
+import { purgedTagsOf, recordPurges } from "./route-helpers";
 
 /* sync_roster and the roster-drift check: D1 converges to content/roster through the compile and write doors a
  * roster save uses (the repository is the source). Each case starts from an empty roster table and
@@ -75,7 +75,7 @@ describe("sync_roster and the roster-drift check", () => {
       expect((await rowFor(EARLIER_SLUG))?.year).toBe(EARLIER.year);
       expect((await driftCheck())?.ok).toBe(true);
 
-      const tags = purge.mock.calls.flatMap(([options]) => options.tags);
+      const tags = await purgedTagsOf(purge);
       expect(tags).toContain("content-pages");
       expect(tags).toContain(cacheTags());
 
