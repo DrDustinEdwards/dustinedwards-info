@@ -458,12 +458,12 @@ export async function deletePost(
 }
 
 /**
- * A renamed post's rows under its old slug, its search records and its Ask records, cleared (site-api v0.17.0 rename):
- * the file and its history have moved to the new slug, whose save writes the rows again.
+ * A renamed post's rows under its old slug and its search records, cleared (site-api v0.17.0 rename): the file and its
+ * history have moved to the new slug, whose save writes the rows again and asks the Ask index to sync. No sync here: a
+ * slow one between the move and that save left a post moved but never saved when the request was cut off.
  */
 export async function forgetPostRows(env: PublishEnv, slug: string) {
-  const { purged } = await deletePostFromD1(env, slug);
-  return { purged, askRemoval: await askSyncAfterWrite(env, `post renamed from ${slug}`) };
+  return deletePostFromD1(env, slug);
 }
 
 /** Every row arrives through renderAndWrite, the same door a save uses, with the blob sha to prove its bytes. */

@@ -142,6 +142,7 @@ const AGAIN_KEY = "ask:index:again";
 const MARK_KEY = "ask:index:mark";
 
 const INDEX_TEMPLATE = "content_only";
+const ASK_SYNC_TIMEOUT_MS = 8000;
 
 /** Sends ASK_INDEX_QUERY when the instance was last given another one; the change itself starts a sync. */
 async function ensureQuery(env: Env): Promise<void> {
@@ -166,10 +167,18 @@ export async function startAskSync(
 ): Promise<{ ok: true; job: AiSearchJobInfo; joined: boolean } | { ok: false; error: string }> {
   if (!askAvailable(env)) return { ok: false, error: "AI_SEARCH is not bound" };
   try {
-    await ensureQuery(env);
-    // Workers' clock moves only across I/O, so this is the moment before the sync is asked for.
-    const asked = Math.floor(Date.now() / 1000) * 1000;
-    const job = await env.AI_SEARCH.jobs.create({ description: why });
+    let asked = 0;
+    // Bounded: a write waits for this, and Carrel gives a write 20 seconds, so a slow AI Search must not cost the write.
+    const job = await withTimeout(
+      (async () => {
+        await ensureQuery(env);
+        // Workers' clock moves only across I/O, so this is the moment before the sync is asked for.
+        asked = Math.floor(Date.now() / 1000) * 1000;
+        return env.AI_SEARCH.jobs.create({ description: why });
+      })(),
+      ASK_SYNC_TIMEOUT_MS,
+      `AI Search did not start a sync within ${ASK_SYNC_TIMEOUT_MS} ms`,
+    );
     const joined = !(jobTime(job.started_at) >= asked);
     await env.APP_KV.put(JOB_KEY, job.id);
     if (joined) await env.APP_KV.put(AGAIN_KEY, why);
