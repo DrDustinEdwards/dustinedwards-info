@@ -1342,6 +1342,36 @@ describe("the v0.17.0 contract on posts", () => {
     expect((moved as Response).headers.get("location")).toBe(`${ORIGIN}/writing/v17-new`);
   });
 
+  it("leaves no trash entry or redirect behind when a renamed, trashed post is deleted", async () => {
+    await putSource(postPath("v17-gone"), live("v17-gone"));
+    await seedPost("v17-gone");
+    await send("POST", `${PREFIX}/content/v17-gone/rename`, {
+      newId: "v17-gone-new",
+      expectedVersion: await versionOf(postPath("v17-gone")),
+      changeId: "chg-v17-gone-rename",
+    });
+    const trashed = await send("POST", `${PREFIX}/content/v17-gone-new/trash`, {
+      expectedVersion: await versionOf(postPath("v17-gone-new")),
+      changeId: "chg-v17-gone-trash",
+    });
+    expect(trashed.status).toBe(200);
+    const version = await versionOf(postPath("v17-gone-new"));
+    const deleted = await carrelRequest(
+      argsFor(
+        new Request(
+          `${PREFIX}/content/v17-gone-new?expectedVersion=${version}&changeId=chg-v17-gone-delete`,
+          { method: "DELETE", headers: headersFor(testEnv.CARREL_SITE_KEY) },
+        ),
+      ),
+    );
+    expect(deleted.status).toBe(200);
+    const leftovers = await testEnv.DB.prepare(
+      `SELECT (SELECT COUNT(*) FROM content_trash WHERE content_id = 'v17-gone-new')
+            + (SELECT COUNT(*) FROM post_redirects WHERE to_slug = 'v17-gone-new') AS n`,
+    ).first<{ n: number }>();
+    expect(leftovers?.n).toBe(0);
+  });
+
   it("publishes under the date Carrel names", async () => {
     await putSource(postPath("v17-dated"), post("v17-dated"));
     const response = await send("POST", `${PREFIX}/content/v17-dated/publish`, {

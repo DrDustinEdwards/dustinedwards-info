@@ -379,7 +379,7 @@ export function carrelSiteAdapter(options: {
       } catch (error) {
         return asSiteApiError(env, error, postPath(id));
       }
-      await batch(waiting.remove(id), dropScheduledPublish(env, id), dropTrash(env, id));
+      await batch(waiting.remove(id), dropScheduledPublish(env, id));
     },
 
     // A live or scheduled post is written as a draft first, so it leaves the site before it enters the trash.

@@ -223,6 +223,9 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
     clearSearchDocs(db, slug),
     ...rebuildSearchIndexes(db),
     clearMediaRefs(db, slug),
+    // Its trash entry and the old addresses redirecting to it: neither outlives the post.
+    db.prepare(`DELETE FROM content_trash WHERE content_id = ?1`).bind(slug),
+    db.prepare(`DELETE FROM post_redirects WHERE to_slug = ?1`).bind(slug),
   ]);
   return { purged: combinePurges(purgedPage, purgedListings) };
 }
