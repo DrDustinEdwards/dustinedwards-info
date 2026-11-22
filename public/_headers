@@ -86,6 +86,9 @@
 /islands/*
   Cache-Control: public, max-age=31536000, immutable
 
+/site-*
+  Cache-Control: public, max-age=31536000, immutable
+
 /diagrams/*
   ! Cross-Origin-Resource-Policy
   Cross-Origin-Resource-Policy: cross-origin
