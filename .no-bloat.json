@@ -24,7 +24,7 @@
     ]
   },
   "baseline": {
-    "measured_at": "4d604dac",
+    "measured_at": "069642a",
     "knip": {},
     "jscpd": {
       "clones": 25,
@@ -37,13 +37,49 @@
       "lines": 0
     },
     "legacy": {},
+    "size": {
+      "app/app.css": 575,
+      "app/components/admin/kb-form-steps.tsx": 524,
+      "app/components/admin/kb-form.tsx": 501,
+      "app/components/lab.tsx": 512,
+      "app/components/procedure.tsx": 622,
+      "app/db/posts.ts": 676,
+      "app/db/schema.ts": 794,
+      "app/kb/procedures/library.mjs": 568,
+      "app/kb/procedures/render.mjs": 920,
+      "app/kb/procedures/validate.mjs": 1017,
+      "app/kb/registry/catalog.mjs": 1027,
+      "app/lab/members.server.ts": 505,
+      "app/lib/cv/view.mjs": 502,
+      "app/lib/editor/publish.server.ts": 508,
+      "app/lib/features.mjs": 571,
+      "app/lib/nav.ts": 518,
+      "app/lib/operator/sync-tools.server.ts": 613,
+      "app/lib/phage-tools.mjs": 1020,
+      "app/lib/publications/validate.mjs": 503,
+      "app/lib/search/search.server.ts": 541,
+      "app/routes/colophon.tsx": 606,
+      "app/routes/cv.tsx": 629,
+      "app/styles/cv.css": 613,
+      "app/styles/katex.generated.css": 1125,
+      "mcp/scripts/check-wrapper.mjs": 722,
+      "scripts/build-og.mjs": 541,
+      "scripts/check-all.mjs": 596,
+      "scripts/check-ask-guards.mjs": 698,
+      "scripts/check-changed.mjs": 520,
+      "scripts/check-contrast.mjs": 737,
+      "scripts/check-links.mjs": 755,
+      "scripts/machine-readable/microformats.mjs": 573,
+      "scripts/sync-content.mjs": 920,
+      "test/worker/carrel-site-api.test.ts": 1488
+    },
     "tests": {
       "files": 175,
       "cases": 1099
     },
     "comments": {
-      "lines": 16979,
-      "code": 95717,
+      "lines": 17004,
+      "code": 95837,
       "percentage": 15.07
     }
   }
