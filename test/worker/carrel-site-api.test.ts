@@ -1309,7 +1309,7 @@ describe("the v0.17.0 contract on posts", () => {
     expect((await list("limit=200")).items.map((i) => i.id)).toContain("v17-trash");
   });
 
-  it("renames a live post with its history, and its old address answers a permanent redirect", async () => {
+  it("renames a live post with its history, its old address answers a permanent redirect, and deleting it leaves no rows", async () => {
     await putSource(postPath("v17-old"), live("v17-old"));
     const renamed = await send("POST", `${PREFIX}/content/v17-old/rename`, {
       newId: "v17-new",
@@ -1340,6 +1340,28 @@ describe("the v0.17.0 contract on posts", () => {
     expect(moved).toBeInstanceOf(Response);
     expect((moved as Response).status).toBe(301);
     expect((moved as Response).headers.get("location")).toBe(`${ORIGIN}/writing/v17-new`);
+
+    // Trashed and deleted under its new slug, it leaves neither a trash entry nor a redirect.
+    const trashed = await send("POST", `${PREFIX}/content/v17-new/trash`, {
+      expectedVersion: await versionOf(postPath("v17-new")),
+      changeId: "chg-v17-old-trash",
+    });
+    expect(trashed.status).toBe(200);
+    const version = await versionOf(postPath("v17-new"));
+    const deleted = await carrelRequest(
+      argsFor(
+        new Request(
+          `${PREFIX}/content/v17-new?expectedVersion=${version}&changeId=chg-v17-old-delete`,
+          { method: "DELETE", headers: headersFor(testEnv.CARREL_SITE_KEY) },
+        ),
+      ),
+    );
+    expect(deleted.status).toBe(200);
+    const leftovers = await testEnv.DB.prepare(
+      `SELECT (SELECT COUNT(*) FROM content_trash WHERE content_id = 'v17-new')
+            + (SELECT COUNT(*) FROM post_redirects WHERE to_slug = 'v17-new') AS n`,
+    ).first<{ n: number }>();
+    expect(leftovers?.n).toBe(0);
   });
 
   it("publishes under the date Carrel names", async () => {
