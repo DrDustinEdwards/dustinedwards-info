@@ -212,9 +212,6 @@ function searchStatements(db: D1Database, record: PostRecord) {
 
 /** Tag rows stay, as in the bulk sync. Stale media_refs would block deleting the image forever. */
 export async function deletePostFromD1(env: PublishEnv, slug: string) {
-  // Purged BEFORE the delete: a purge landing after a slow delete could re-store the removed page.
-  const purgedPage = await purgePost(slug, `deletePostFromD1 ${slug}`);
-  const purgedListings = await purgePosts(`deletePostFromD1 ${slug}`);
   const db = env.DB;
   await db.batch([
     clearPostTags(db, slug),
@@ -227,5 +224,9 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
     db.prepare(`DELETE FROM content_trash WHERE content_id = ?1`).bind(slug),
     db.prepare(`DELETE FROM post_redirects WHERE to_slug = ?1`).bind(slug),
   ]);
+  // Purged AFTER the delete, as every save is: a page stored between an earlier purge and the delete would keep the
+  // removed post until it expired. The purge runs in the background, so a slow one never holds the delete.
+  const purgedPage = await purgePost(slug, `deletePostFromD1 ${slug}`);
+  const purgedListings = await purgePosts(`deletePostFromD1 ${slug}`);
   return { purged: combinePurges(purgedPage, purgedListings) };
 }

@@ -10,7 +10,14 @@ import capsidPage from "../../content/pages/software-capsid.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
 import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext, recordPurges, carrelSend, carrelGet } from "./route-helpers";
+import {
+  purgedTagsOf,
+  renderRoute,
+  routeContext,
+  recordPurges,
+  carrelSend,
+  carrelGet,
+} from "./route-helpers";
 import { seedDictionary, seedPages } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -168,7 +175,7 @@ describe("an entry change purges the pages tag, because a page embeds its entry"
         changeId: "chg-purge",
       });
       expect(response.status, await response.clone().text()).toBe(200);
-      const tags = purge.mock.calls.flatMap(([options]) => options.tags);
+      const tags = await purgedTagsOf(purge);
       expect(tags).toContain("content-pages");
 
       // The tag purged is the one the page's twin carries (its HTML carries it beside the long-standing "pages").

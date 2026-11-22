@@ -16,7 +16,7 @@ import { cacheTags, SITE_ORIGIN } from "~/lib/seo";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
 import { loader as sitemapLoader } from "~/routes/sitemap";
 
-import { routeContext, recordPurges } from "./route-helpers";
+import { routeContext, recordPurges, purgedTagsOf } from "./route-helpers";
 
 /* A document that can be stored and carries no tag a save purges stays stale until a deploy. These
  * pin that the sitemap, every feed and llms-full carry the tags the two purges send. */
@@ -48,7 +48,7 @@ async function llmsFull() {
 async function purgedBy(run: () => Promise<unknown>): Promise<string[]> {
   purge.mockClear();
   await run();
-  return purge.mock.calls.flatMap(([options]) => options.tags);
+  return purgedTagsOf(purge);
 }
 
 describe("the cache tags of the machine documents", () => {

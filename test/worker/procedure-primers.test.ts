@@ -12,7 +12,7 @@ import { loader as twinLoader } from "~/routes/procedure[.md]";
 
 import coi from "../../content/procedures/coi-primers.md?raw";
 
-import { routeContext, recordPurges } from "./route-helpers";
+import { routeContext, recordPurges, purgedTagsOf } from "./route-helpers";
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles } from "./seed";
 
@@ -207,7 +207,7 @@ describe("a change to a primer reaches the protocols that print it", () => {
         actor: carrel,
       });
       expect((await stored()).primers[0]?.sequence).toBe("GGTCAACAAATCATAAAGATATTGA");
-      const tags = purge.mock.calls.flatMap(([options]) => options.tags);
+      const tags = await purgedTagsOf(purge);
       expect(tags).toContain("registry");
       expect(tags).toContain("procedures");
     },

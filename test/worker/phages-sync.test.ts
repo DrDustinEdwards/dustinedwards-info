@@ -14,7 +14,7 @@ import scienceEducationPage from "../../content/pages/research-science-education
 
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { seedPages } from "./seed";
-import { recordPurges } from "./route-helpers";
+import { purgedTagsOf, recordPurges } from "./route-helpers";
 
 /* sync_phages and the phage-drift check: D1 converges to content/phages through the compile and write doors a
  * phage save uses (the repository is the source), and the page the table is drawn into is re-derived
@@ -113,7 +113,7 @@ describe("sync_phages and the phage-drift check", () => {
         await gitBlobSha(files["content/phages/acorn15.md"] ?? ""),
       );
       expect((await searchRows()).some((r) => r.body.includes("Acorn15"))).toBe(true);
-      expect(purge.mock.calls.flatMap(([o]) => o.tags)).toEqual(["content-pages"]);
+      expect(await purgedTagsOf(purge)).toEqual(["content-pages"]);
       expect((await driftCheck())?.ok).toBe(true);
 
       const again = await sync();

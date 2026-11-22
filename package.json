@@ -73,7 +73,7 @@
     "@drdustinedwards/site-helpers": "github:DrDustinEdwards/prelum#v0.63.13",
     "@dustinedwards/d1-dump": "github:DrDustinEdwards/d1-dump#v0.16.3",
     "@dustinedwards/site-api": "github:DrDustinEdwards/site-api#v0.46.14",
-    "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.173.8",
+    "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.173.12",
     "@fontsource-variable/source-serif-4": "5.3.1",
     "@lezer/highlight": "1.2.5",
     "@observablehq/plot": "0.6.17",
