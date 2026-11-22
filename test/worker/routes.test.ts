@@ -6,7 +6,7 @@ import {
   readHealthTile,
   storeHealthSnapshot,
 } from "@dustinedwards/site-runtime/health-snapshot";
-import { siteHealthResponse } from "~/lib/health/response.server";
+import { healthAnswer } from "~/lib/health/response.server";
 import { HEALTH_CHECK_NAMES, runHealthChecks } from "~/lib/health/checks.server";
 import { ORIGIN_REFUSAL } from "@dustinedwards/site-runtime/origin";
 import { action as themeAction } from "~/routes/theme";
@@ -204,7 +204,7 @@ describe("/health", () => {
 describe("the colophon health tile", () => {
   it("is fresh once the health-snapshot job has run, with every check /health names", async () => {
     await env.APP_KV.delete(HEALTH_SNAPSHOT_KEY);
-    await storeHealthSnapshot({ kv: env.APP_KV, answer: () => siteHealthResponse(env as never) });
+    await storeHealthSnapshot({ kv: env.APP_KV, answer: () => healthAnswer(env as never) });
     const tile = await readHealthTile({ kv: env.APP_KV });
     expect(tile.state).toBe("fresh");
     expect(tile.state === "fresh" && tile.checks.map((c) => c.name)).toEqual(

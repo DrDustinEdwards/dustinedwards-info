@@ -64,8 +64,7 @@ export function siteJobs(env: Env, ctx: ExecutionContext, at: Date): SiteJob[] {
       run: async () =>
         (await import("@dustinedwards/site-runtime/health-snapshot")).storeHealthSnapshot({
           kv: env.APP_KV,
-          answer: async () =>
-            (await import("~/lib/health/response.server")).siteHealthResponse(env),
+          answer: async () => (await import("~/lib/health/response.server")).healthAnswer(env),
           now: at,
         }),
     },
