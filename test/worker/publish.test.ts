@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, onTestFinished } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { mediaStore } from "~/db";
 import {
@@ -15,6 +15,7 @@ import { PolicyError } from "~/lib/editor/publish-policy.mjs";
 import { SourceError } from "~/lib/source/store.server";
 import { DIVERGENCE_ERROR_NAME } from "~/lib/editor/converge.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
+import { startAskSync } from "~/lib/search/ask.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 
@@ -564,6 +565,23 @@ describe("deletePost", () => {
 
     expect(result.askRemoval).toMatchObject({ ok: false });
     expect(await countRows("posts", "WHERE slug = ?1", "ask-stuck")).toBe(0);
+  });
+});
+
+describe("startAskSync", () => {
+  it("gives up on an AI Search that never answers, so a write is not held past Carrel's 20 seconds", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => void vi.useRealTimers());
+    const hung = {
+      ...env,
+      AI_SEARCH: { update: async () => {}, jobs: { create: () => new Promise(() => {}) } },
+    } as unknown as Parameters<typeof startAskSync>[0];
+    const asked = startAskSync(hung, "hung");
+    await vi.advanceTimersByTimeAsync(8000);
+    expect(await asked).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("did not start a sync"),
+    });
   });
 });
 
