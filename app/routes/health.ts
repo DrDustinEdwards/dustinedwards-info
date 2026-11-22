@@ -11,7 +11,7 @@ import { logEvent } from "@dustinedwards/site-runtime/log";
 import { clientIp } from "@dustinedwards/site-runtime/http";
 import { getEnv } from "~/lib/context";
 import { limitHit } from "~/lib/rate-limit.mjs";
-import { siteHealthResponse } from "~/lib/health/response.server";
+import { healthAnswer } from "~/lib/health/response.server";
 
 import type { Route } from "./+types/health";
 
@@ -47,5 +47,5 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     return refusal("rate-limited", 429, { "Retry-After": String(verdict.retryAfterSeconds) });
   }
 
-  return siteHealthResponse(env);
+  return healthAnswer(env);
 }

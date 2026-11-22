@@ -1,31 +1,29 @@
 /**
- * The site's health answer, site-runtime's healthResponse: /health serves it (behind its rate limit) and the
+ * The site's health answer, site-runtime's siteHealthResponse: /health serves it (behind its rate limit) and the
  * health-snapshot cron job (workers/app.ts) stores its verdict for the colophon. 503 only when D1 does not answer.
  * Warnings, never a 503: the newest complete dump older than 26 hours, a binding that does not answer, a cron job
  * that failed or stopped, and every drift check (the site is up while one drifts). `sha` is the commit ship deployed
  * (DEPLOY_SHA); a hand deploy has none.
  */
 
-import { cronCheck } from "@dustinedwards/site-runtime/cron";
 import {
   aiOutcomeCheck,
   browserCheck,
   durableObjectCheck,
   emailCheck,
-  healthResponse,
   imagesCheck,
   kvCheck,
   purgeCheck,
   queueCheck,
   r2Check,
+  siteHealthResponse as siteHealth,
 } from "@dustinedwards/site-runtime/health";
 
 import { HEALTH_CHECK_NAMES, runHealthChecks } from "~/lib/health/checks.server";
-import { CHECK_TIMEOUT_MS } from "~/lib/health/verdicts.mjs";
 import { CRON_JOBS } from "~/lib/cron-jobs.mjs";
 import { backupStatus } from "~/lib/backup/d1-backup.server";
 
-export function siteHealthResponse(env: Env): Promise<Response> {
+export function healthAnswer(env: Env): Promise<Response> {
   /* The drift checks run once, started here and not awaited, so each named check below waits on the run inside
      healthResponse's checkTimeoutMs, beside the binding checks: a slow run holds /health no longer than any other
      check. A detail carries only "present of expected" (site-runtime ./health-read reads it back), because this is public; the full
@@ -53,13 +51,11 @@ export function siteHealthResponse(env: Env): Promise<Response> {
      there, not a check here). LEFT OUT: AI_SEARCH, because Ask is optional and classic search never waits on it,
      and the instance has no read that is not a billed query; the queue consumers and the dead-letter queues,
      because a consumer is not a binding this Worker holds. */
-  return healthResponse({
-    ping: () => env.DB.prepare("SELECT 1").first(),
+  return siteHealth(env, {
+    jobs: [...CRON_JOBS],
     // The dump with the media and revisions files backups (d1-backup.server.ts), any one's warning warns. Each is
     // nightly and the warning threshold 26 hours; healthResponse keeps the read an hour in the Cache API (site-runtime 0.75.0).
     backup: () => backupStatus(env),
-    sha: (env as { DEPLOY_SHA?: string }).DEPLOY_SHA,
-    checkTimeoutMs: CHECK_TIMEOUT_MS,
     checks: [
       { ...r2Check("media", env.MEDIA), level: "warn" },
       { ...r2Check("og", env.OG), level: "warn" },
@@ -75,14 +71,6 @@ export function siteHealthResponse(env: Env): Promise<Response> {
       // The last real Ask answer call failed (a spend cap, a revoked key): the binding checks above still pass then.
       aiOutcomeCheck("ask", env.APP_KV),
       aiOutcomeCheck("alt-text", env.APP_KV),
-      // The deploy's time holds a job back until its first window since the deploy has passed: a job added
-      // after its hour today (purge-zero-results, check-publications) has not been due yet.
-      cronCheck(env.DB, {
-        jobs: [...CRON_JOBS],
-        deployedAt: env.CF_VERSION_METADATA?.timestamp
-          ? new Date(env.CF_VERSION_METADATA.timestamp)
-          : undefined,
-      }),
       ...HEALTH_CHECK_NAMES.map((name) => ({
         name,
         level: "warn" as const,
