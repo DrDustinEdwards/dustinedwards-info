@@ -93,7 +93,6 @@
     "linkedom": "0.18.15",
     "mdast-util-gfm": "3.1.0",
     "mdast-util-to-markdown": "2.2.3",
-    "parse5": "8.1.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-router": "8.5.2",
