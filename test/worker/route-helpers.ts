@@ -99,7 +99,7 @@ export function recordPurges(
  * The tags the recorded purges asked for. A save starts its purge in the background (cache-purge.server.ts), so this
  * waits for the first one and lets the rest land. Each tag is listed once: a purge the test before started can land late.
  */
-export async function purgedTagsOf(purge: { mock: { calls: { tags: string[] }[][] } }) {
+export async function purgedTagsOf(purge: { mock: { calls: [{ tags: string[] }][] } }) {
   await vi.waitFor(() => expect(purge.mock.calls.length).toBeGreaterThan(0));
   await new Promise((resolve) => setTimeout(resolve, 20));
   return [...new Set(purge.mock.calls.flatMap(([options]) => options.tags))];
