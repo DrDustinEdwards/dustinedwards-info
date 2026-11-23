@@ -9,6 +9,7 @@
 // address passes here and is left to check:links.
 
 import { CONTENT_PAGE_PATHS, contentPageMarkdownPath } from "../content-pages.mjs";
+import { safeDecode } from "../safe-decode.mjs";
 import { wordpressDisposition } from "../wordpress-redirects.mjs";
 import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 
@@ -21,14 +22,6 @@ import { unescapeHtml } from "@dustinedwards/site-runtime/html";
  * `posts` maps `/writing/<slug>` to whether a reader can open it; `idsOf` is the element ids a content
  * page carries, or null for a path that is not one.
  */
-
-const safeDecode = (/** @type {string} */ value) => {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-};
 
 const SITE_HOST = /^https?:\/\/(?:www\.)?dustinedwards\.info(?=[/?#]|$)/i;
 

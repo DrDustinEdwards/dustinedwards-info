@@ -23,6 +23,7 @@ import {
 } from "~/components/admin/kb-form-fields";
 import { BodyEditor, type Inserts, goTo } from "~/components/admin/kb-form-steps";
 import { SLUG_ATTRIBUTE_PATTERN } from "@drdustinedwards/site-helpers/slug";
+import { safeDecode } from "~/lib/safe-decode.mjs";
 
 /*
  * The Knowledge Base's form editor (docs/KNOWLEDGE-BASE.md): every field its own input, the values nobody has yet at the
@@ -196,8 +197,7 @@ export function KbFormEditor({
   const [duplicating, setDuplicating] = useState(actionData?.intent === "duplicate");
   // A Needs info link from the Knowledge Base list opens the editor at the gap's field.
   useEffect(() => {
-    if (window.location.hash.length > 1)
-      goTo(null, decodeURIComponent(window.location.hash.slice(1)));
+    if (window.location.hash.length > 1) goTo(null, safeDecode(window.location.hash.slice(1)));
   }, []);
 
   const checked = actionData?.intent === "check" ? actionData : null;

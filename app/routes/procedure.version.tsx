@@ -7,6 +7,7 @@ import { ProcedureView, VersionNotice } from "~/components/procedure";
 import { getFrozenVersion, listFrozenVersions } from "~/db/procedure-versions";
 import { getProcedureByPath } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
+import { safeDecode } from "~/lib/safe-decode.mjs";
 import { versionPath } from "~/kb/procedures/cite.mjs";
 import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
 import { lineageFor } from "~/kb/procedures/lineage.server";
@@ -40,7 +41,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const found = /^(.*)\/v\/([^/]+?)\/?$/.exec(url.pathname);
   if (!found) throw data(null, { status: 404 });
   const path = found[1] ?? "";
-  const version = decodeURIComponent(found[2] ?? "");
+  const version = safeDecode(found[2] ?? "");
   const frozen = await getFrozenVersion(env, path, version);
   if (!frozen) throw data(null, { status: 404 });
   // The live page tells this one what is current. A draft or a removed procedure has no current version.

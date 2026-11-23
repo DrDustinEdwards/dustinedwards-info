@@ -163,7 +163,7 @@ function buildFilters(parsed: ParsedQuery, nowSeconds: number): FilterSql {
   const params: unknown[] = [nowSeconds];
 
   if (parsed.filters.type.length > 0) {
-    // One JSON parameter, not a placeholder per type: the operators are free text, and D1 refuses past 100.
+    // One JSON parameter per operator, not a placeholder per value: the operators are free text, and D1 refuses past 100.
     clauses.push(`d.type IN (SELECT value FROM json_each(?))`);
     params.push(JSON.stringify(parsed.filters.type));
   }
@@ -172,14 +172,14 @@ function buildFilters(parsed: ParsedQuery, nowSeconds: number): FilterSql {
   // matches nothing, as an unknown type does.
   if (parsed.filters.base.length > 0) {
     const prefixes = parsed.filters.base.map(basePrefix);
-    clauses.push(`(${prefixes.map(() => "d.doc_url LIKE ?").join(" OR ")})`);
-    params.push(...prefixes.map((prefix) => (prefix === null ? "\u0000" : `${prefix}%`)));
+    clauses.push(`EXISTS (SELECT 1 FROM json_each(?) WHERE d.doc_url LIKE value)`);
+    params.push(JSON.stringify(prefixes.map((p) => (p === null ? "\u0000" : `${p}%`))));
   }
 
   // Every tag must be present, so tag:a tag:b narrows rather than widens.
-  for (const tag of parsed.filters.tag) {
-    clauses.push(`instr(d.doc_tags, ?) > 0`);
-    params.push(`|${tag}|`);
+  if (parsed.filters.tag.length > 0) {
+    clauses.push(`NOT EXISTS (SELECT 1 FROM json_each(?) WHERE instr(d.doc_tags, value) = 0)`);
+    params.push(JSON.stringify(parsed.filters.tag.map((tag) => `|${tag}|`)));
   }
 
   if (parsed.year !== null) {

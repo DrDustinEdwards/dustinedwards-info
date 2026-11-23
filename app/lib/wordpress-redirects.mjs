@@ -44,7 +44,8 @@ export function wwwRedirectTarget(hostname, pathname, search) {
       ? pathname.replace(/(.)\/+$/, "$1")
       : pathname;
   const target = disposition?.status === 301 ? disposition.location : `${path}${search}`;
-  return new URL(target, SITE_ORIGIN).toString();
+  // A path starting with // is a protocol-relative reference that would resolve to another host.
+  return new URL(target.replace(/^\/{2,}/, "/"), SITE_ORIGIN).toString();
 }
 
 /**
