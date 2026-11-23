@@ -24,7 +24,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
 /** The D1 rows sync:content writes. */
 export const REGISTRY_ARTIFACT_PATH = path.join("content", "generated", "registry.json");
 
-/** The repository's papers, read from content/publications as a clone has them. */
+/** The repository's papers and recipes, read from content as a clone has them. */
 const repoHost = {
   /** @param {string} slug a publication's file key */
   async recipe(slug) {
@@ -149,74 +149,38 @@ export async function buildRegistry(options = {}) {
  * @param {Parameters<typeof buildRegistry>[0]} [options]
  */
 export function registryHost(options) {
-  /** @type {Promise<Map<string, import("../../app/kb/procedures/render.mjs").StoredPrimer>> | undefined} */
-  let primers;
-  /** @type {Promise<Map<string, import("../../app/kb/procedures/render.mjs").StoredStrain>> | undefined} */
-  let strains;
-  /** @type {Promise<Map<string, import("../../app/kb/procedures/render.mjs").StoredReagent>> | undefined} */
-  let reagents;
-  /** @type {Promise<Map<string, import("../../app/kb/procedures/render.mjs").StoredEquipment>> | undefined} */
-  let equipment;
+  /** @type {ReturnType<typeof buildRegistry> | undefined} */
+  let built;
+  /** @type {Map<string, Promise<Map<string, any>>>} */
+  const byKinds = new Map();
+  /**
+   * The ids asked for among one kind's stored records, the registry compiled once for every kind.
+   * @param {string} kind
+   * @param {(item: any) => any} stored
+   * @param {string[]} ids
+   */
+  const pick = async (kind, stored, ids) => {
+    if (!byKinds.has(kind))
+      byKinds.set(
+        kind,
+        (built ??= buildRegistry(options)).then(
+          ({ items }) =>
+            new Map(
+              items.filter((item) => item.kind === kind).map((item) => [item.id, stored(item)]),
+            ),
+        ),
+      );
+    const all = await byKinds.get(kind);
+    return new Map(ids.flatMap((id) => (all?.has(id) ? [[id, all.get(id)]] : [])));
+  };
   return {
     /** @param {string[]} ids */
-    async primers(ids) {
-      primers ??= buildRegistry(options).then(
-        ({ items }) =>
-          new Map(
-            items
-              .filter((item) => item.kind === "primer")
-              .map((item) => [item.id, storedPrimer(item)]),
-          ),
-      );
-      const all = await primers;
-      return new Map(
-        ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])),
-      );
-    },
+    primers: (ids) => pick("primer", storedPrimer, ids),
     /** @param {string[]} ids */
-    async equipment(ids) {
-      equipment ??= buildRegistry(options).then(
-        ({ items }) =>
-          new Map(
-            items
-              .filter((item) => item.kind === "equipment")
-              .map((item) => [item.id, storedEquipment(item)]),
-          ),
-      );
-      const all = await equipment;
-      return new Map(
-        ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])),
-      );
-    },
+    equipment: (ids) => pick("equipment", storedEquipment, ids),
     /** @param {string[]} ids */
-    async reagents(ids) {
-      reagents ??= buildRegistry(options).then(
-        ({ items }) =>
-          new Map(
-            items
-              .filter((item) => item.kind === "reagent")
-              .map((item) => [item.id, storedReagent(item)]),
-          ),
-      );
-      const all = await reagents;
-      return new Map(
-        ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])),
-      );
-    },
+    reagents: (ids) => pick("reagent", storedReagent, ids),
     /** @param {string[]} ids */
-    async strains(ids) {
-      strains ??= buildRegistry(options).then(
-        ({ items }) =>
-          new Map(
-            items
-              .filter((item) => item.kind === "strain")
-              .map((item) => [item.id, storedStrain(item)]),
-          ),
-      );
-      const all = await strains;
-      return new Map(
-        ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])),
-      );
-    },
+    strains: (ids) => pick("strain", storedStrain, ids),
   };
 }

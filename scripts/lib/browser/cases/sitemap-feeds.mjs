@@ -3,14 +3,17 @@
 // redirect. Plain fetches, not the browser page, because the status is what is being read and a page
 // would follow a redirect.
 import { sitemapLocs } from "@dustinedwards/site-runtime/html";
-import { BASE, ok } from "../harness.mjs";
+import { BASE, FETCH_TIMEOUT_MS, ok } from "../harness.mjs";
 
 /** @param {string} path */
-const head = (path) => fetch(`${BASE}${path}`, { redirect: "manual" });
+const head = (path) =>
+  fetch(`${BASE}${path}`, { redirect: "manual", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 
 /** @param {import("../harness.mjs").CaseContext} _ctx */
 export async function run(_ctx) {
-  const sitemap = await (await fetch(`${BASE}/sitemap.xml`)).text();
+  const sitemap = await (
+    await fetch(`${BASE}/sitemap.xml`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+  ).text();
   const paths = sitemapLocs(sitemap).map((loc) => new URL(loc).pathname);
   ok("the sitemap lists pages to check", paths.length > 20, `${paths.length} <loc> entries`);
 

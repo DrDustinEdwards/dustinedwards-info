@@ -10,11 +10,12 @@ import path from "node:path";
 import { isSourcePath, jsonRows } from "./lib/content-source.mjs";
 import { resolveD1Address } from "./lib/d1-address.mjs";
 import { sqlLiteral as sql } from "./lib/sql-literal.mjs";
+import { requireTarget } from "./lib/target-flag.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
 import { applySqlFile } from "./lib/d1-apply.mjs";
 
 const file = process.argv.slice(2).find((a) => !a.startsWith("--"));
-const target = process.argv.includes("--remote") ? "--remote" : "--local";
+const target = requireTarget(process.argv.slice(2), "remove-source");
 if (!file || !isSourcePath(file)) {
   console.error("usage: node scripts/remove-source.mjs content/<kind>/<file> [--local|--remote]");
   process.exit(1);

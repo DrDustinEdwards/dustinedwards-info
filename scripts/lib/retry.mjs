@@ -1,5 +1,5 @@
 /**
- * Reads only: a retried write may land twice. Wraps a timeout as well as a rejection because
+ * Reads, or writes that are idempotent (sync-content's applyRetried): a retried write may land twice. Wraps a timeout as well as a rejection because
  * Cloudflare transients show up as both a fast death and a hang.
  */
 

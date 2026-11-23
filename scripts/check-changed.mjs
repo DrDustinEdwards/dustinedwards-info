@@ -7,10 +7,11 @@ import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import { gateNames } from "./build-stack.mjs";
 import { CI_EXCLUDED, TIERS, runGate } from "./check-all.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -517,4 +518,4 @@ function main() {
 }
 
 /* Main guard, so a test can import the map and the file lister without running a check. */
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) main();
+if (isMain(import.meta.url)) main();

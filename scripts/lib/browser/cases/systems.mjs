@@ -23,8 +23,6 @@ const MODEL = loadSystemModel(
 );
 const IDS = MODEL.systems.map((s) => s.id);
 const CORE = MODEL.systems.find((s) => s.ring === "core")?.id ?? "";
-/** The system with the most flows over its parts: where stepping is checked. */
-const FLOWED = MODEL.systems.find((s) => s.id === CORE)?.id ?? CORE;
 const SHARED = MODEL.systems.find((s) => s.ring === "shared")?.id ?? CORE;
 const PRIVATE = MODEL.systems.find((s) => s.private);
 
@@ -60,7 +58,7 @@ async function plainMap(/** @type {import("puppeteer").Page} */ page) {
   await page.waitForSelector("#network .cap-system-map-network:not([hidden])", { timeout: 10_000 });
 }
 
-/** @param {import("../harness.mjs").CaseContext} ctx */
+/** @param {Pick<import("../harness.mjs").CaseContext, "browser">} ctx */
 export async function run({ browser }) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 900 });
@@ -215,10 +213,10 @@ async function everySystemHasAPage() {
 
 /** On the core's page, Start lights the first step's parts and says where it is; Next steps; Escape stops. */
 async function stepsAFlow(/** @type {import("puppeteer").Page} */ page) {
-  await open(page, "light", systemPath(FLOWED));
+  await open(page, "light", systemPath(CORE));
   const flows = await page.$$(".cap-system-map-flow");
   if (!flows.length) {
-    ok(`/systems/${FLOWED}: has a flow to step`, false, "no .cap-system-map-flow");
+    ok(`/systems/${CORE}: has a flow to step`, false, "no .cap-system-map-flow");
     return;
   }
   await page.click(".cap-system-map-flow [data-cap-part='next']");
@@ -238,7 +236,7 @@ async function stepsAFlow(/** @type {import("puppeteer").Page} */ page) {
     (root) => !root.hasAttribute("data-step") && root.querySelectorAll("[data-lit]").length === 0,
   );
   ok(
-    `/systems/${FLOWED}: Start lights a step's parts and says where it is, Next steps, Escape stops`,
+    `/systems/${CORE}: Start lights a step's parts and says where it is, Next steps, Escape stops`,
     first.step === "1" &&
       first.lit > 0 &&
       /^Step 1 of \d+: /.test(first.status) &&
@@ -258,7 +256,7 @@ async function wholeWithoutScript(/** @type {import("puppeteer").Page} */ page) 
       "#network a.cap-system-map-cell",
       (els) => els.filter((el) => el.getBoundingClientRect().height > 0).length,
     );
-    await page.goto(`${BASE}${systemPath(FLOWED)}`, { waitUntil: "networkidle0" });
+    await page.goto(`${BASE}${systemPath(CORE)}`, { waitUntil: "networkidle0" });
     const steps = await page.$$eval(
       ".cap-system-map-steps li",
       (els) => els.filter((el) => el.getBoundingClientRect().height > 0).length,
@@ -311,7 +309,7 @@ async function noLayoutShift(/** @type {import("puppeteer").Page} */ page) {
 
 /** Under 4x CPU throttling, each press of a flow's Start, Next and Back is handled within the budget. */
 async function inputResponse(/** @type {import("puppeteer").Page} */ page) {
-  await open(page, "light", systemPath(FLOWED));
+  await open(page, "light", systemPath(CORE));
   await page.evaluate(() => {
     /** @type {Window & { __events?: Array<{ duration: number, work: number }> }} */ (
       window

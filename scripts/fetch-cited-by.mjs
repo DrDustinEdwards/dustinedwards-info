@@ -13,8 +13,6 @@ const OUT_PATH = join(root, "data", "publications.cited-by.json");
 
 const MAX_CITING = 50;
 
-/** Not an email address, for the reason citations.server.ts gives. */
-
 const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {

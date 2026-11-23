@@ -4,6 +4,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { MIN_TOKEN_LENGTH } from "@dustinedwards/site-runtime/operator";
+
 import { root } from "./harness.mjs";
 
 /**
@@ -18,19 +20,16 @@ const SMOKE_TOKEN_PATH = SMOKE_TOKEN_ENV ?? join(root, ".smoke-token");
 export const SMOKE_SOURCE = SMOKE_TOKEN_ENV
   ? `SMOKE_TOKEN_FILE (${SMOKE_TOKEN_ENV})`
   : ".smoke-token";
-/** The Worker's own floor, restated here so a short token fails before a request. */
-const SMOKE_MIN_LENGTH = 32;
-
 export let SMOKE_TOKEN = "";
 let SMOKE_ERROR = "";
 if (existsSync(SMOKE_TOKEN_PATH)) {
   SMOKE_TOKEN = readFileSync(SMOKE_TOKEN_PATH, "utf8").trim();
   if (!SMOKE_TOKEN) {
     SMOKE_ERROR = `${SMOKE_SOURCE} exists and is empty. Mint one: node scripts/mint-smoke-token.mjs > .smoke-token`;
-  } else if (SMOKE_TOKEN.length < SMOKE_MIN_LENGTH) {
+  } else if (SMOKE_TOKEN.length < MIN_TOKEN_LENGTH) {
     SMOKE_ERROR =
       `the token in ${SMOKE_SOURCE} is ${SMOKE_TOKEN.length} characters and the Worker ` +
-      `requires at least ${SMOKE_MIN_LENGTH}, so it would be refused before it was compared.`;
+      `requires at least ${MIN_TOKEN_LENGTH}, so it would be refused before it was compared.`;
   }
 } else if (SMOKE_TOKEN_ENV) {
   SMOKE_ERROR =
@@ -48,9 +47,8 @@ export const CREDENTIAL_ERROR = SMOKE_ERROR;
  * A pinned header is safe here: a bearer token has no refresh to fight.
  *
  * @param {import("puppeteer").Page} page
- * @param {string} [_origin] kept so callers pass the origin they drive; a header needs none
  */
-export async function applyCredential(page, _origin) {
+export async function applyCredential(page) {
   await page.setExtraHTTPHeaders({ authorization: `Bearer ${SMOKE_TOKEN}` });
 }
 

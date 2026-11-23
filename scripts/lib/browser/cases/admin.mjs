@@ -37,9 +37,8 @@ export async function run({ browser }) {
     ok(
       "the admin plane has a credential to observe it with",
       false,
-      `no admin credential, so NONE of this ran: the 6 admin surfaces, the ` +
-        `editor mount, the two mark fills, the four media interactions, and the ` +
-        `sideways-scroll cases at 1280, 553, 480, 400 and 320.\n` +
+      `no admin credential, so NONE of this ran: the admin surfaces, the ` +
+        `editor mount, the media library, and the sideways-scroll cases.\n` +
         `        These cases need a REAL credential and are deliberately ` +
         `not stubbed: a fake auth path would not render what production renders, and the ` +
         `defects they exist to catch live in the authenticated render.\n` +
@@ -103,7 +102,7 @@ export async function run({ browser }) {
     admin.on("response", (r) => {
       if (/markdown-editor.*\.js/.test(r.url())) fetched.push(r.status());
     });
-    await applyCredential(admin, ADMIN_ORIGIN);
+    await applyCredential(admin);
     await admin.setViewport({ width: 1280, height: 900 });
 
     /*

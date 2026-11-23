@@ -36,7 +36,7 @@ export function readOperatorToken(tokenFile) {
   if (token.length < MIN_TOKEN_LENGTH) {
     return {
       token: "",
-      why: "the token in OPERATOR_TOKEN_FILE is shorter than the 32 characters the Worker requires",
+      why: `the token in OPERATOR_TOKEN_FILE is shorter than the ${MIN_TOKEN_LENGTH} characters the Worker requires`,
       remedy:
         "auth.server.ts treats a short secret as a misconfiguration and answers 503. " +
         "Nothing has been built or deployed.",

@@ -9,6 +9,8 @@
 # uptime monitors, the D1 sync, the Ask index, the CV PDF, the share cards and the media index, then the browser test.
 # A converge miss leaves the deploy standing and fails the run. `mcp` ships the admin MCP the same way as the site.
 #
+# The scheduled rebuild ships main's tip only once CI has passed on it.
+#
 # THE SWITCH. `gh variable set AUTO_DEPLOY --body off` stops the automatic and scheduled runs; any other value, or
 # none, turns them back on. A dispatch from main deploys either way.
 #
@@ -49,6 +51,9 @@ jobs:
     name: Decide
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     outputs:
       deploy: ${{ steps.decide.outputs.deploy }}
     steps:
@@ -62,6 +67,8 @@ jobs:
           CI_BRANCH: ${{ github.event.workflow_run.head_branch }}
           CI_SHA: ${{ github.event.workflow_run.head_sha }}
           AUTO_DEPLOY: ${{ vars.AUTO_DEPLOY }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           skip() { echo "Not deploying: $1"; echo "deploy=false" >> "$GITHUB_OUTPUT"; exit 0; }
@@ -71,7 +78,11 @@ jobs:
             go "Dispatched; deploying main's tip ${SHA}."
           fi
           [ "$AUTO_DEPLOY" != "off" ] || skip "AUTO_DEPLOY is off. Deploy by hand with: gh workflow run deploy.yml --ref main"
-          [ "$EVENT" != "schedule" ] || go "Scheduled rebuild of main's tip ${SHA} from D1's content."
+          if [ "$EVENT" = "schedule" ]; then
+            ci=$(gh run list --repo "$REPO" --workflow ci.yml --branch main --event push --commit "$SHA" --json conclusion --jq '.[0].conclusion // ""')
+            [ "$ci" = "success" ] || skip "CI has not passed on main's tip ${SHA} (${ci:-no run}); the scheduled rebuild waits for it."
+            go "Scheduled rebuild of main's tip ${SHA} from D1's content."
+          fi
           [ "$CI_CONCLUSION" = "success" ] || skip "CI concluded ${CI_CONCLUSION} on ${CI_SHA}."
           [ "$CI_EVENT" = "push" ] || skip "CI ran for a ${CI_EVENT}, not a push to main."
           [ "$CI_BRANCH" = "main" ] || skip "CI ran on ${CI_BRANCH}, not main."

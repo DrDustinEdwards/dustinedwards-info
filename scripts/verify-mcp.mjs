@@ -20,12 +20,19 @@ function errorMessage(error) {
 }
 
 /**
- * jsonc: block and line comments stripped, as check:wrapper reads it.
+ * jsonc: comments and trailing commas dropped, with strings left alone (a `/*` inside a string is text).
+ * Builtins only, so this gate runs in a checkout with no install.
  * @param {string} text
  * @returns {any}
  */
 function readJsonc(text) {
-  return JSON.parse(text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, ""));
+  const code = text.replace(
+    /("(?:[^"\\]|\\.)*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
+    (_, string) => string ?? "",
+  );
+  return JSON.parse(
+    code.replace(/("(?:[^"\\]|\\.)*")|,(\s*[}\]])/g, (_, string, close) => string ?? close),
+  );
 }
 
 /**

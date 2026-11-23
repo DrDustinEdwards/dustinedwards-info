@@ -215,6 +215,7 @@ export async function fetchHealth(url) {
     const res = await fetch(url, {
       headers: { "user-agent": "deploy-converge", "cache-control": "no-cache" },
       redirect: "manual",
+      signal: AbortSignal.timeout(30_000),
     });
     return { status: res.status, text: await res.text(), error: "" };
   } catch (error) {

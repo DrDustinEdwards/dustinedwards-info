@@ -71,3 +71,11 @@ await test("mcpConfig reads PUBLIC_ORIGIN through comments", () => {
   }`;
   assert.deepEqual(mcpConfig(root(config)), { ok: true, origin: ORIGIN });
 });
+
+await test("mcpConfig keeps a /* inside a string and accepts a trailing comma", () => {
+  const config = `{
+    "routes": ["/api/*",],
+    "vars": { "PUBLIC_ORIGIN": "${ORIGIN}/", }, /* after */
+  }`;
+  assert.deepEqual(mcpConfig(root(config)), { ok: true, origin: ORIGIN });
+});

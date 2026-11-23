@@ -4,7 +4,7 @@
  * production, and neither shows until the damage is done.
  *
  * @param {string[]} argv the script's arguments
- * @param {string} script the npm script name, for the refusal
+ * @param {string} script the script name, for the refusal
  * @returns {"--remote" | "--local"}
  */
 export function requireTarget(argv, script) {
@@ -17,8 +17,8 @@ export function requireTarget(argv, script) {
   }
   if (!remote && !local) {
     throw new Error(
-      `${script} needs an explicit target: npm run ${script} -- --remote writes and prunes ` +
-        `production, npm run ${script} -- --local the local emulator. Nothing was touched.`,
+      `${script} needs an explicit target: --remote writes and prunes production, ` +
+        `--local the local emulator. Nothing was touched.`,
     );
   }
   return remote ? "--remote" : "--local";

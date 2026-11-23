@@ -19,6 +19,7 @@ import {
   SOURCE_PATHS,
 } from "./lib/content-source.mjs";
 import { resolveD1Address } from "./lib/d1-address.mjs";
+import { requireTarget } from "./lib/target-flag.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
 
 const git = (/** @type {string[]} */ args) =>
@@ -52,7 +53,7 @@ if (process.argv.includes("--restore")) {
 
 const PREVIEW = process.argv.includes("--preview");
 const DB_NAME = PREVIEW ? "dustinedwards-preview" : "dustinedwards";
-const target = PREVIEW || process.argv.includes("--remote") ? "--remote" : "--local";
+const target = PREVIEW ? "--remote" : requireTarget(process.argv.slice(2), "pull-sources");
 
 /** @type {Array<{ path: string, content: string, sha: string, updated_at: number }>} */
 const rows = jsonRows(
