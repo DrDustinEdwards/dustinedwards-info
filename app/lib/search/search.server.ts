@@ -173,17 +173,13 @@ function buildFilters(parsed: ParsedQuery, nowSeconds: number): FilterSql {
   if (parsed.filters.base.length > 0) {
     const prefixes = parsed.filters.base.map(basePrefix);
     clauses.push(`EXISTS (SELECT 1 FROM json_each(?) WHERE d.doc_url LIKE value)`);
-    params.push(
-      JSON.stringify(prefixes.map((prefix) => (prefix === null ? "\u0000" : `${prefix}%`))),
-    );
+    params.push(JSON.stringify(prefixes.map((p) => (p === null ? "\u0000" : `${p}%`))));
   }
 
   // Every tag must be present, so tag:a tag:b narrows rather than widens.
   if (parsed.filters.tag.length > 0) {
-    clauses.push(
-      `NOT EXISTS (SELECT 1 FROM json_each(?) WHERE instr(d.doc_tags, '|' || value || '|') = 0)`,
-    );
-    params.push(JSON.stringify(parsed.filters.tag));
+    clauses.push(`NOT EXISTS (SELECT 1 FROM json_each(?) WHERE instr(d.doc_tags, value) = 0)`);
+    params.push(JSON.stringify(parsed.filters.tag.map((tag) => `|${tag}|`)));
   }
 
   if (parsed.year !== null) {

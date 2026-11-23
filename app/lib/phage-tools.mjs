@@ -361,7 +361,6 @@ function runDilution(values) {
     return { ok: false, error: "Enter the starting titer in pfu/ml, greater than 0." };
   if (!Number.isFinite(target) || target <= 0)
     return { ok: false, error: "Enter the target concentration in pfu/ml, greater than 0." };
-  // Within 1% is no step (planDilution), so there is nothing to dilute.
   if (target * 1.01 >= start)
     return {
       ok: false,
@@ -511,10 +510,7 @@ function runWebbedPlate(values) {
 function runFlood(values) {
   const ml = parseNumber(values.ml);
   if (!Number.isFinite(ml) || ml <= 0 || ml > 10000)
-    return {
-      ok: false,
-      error: "Enter the lysate wanted in ml, greater than 0 and at most 10,000.",
-    };
+    return { ok: false, error: "Enter the lysate wanted in ml, over 0 and up to 10,000." };
   const { fewest, most } = platesForLysate({ mlWanted: ml });
   const range = fewest === most ? `${most}` : `${fewest} to ${most}`;
   return {
