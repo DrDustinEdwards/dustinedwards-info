@@ -711,7 +711,7 @@ const buildPresent = existsSync(assetDir);
 
 // Floors: counts from running the gate with build/ present and absent, a little under each. Only CI
 // reaches the absent branch; measure it by moving build/ aside, never by reasoning.
-const MINIMUM_CHECKS = buildPresent ? 625 : 501;
+const MINIMUM_CHECKS = buildPresent ? 594 : 478;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",

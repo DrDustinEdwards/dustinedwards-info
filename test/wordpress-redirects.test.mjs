@@ -5,11 +5,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS } from "../app/lib/content-pages.mjs";
 import { ROSTER_ANCHOR, ROSTER_PAGE_PATH } from "../app/lib/roster/compile.mjs";
 import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
-import {
-  EXPLICIT_ROWS,
-  PENDING_TARGETS,
-  wordpressDisposition,
-} from "../app/lib/wordpress-redirects.mjs";
+import { EXPLICIT_ROWS, wordpressDisposition } from "../app/lib/wordpress-redirects.mjs";
 
 const gsc = JSON.parse(
   readFileSync(new URL("../scripts/fixtures/wordpress-gsc-urls.json", import.meta.url), "utf8"),
@@ -30,6 +26,12 @@ const ANSWERED_NOW = new Set([
   "/sitemap.xml",
 ]);
 
+/** A page the new site answers: a route, a content page or a published procedure. */
+const answered = (path) =>
+  ANSWERED_NOW.has(path) ||
+  CONTENT_PAGE_PATHS.includes(path) ||
+  publishedProcedurePaths().includes(path);
+
 await test("every Search Console URL resolves: 200 kept, one 301, or 410, never unmapped", () => {
   assert.equal(gsc.paths.length + gsc.profilePaths, gsc.total, "the fixture accounts for all 271");
   assert.equal(gsc.total, 271);
@@ -40,13 +42,9 @@ await test("every Search Console URL resolves: 200 kept, one 301, or 410, never 
     const url = new URL(raw, "https://dustinedwards.info");
     const d = wordpressDisposition(url.pathname);
     if (d === null) {
-      // Kept: the page must be one the new site answers, or listed as pending for the switch.
+      // Kept: the page must be one the new site answers.
       const kept = url.pathname.replace(/\/$/, "") || "/";
-      if (
-        !ANSWERED_NOW.has(url.pathname) &&
-        !ANSWERED_NOW.has(kept) &&
-        !PENDING_TARGETS.includes(kept)
-      ) {
+      if (!answered(url.pathname) && !answered(kept)) {
         problems.push(`${raw}: kept, but nothing answers it`);
       }
       continue;
@@ -55,8 +53,8 @@ await test("every Search Console URL resolves: 200 kept, one 301, or 410, never 
     const target = targetPath(d.location);
     // One hop: the target is not itself redirected.
     if (wordpressDisposition(target) !== null) problems.push(`${raw}: ${target} redirects again`);
-    if (!ANSWERED_NOW.has(target) && !PENDING_TARGETS.includes(target)) {
-      problems.push(`${raw}: ${target} is neither a page nor listed as pending`);
+    if (!answered(target)) {
+      problems.push(`${raw}: ${target} is not a page the site answers`);
     }
   }
   assert.deepEqual(problems, []);

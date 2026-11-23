@@ -204,8 +204,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
         "title",
         "carries a character reference (&amp; and the like); write the character itself",
       );
-    if (title.includes("<"))
-      bad("title", 'contains "<", which would end a JSON-LD script block early');
+    if (title.includes("<")) bad("title", 'contains "<"; store it as &lt;');
     if (title !== title.trim() || /\s{2,}/.test(title))
       bad("title", "has leading, trailing or repeated whitespace");
   }
@@ -401,11 +400,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
   // the abstract and the raw record
   if (data.abstract !== undefined && data.abstract !== null) {
     if (!isString(data.abstract)) bad("abstract", "must be text");
-    else if (data.abstract.includes("<"))
-      bad(
-        "abstract",
-        `contains "<", which would end a JSON-LD script block early; store it as &lt;`,
-      );
+    else if (data.abstract.includes("<")) bad("abstract", `contains "<"; store it as &lt;`);
   }
   if (data.csl !== undefined && data.csl !== null) {
     if (!isObject(data.csl)) {

@@ -31,6 +31,7 @@ export type PlateLayout = {
   }>;
 };
 
+// The canvas as drawn: WIDE reads only each leader's start and recomputes the rest, so the other segments and labels here are reference.
 const CANVAS_WIDE: PlateLayout = {
   size: 500,
   dish: { cx: 250, cy: 250, rim: 246, lawn: 235 },
