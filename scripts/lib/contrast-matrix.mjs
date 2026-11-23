@@ -105,15 +105,11 @@ export const MATRIX = [
   ["--text-destructive", "--surface-popover", TEXT, "destructive text in a popover"],
   ["--text-destructive", "--tint-destructive", TEXT, "destructive text on its own tint"],
 
-  ["--text", "--glass-fill-paper", TEXT, "body on paper glass, composited"],
-  ["--text-secondary", "--glass-fill-paper", TEXT, "muted copy on paper glass"],
   // The placeholder must sit below the value that replaces it.
   ["--placeholder", "--page-paper", TEXT, "placeholder in a field"],
 
   // The header mark's purple paths take --brand, measured by the --brand on --page-paper row. Its three
   // warm paths would fail (2.72, 1.93, 1.58:1 on limestone) but are logotype ink, which 1.4.11 exempts.
-  ["--brand", "--glass-fill-paper", TEXT, "link on paper glass"],
-  ["--visited", "--glass-fill-paper", TEXT, "visited link on paper glass"],
 
   // No bar rows: a pair against a surface nothing paints is not coverage.
 
@@ -156,25 +152,11 @@ export const NON_PARTICIPATING = new Map([
       "recorded as failing rather than quietly unmeasured: a disabled control that met 4.5:1 would " +
       "read as available. It is identified by the disabled attribute, the recess, and text beside it",
   ],
-  [
-    "--lamp-chroma-on-paper",
-    "a catch hue mixed in behind the one paper glass surface. Light is atmosphere and never " +
-      "meaning, so nothing reads it and no pair can be required of it. Its " +
-      "companion --lamp-chroma-on-bar was deleted 2026-09-14 with the bar it lit",
-  ],
   // Dust 300 is texture on Plate I, the halo's dashed outer ring: it marks an edge and identifies nothing.
   [
     "--fig-dust-300",
     "texture: the halo's dashed ring on Plate I, below the stroke floor because it identifies nothing",
   ],
-  // The lamp's catch hue in each theme reads these two purple steps, and nothing else does.
-  .../** @type {Array<[string, string]>} */ (
-    ["--fig-purple-100", "--fig-purple-400"].map((t) => [
-      t,
-      "the lamp catch hue behind the glass, which --lamp-chroma-on-paper resolves through; light is " +
-        "atmosphere and never meaning, so no pair can be required of it",
-    ])
-  ),
 ]);
 
 /**

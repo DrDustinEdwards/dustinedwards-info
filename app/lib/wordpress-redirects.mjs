@@ -56,32 +56,6 @@ const BAYLOR_PDF = "/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.p
 const CV_PDF = "/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf";
 
 /**
- * Targets whose pages do not exist yet. Every 301 into one of these answers 404 until its page job
- * lands, so the switch checklist reads this list: it must be empty, or each entry accepted, before
- * DNS moves.
- */
-export const PENDING_TARGETS = [
-  "/research",
-  "/research/retroviruses",
-  "/research/bacteriophages",
-  "/research/science-education",
-  "/research/phages",
-  "/research/protocols",
-  "/research/protocols/phage-isolation",
-  "/research/protocols/phage-dna-extraction",
-  "/research/protocols/coi-primers",
-  "/research/protocols/rev-lpdv-primers",
-  "/research/protocols/pan-avian-gapdh",
-  "/teaching",
-  "/teaching/phage-discovery",
-  "/teaching/virus-isolation",
-  "/teaching/phage-bioinformatics",
-  "/teaching/central-dogma",
-  "/teaching/study-skills",
-  "/research/retroviruses/avian",
-];
-
-/**
  * @typedef {{ status: 301, location: string } | { status: 410 }} Disposition
  */
 
