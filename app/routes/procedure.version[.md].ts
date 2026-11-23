@@ -1,5 +1,6 @@
 import { getFrozenVersion } from "~/db/procedure-versions";
 import { getEnv } from "~/lib/context";
+import { safeDecode } from "~/lib/safe-decode.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { withLineage } from "~/kb/procedures/lineage.mjs";
 import { lineageFor } from "~/kb/procedures/lineage.server";
@@ -17,7 +18,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const found = /^(.*)\/v\/([^/]+?)\.md$/.exec(new URL(request.url).pathname);
   const frozen = found
-    ? await getFrozenVersion(env, found[1] ?? "", decodeURIComponent(found[2] ?? ""))
+    ? await getFrozenVersion(env, found[1] ?? "", safeDecode(found[2] ?? ""))
     : null;
   if (!frozen) {
     return new Response("Not found\n", {

@@ -3,6 +3,7 @@ import { data } from "react-router";
 import { ProcedureSheet } from "~/components/procedure";
 import { getFrozenVersion } from "~/db/procedure-versions";
 import { getEnv } from "~/lib/context";
+import { safeDecode } from "~/lib/safe-decode.mjs";
 import { sheetAddress } from "~/kb/procedures/cite.mjs";
 import { PROCEDURES_CACHE_TAG, readScale } from "~/kb/procedures/route";
 import { SITE_ORIGIN, pageMeta, publicHtmlHeaders } from "~/lib/seo";
@@ -28,7 +29,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const frozen = await getFrozenVersion(
     getEnv(context),
     found[1] ?? "",
-    decodeURIComponent(found[2] ?? ""),
+    safeDecode(found[2] ?? ""),
   );
   if (!frozen) throw data(null, { status: 404 });
   const { count, factor } = readScale(frozen.record, url);

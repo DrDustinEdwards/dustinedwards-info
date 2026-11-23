@@ -197,6 +197,17 @@ await test("dilution: refuses a target at or above the start", () => {
   assert.equal(result.ok, false);
 });
 
+await test("a target within 1% of the start answers instead of throwing", () => {
+  const dilution = runTool("dilution", {
+    start: "1e10",
+    target: "9.95e9",
+    transfer: "10",
+    needed: "",
+  });
+  assert.equal(dilution.ok, false);
+  assert.ok(runTool("webbed-plate", { titer: "1e4", pfu: "99.5", volume: "10", plates: "6" }).ok);
+});
+
 await test("webbed plate: the FAQ's example, 11,100 pfu from a 1.11 x 10^10 lysate", () => {
   // 111 plaques in 10 ul of 10^-6 is 1.11 x 10^10 pfu/ml, and 11,100 / 1.11 x 10^10 x 1,000 = 1.00 x 10^-3 µl.
   // The notebook's dilution (1/10^4, 10 µl per plate) delivered 10 x 10^-4 = 1 x 10^-3 µl of lysate per plate.

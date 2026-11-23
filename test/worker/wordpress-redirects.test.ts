@@ -53,6 +53,13 @@ describe("the map's edges", () => {
     expect(response.headers.get("location")).toBe(`${APEX}/research/phages?x=1`);
   });
 
+  it("www never redirects off the apex, even for a path that starts with //", async () => {
+    for (const path of ["//evil.example/x?a=1", "///evil.example/x", "/\\evil.example/x"]) {
+      const response = await get(`https://www.dustinedwards.info${path}`);
+      expect(new URL(response.headers.get("location") ?? "").origin, path).toBe(APEX);
+    }
+  });
+
   it("www sends a removed address to the apex, which answers 410", async () => {
     const response = await get("https://www.dustinedwards.info/molarity-calculator/");
     expect(response.status).toBe(301);

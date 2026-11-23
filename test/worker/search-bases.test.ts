@@ -80,6 +80,15 @@ describe("the knowledge base facet", () => {
     expect(withReal.total).toBeGreaterThan(0);
   });
 
+  it("takes any number of tag: and base: operators, as one bound parameter each", async () => {
+    const tags = Array.from({ length: 150 }, (_, i) => `tag:t${i}`).join(" ");
+    const bases = Array.from({ length: 150 }, () => "base:lab").join(" ");
+    expect((await search(searchEnv, { q: `${WORD} ${tags}` })).total).toBe(0);
+    expect(urls((await search(searchEnv, { q: `${WORD} ${bases}` })).hits)).toEqual([
+      "/research/lab/reagents/zymograd",
+    ]);
+  });
+
   it("is a filter on its own: base:recipes with no words lists the base's records", async () => {
     expect(urls((await search(searchEnv, { q: "base:recipes" })).hits)).toEqual([
       "/recipes/zymograd-bread",
