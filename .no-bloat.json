@@ -24,7 +24,7 @@
     ]
   },
   "baseline": {
-    "measured_at": "2302e1a",
+    "measured_at": "451daca",
     "knip": {},
     "jscpd": {
       "clones": 25,
@@ -64,7 +64,7 @@
       "app/styles/katex.generated.css": 1125,
       "mcp/scripts/check-wrapper.mjs": 722,
       "scripts/build-og.mjs": 541,
-      "scripts/check-all.mjs": 596,
+      "scripts/check-all.mjs": 594,
       "scripts/check-ask-guards.mjs": 698,
       "scripts/check-changed.mjs": 520,
       "scripts/check-contrast.mjs": 737,
@@ -74,12 +74,12 @@
       "test/worker/carrel-site-api.test.ts": 1488
     },
     "tests": {
-      "files": 175,
-      "cases": 1102
+      "files": 176,
+      "cases": 1104
     },
     "comments": {
-      "lines": 17004,
-      "code": 95854,
+      "lines": 17005,
+      "code": 95849,
       "percentage": 15.07
     }
   }

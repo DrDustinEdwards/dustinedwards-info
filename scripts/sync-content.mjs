@@ -49,7 +49,6 @@ function buildSql(posts) {
   /** @type {string[]} */
   const out = [];
 
-  // Scoped to rows that came from a file, so hand-authored pages are never touched by a content sync.
   // Never an unscoped delete: an empty keep list is a collapsed artifact, refused upstream and here.
   if (posts.length === 0) throw new Error("buildSql refuses to delete every file-sourced post");
   const keep = posts.map((p) => sql(p.sourcePath)).join(", ");

@@ -9,8 +9,6 @@
 # uptime monitors, the D1 sync, the Ask index, the CV PDF, the share cards and the media index, then the browser test.
 # A converge miss leaves the deploy standing and fails the run. `mcp` ships the admin MCP the same way as the site.
 #
-# The scheduled rebuild ships main's tip only once CI has passed on it.
-#
 # THE SWITCH. `gh variable set AUTO_DEPLOY --body off` stops the automatic and scheduled runs; any other value, or
 # none, turns them back on. A dispatch from main deploys either way.
 #

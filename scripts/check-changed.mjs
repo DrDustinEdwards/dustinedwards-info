@@ -303,7 +303,6 @@ export function changedFiles(base, git = realGit) {
     for (const f of text.split("\n")) if (f.trim()) out.add(f.trim());
   };
   if (known) add(lines(["diff", "--name-only", `${base}...HEAD`]));
-  // Untracked too: a new file is the most touched file there is.
   add(lines(["diff", "--name-only"]));
   add(lines(["diff", "--name-only", "--cached"]));
   add(lines(["ls-files", "--others", "--exclude-standard"]));
