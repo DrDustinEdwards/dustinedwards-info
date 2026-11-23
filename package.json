@@ -115,7 +115,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.70.1",
-    "@cloudflare/vitest-plugin": "1.8.5",
+    "@cloudflare/vitest-plugin": "1.9.0",
     "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.59.2",
     "@mermaid-js/mermaid-cli": "12.2.0",
     "@react-router/dev": "8.5.2",
