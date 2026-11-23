@@ -27,10 +27,14 @@ const PRODUCT = /^(?:about )?[1-9][0-9]{1,4} bp$/;
 const LINE = /^[^\r\n]+$/;
 
 /** @param {unknown} value @param {number} max */
-const oneLine = (value, max) =>
+export const oneLine = (value, max) =>
   typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max
     ? null
     : `is one line of at most ${max} characters`;
+
+/** @param {unknown} value */
+export const httpsUrl = (value) =>
+  typeof value === "string" && /^https:\/\/[^\s]+$/.test(value) ? null : "is an https address";
 
 /** @param {unknown} value */
 const sequenceCheck = (value) =>
@@ -70,12 +74,7 @@ export const PRIMER = {
           ? null
           : "is a DOI, such as 10.1371/journal.pone.0099678",
     },
-    published_url: {
-      check: (value) =>
-        typeof value === "string" && /^https:\/\/[^\s]+$/.test(value)
-          ? null
-          : "is an https address",
-    },
+    published_url: { check: httpsUrl },
     published_name: { required: true, check: (value) => oneLine(value, 120) },
     published_sequence: { required: true, check: sequenceCheck },
     // The product size the paper states for the pair, on the forward primer only: a size is a pair's, and it is shown beside the

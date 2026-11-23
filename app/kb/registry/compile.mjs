@@ -11,23 +11,15 @@
 
 import { gitBlobSha } from "../../lib/content/hashes.mjs";
 import { foldText } from "../../lib/cv/view.mjs";
+import { REGISTRY_ID, isGap } from "../procedures/gap.mjs";
 import { KINDS, kindKeys } from "./kinds.mjs";
 import { parseFrontMatter, wideDashError } from "../../lib/content/front-matter.mjs";
 
 export const REGISTRY_DIR = "content/registry";
 
-/** An id within a kind: lower-case letters, digits and hyphens, so it is a file name and a URL segment as written. */
-export const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,62}$/;
 /** A kind is a key of KINDS: the same shape, so it is a directory and a URL segment as written. */
 const KIND_PATTERN = /^[a-z][a-z-]{0,30}$/;
 const NAME_MAX = 120;
-
-const GAP = /^MISSING:\s*(\S.*)$/s;
-
-/** True for a recorded gap: `MISSING: <why>`. @param {unknown} value @returns {value is string} */
-export function isGap(value) {
-  return typeof value === "string" && GAP.test(value);
-}
 
 /** The registry address of an item, `<kind>/<id>`: what the drift check, the sync and Carrel read it by. */
 export function registrySlug(/** @type {string} */ kind, /** @type {string} */ id) {
@@ -45,7 +37,7 @@ export function parseRegistrySlug(slug) {
   const parts = slug.split("/");
   if (parts.length !== 2) return null;
   const [kind = "", id = ""] = parts;
-  return KIND_PATTERN.test(kind) && ID_PATTERN.test(id) ? { kind, id } : null;
+  return KIND_PATTERN.test(kind) && REGISTRY_ID.test(id) ? { kind, id } : null;
 }
 
 /** The repository path of an item's file, from its slug. */

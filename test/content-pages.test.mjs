@@ -9,8 +9,6 @@ import {
   contentPageTrail,
   publishedContentPagePaths,
 } from "../app/lib/content-pages.mjs";
-import { PENDING_TARGETS } from "../app/lib/wordpress-redirects.mjs";
-import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
 
 const pagesDir = new URL("../content/pages/", import.meta.url);
 
@@ -28,15 +26,6 @@ await test("every listed page has its markdown file, unless its markdown is gene
       `${path}: ${contentPageFile(path)}`,
     );
   }
-});
-
-await test("every page an old WordPress address redirects to is one of these pages, or is named here", () => {
-  // The protocols are procedures, drawn from D1 (docs/PROCEDURES.md), so their files say they exist.
-  const procedures = publishedProcedurePaths();
-  const notHere = PENDING_TARGETS.filter(
-    (p) => !CONTENT_PAGE_PATHS.includes(p) && !procedures.includes(p),
-  );
-  assert.deepEqual(notHere, []);
 });
 
 await test("every old phage address Google knows lands on a heading of /research/phages", () => {

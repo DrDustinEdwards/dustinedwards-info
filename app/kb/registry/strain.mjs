@@ -9,15 +9,7 @@
 // designation, which the record's `name` must equal.
 
 import { BIOSAFETY_LEVELS } from "../procedures/validate.mjs";
-import { stated } from "./primer.mjs";
-
-const LINE = /^[^\r\n]+$/;
-
-/** @param {unknown} value @param {number} max */
-const oneLine = (value, max) =>
-  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max
-    ? null
-    : `is one line of at most ${max} characters`;
+import { httpsUrl, oneLine, stated } from "./primer.mjs";
 
 /** @type {import("./kinds.mjs").KindSpec} */
 export const STRAIN = {
@@ -29,12 +21,7 @@ export const STRAIN = {
     strain: { check: (value) => oneLine(value, 60) },
     collection: { required: true, check: (value) => oneLine(value, 60) },
     collection_number: { required: true, check: (value) => oneLine(value, 40) },
-    guide_url: {
-      check: (value) =>
-        typeof value === "string" && /^https:\/\/[^\s]+$/.test(value)
-          ? null
-          : "is an https address",
-    },
+    guide_url: { check: httpsUrl },
     // Dustin's to set: a gap until the biosafety officer check is done.
     biosafety_level: {
       required: true,

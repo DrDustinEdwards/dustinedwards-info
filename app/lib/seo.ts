@@ -197,11 +197,6 @@ export function searchTitle(title: string, suffix: string = ` | ${SITE.name}`): 
   return prelumSearchTitle(title, suffix);
 }
 
-/** The home page's Person: the same node as `personNode`, joined to it by the shared `@id`. */
-export function personJsonLd(origin: string) {
-  return personNode(origin);
-}
-
 /**
  * The About page is a ProfilePage about the same Person the home page describes: the shared `@id` is
  * what makes the two one entity rather than two people with one name. Its own `@id` is Prelum's page node, so the two are one page.
@@ -406,7 +401,7 @@ export function personId(origin: string) {
   return `${origin}/#person`;
 }
 
-/** Not a duplicate of `personJsonLd`: this `@id` joins papers to a person. */
+/** The Person node: the home page, the About page and the papers join it by the shared `@id`. */
 export function personNode(origin: string) {
   return thing("Person", {
     "@id": personId(origin),
@@ -467,7 +462,7 @@ export function publicationsJsonLd(
     ...items.map((p) =>
       thing(p.type ? schemaTypeFor(p.type) : "ScholarlyArticle", {
         "@id": origin + paperPath(p.slug),
-        // Decoding is safe here: `jsonLd()` escapes `<` and `>` on the way into the script element.
+        // Decoding is safe here: Capsomer's JsonLd escapes `<` and `>` on the way into the script element.
         headline: unescapeHtml(p.title),
         name: unescapeHtml(p.title),
         author: p.authors.map((name) =>

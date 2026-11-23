@@ -11,7 +11,7 @@ export default function start(): void {
   const chips = [...root.querySelectorAll<HTMLButtonElement>(".cap-chip[data-value]")];
   const cards = [...root.querySelectorAll<HTMLElement>(".features-card")];
   const sections = [...root.querySelectorAll<HTMLElement>("[data-section]")];
-  const status = root.querySelector<HTMLElement>(".features-status");
+  const status = root.querySelector<HTMLElement>('.cap-sr-only[role="status"]');
 
   const choose = (value: string): void => {
     root.dataset.featureFilter = value;

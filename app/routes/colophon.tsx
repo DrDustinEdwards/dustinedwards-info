@@ -75,7 +75,6 @@ export function meta() {
   });
 }
 
-/** `recordsForPage` reads the same list, so no record can point at a fragment the page does not render. */
 /** A filter for one list below it. Hidden until app/enhance/colophon.ts runs, since it does nothing without script. */
 function ColophonFind({ label, list }: { label: string; list: string }) {
   const [value, setValue] = useState("");
@@ -406,7 +405,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
             </button>
           ))}
         </div>
-        <span className="colophon-status" role="status" />
+        <span className="cap-sr-only" role="status" />
         <ul className="colophon-cards colophon-features">
           {features.features.map((feature) => (
             <li

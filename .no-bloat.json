@@ -24,11 +24,11 @@
     ]
   },
   "baseline": {
-    "measured_at": "451daca",
+    "measured_at": "11e1b90",
     "knip": {},
     "jscpd": {
       "clones": 25,
-      "lines": 376,
+      "lines": 369,
       "percentage": 0.29,
       "unread": 0
     },
@@ -38,30 +38,28 @@
     },
     "legacy": {},
     "size": {
-      "app/app.css": 575,
+      "app/app.css": 515,
       "app/components/admin/kb-form-steps.tsx": 524,
       "app/components/admin/kb-form.tsx": 501,
-      "app/components/lab.tsx": 512,
       "app/components/procedure.tsx": 622,
       "app/db/posts.ts": 676,
       "app/db/schema.ts": 794,
       "app/kb/procedures/library.mjs": 568,
-      "app/kb/procedures/render.mjs": 920,
-      "app/kb/procedures/validate.mjs": 1017,
+      "app/kb/procedures/render.mjs": 919,
+      "app/kb/procedures/validate.mjs": 1011,
       "app/kb/registry/catalog.mjs": 1027,
       "app/lab/members.server.ts": 505,
       "app/lib/cv/view.mjs": 502,
       "app/lib/editor/publish.server.ts": 508,
       "app/lib/features.mjs": 571,
-      "app/lib/nav.ts": 518,
-      "app/lib/operator/sync-tools.server.ts": 613,
+      "app/lib/nav.ts": 514,
+      "app/lib/operator/sync-tools.server.ts": 610,
       "app/lib/phage-tools.mjs": 1020,
-      "app/lib/publications/validate.mjs": 503,
       "app/lib/search/search.server.ts": 541,
-      "app/routes/colophon.tsx": 606,
+      "app/routes/colophon.tsx": 605,
       "app/routes/cv.tsx": 629,
       "app/styles/cv.css": 613,
-      "app/styles/katex.generated.css": 1125,
+      "app/styles/katex.generated.css": 1124,
       "mcp/scripts/check-wrapper.mjs": 722,
       "scripts/build-og.mjs": 541,
       "scripts/check-all.mjs": 594,
@@ -74,13 +72,13 @@
       "test/worker/carrel-site-api.test.ts": 1488
     },
     "tests": {
-      "files": 176,
-      "cases": 1104
+      "files": 171,
+      "cases": 1081
     },
     "comments": {
-      "lines": 17005,
-      "code": 95849,
-      "percentage": 15.07
+      "lines": 16829,
+      "code": 95210,
+      "percentage": 15.02
     }
   }
 }

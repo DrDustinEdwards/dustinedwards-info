@@ -102,7 +102,6 @@ export async function validateAndRender(env: PublishEnv, slug: string, raw: stri
       raw,
       expectedSlug: slug,
       resolveImage: makeResolveImage(env),
-      // A chart's CSV, cited from the media library (`:::chart{src="/media/<key>.csv"}`, checklist E3).
       readChartData: async (key: string) => (await env.MEDIA.get(key))?.text() ?? null,
     });
   } catch (error) {
@@ -131,7 +130,6 @@ function computeForSaved<C extends { slug: string; status: string; publishAt: Da
       slug: p.slug,
       ...fields(p),
       draft: p.status === "draft",
-      // ISO strings: string order over ISO timestamps is chronological order.
       publishAt: p.publishAt ? p.publishAt.toISOString() : "",
     }));
   const computed = compute([
@@ -201,9 +199,7 @@ export async function renderAndWrite(
 
   await syncPostToD1(env, record);
 
-  // Purges on a draft save too: an unpublish writes a draft row while changing every public listing.
-  // A condition, if ever needed, must read the PREVIOUS status, never the incoming record. A failed purge
-  // never fails the write, but it is returned: the public pages stay stale until the cache expires.
+  // Purges on a draft save too (an unpublish changes every listing). A failed purge never fails the write; it is returned.
   const purged = await purgePosts(`renderAndWrite ${slug}`);
 
   return { record, purged };
@@ -243,7 +239,6 @@ async function refreshNeighbors(env: PublishEnv, savedSlug: string) {
 
   const storedBySlug = new Map(stored.map((p) => [p.slug, p]));
   const changed = derived.flatMap((post) => {
-    // The saved row was written from the same derivation a moment ago.
     const row = storedBySlug.get(post.slug);
     if (post.slug === savedSlug || !row) return [];
     const relatedJson = JSON.stringify(post.related);
@@ -325,7 +320,6 @@ export async function savePost(
 ) {
   const { actor } = options;
 
-  // Read before rendering: it is the only authority on "ever published", and a refusal should not pay for a render.
   const existing = await readFile(env, postPath(options.slug));
 
   if (options.isNew && existing) {
@@ -334,7 +328,6 @@ export async function savePost(
     });
   }
 
-  // Throws PolicyError on an operator's first publish, and stamps first_published over what the caller sent.
   const decision = decide({
     actor,
     incomingRaw: options.raw,
@@ -342,7 +335,6 @@ export async function savePost(
   });
   const raw = decision.raw;
 
-  // The gate: rendered from the STAMPED markdown before the commit, and its result is discarded.
   const gated = await validateAndRender(env, options.slug, raw);
 
   const written = await commitUnlessUnchanged(env, {
@@ -376,7 +368,6 @@ export async function savePost(
 
   // No compensating revert, ever: undoing the commit would destroy the source to repair a derived index.
   let record = gated;
-  // False until a write lands: an unreached purge leaves the pages as stale as a failed one.
   let purged: PurgeOutcome = false;
   const converged = await convergeWithRetry({
     write: async () => {
@@ -448,7 +439,16 @@ export async function deletePost(
     changes: [{ path: postPath(options.slug), content: null }],
   });
 
-  const { purged } = await deletePostFromD1(env, options.slug);
+  // The file is gone, so a failed D1 delete is recorded and retried, as in savePost.
+  let purged: PurgeOutcome = false;
+  await convergeWithRetry({
+    write: async () => {
+      ({ purged } = await deletePostFromD1(env, options.slug));
+    },
+    recordDivergence: (facts) => recordDivergence(env, facts),
+    slug: options.slug,
+    commitSha,
+  });
 
   return {
     commitSha,

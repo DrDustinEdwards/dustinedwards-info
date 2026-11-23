@@ -15,21 +15,11 @@
 
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
-import { stated } from "./primer.mjs";
-
-const LINE = /^[^\r\n]+$/;
-
-/** @param {unknown} value @param {number} max */
-const oneLine = (value, max) =>
-  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max
-    ? null
-    : `is one line of at most ${max} characters`;
+import { isGap } from "../procedures/gap.mjs";
+import { httpsUrl, oneLine, stated } from "./primer.mjs";
 
 /** A field the file does not carry reads as null (compile.mjs). @param {unknown} value */
 const absent = (value) => value === undefined || value === null;
-
-/** @param {unknown} value */
-const isGap = (value) => typeof value === "string" && value.startsWith("MISSING");
 
 /** @type {import("./kinds.mjs").KindSpec} */
 export const REAGENT = {
@@ -43,12 +33,7 @@ export const REAGENT = {
     // Bought (a supplier and a catalog number) or prepared in the lab (a recipe): setErrors holds each item to one of the two.
     supplier: { check: (value) => oneLine(value, 80) },
     catalog_number: { check: (value) => oneLine(value, 40) },
-    product_url: {
-      check: (value) =>
-        typeof value === "string" && /^https:\/\/[^\s]+$/.test(value)
-          ? null
-          : "is an https address",
-    },
+    product_url: { check: httpsUrl },
     prepared_in_lab: {
       check: (value) => (value === true ? null : "is true, or absent for a reagent that is bought"),
     },

@@ -2,7 +2,6 @@ import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 import { ADMIN_FORM_BYTES } from "~/lib/body.server";
 import { readForm } from "@dustinedwards/site-runtime/body";
 import { Link, data, redirect } from "react-router";
-import { can } from "@dustinedwards/site-runtime/members";
 import { Panel } from "capsomer/react/panel";
 
 import { PageHead } from "capsomer/react/page-head";
@@ -10,37 +9,33 @@ import { crumbLink } from "~/components/admin/shell-parts";
 import { Table } from "capsomer/react/table";
 import { LabStatus } from "~/components/lab/lab-ui";
 import { RunForm } from "~/components/lab/run-form";
-import { labActorContext } from "~/lab/actor.server";
+import { PRIVATE, labActorContext, notFound, requirePermission } from "~/lab/actor.server";
 import { amountText, idOf } from "~/lab/forms.mjs";
 import { recordRun, runPage } from "~/lab/runs.server";
 import { PERMISSION } from "~/lab/titles.mjs";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/workspace.runs.run";
-import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `Run ${params.id} · Lab` }, { name: "robots", content: "noindex" }];
 }
 
-const PRIVATE = { "cache-control": UNCACHED };
-
 /** Someone else's run is a 404 to a person who reads only their own, the same answer as a run that does not exist. */
 export async function loader({ context, params }: Route.LoaderArgs) {
   const actor = context.get(labActorContext);
-  if (!can(actor, PERMISSION.recordRun))
-    throw data("Not found.", { status: 404, headers: PRIVATE });
+  requirePermission(actor, PERMISSION.recordRun);
   const id = idOf(params.id);
   const page = id ? await runPage(getEnv(context), actor, id) : null;
-  if (!page) throw data("Not found.", { status: 404, headers: PRIVATE });
+  if (!page) notFound();
   return data(page, { headers: PRIVATE });
 }
 
 /** A correction of this run: the run is the one in the address. Saved, it opens on its own page; refused, it stays here. */
 export async function action({ context, request, params }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
+  requirePermission(actor, PERMISSION.recordRun);
   const id = idOf(params.id);
-  if (!id || !can(actor, PERMISSION.recordRun))
-    throw data("Not found.", { status: 404, headers: PRIVATE });
+  if (!id) notFound();
   const result = await recordRun(
     getEnv(context),
     actor,

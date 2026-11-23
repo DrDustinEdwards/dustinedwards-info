@@ -17,8 +17,6 @@ import { PHAGE_SLUG, savePhage } from "~/lib/phages/save.server";
 
 type PhageEnv = Env;
 
-/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-
 export function phageHandler(env: PhageEnv): ContentKindHandler {
   /** One write through savePhage as the Carrel actor, answered in the package's terms. */
   async function write(

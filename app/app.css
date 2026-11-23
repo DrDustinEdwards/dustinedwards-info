@@ -116,7 +116,6 @@
      Palette exit (120ms), the image-viewer morph (240ms) and the phone header hide (350ms) stay
      literals: those are the overlay timings, and folding them in here would retune them. */
   --motion-instant: 90ms;
-  --motion-state: 160ms;
   /* Incoming page only. Long enough to see which page arrived, short enough that it is not a wait. */
   --motion-page: 180ms;
   /* One cycle of a loading line, drawn only while something is actually in flight. */
@@ -205,26 +204,17 @@
   /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
   --line-strong: #918e96;
   --brand-pressed: #2f1a4d;
-  /* Text on the glass pane sits on 82% paper over the 45% scrim over paper. The pane itself paints
-     --glass-pane. */
-  --glass-fill-paper: #ebeaed;
-  --glass-fill-paper: color-mix(in srgb, #1c1727 8.1%, #fdfdfe);
   --error: #8e1024;
   --warning: #6b4f07;
   --success: #375445;
 
   /* Figures only: no semantic color ever appears in one. */
-  --fig-purple-100: #e3dcf0;
-  --fig-purple-400: #4f2d7f;
   --fig-oxide-300: #a8604a;
   --fig-oxide-400: #8f4e3a;
   --fig-dust-300: #a8a4ae;
   /* Figure fills only, never a page surface. */
   --fig-lawn: #e9e6ef;
   --fig-turbid: #f2f0f7;
-
-  /* The lamp catch hue follows the backdrop, not the theme. */
-  --lamp-chroma-on-paper: var(--fig-purple-100);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -294,21 +284,15 @@
     --dust: #343238;
     --line-strong: #8a8890;
     --brand-pressed: #a08ecd;
-    --glass-fill-paper: #0f0d14;
-    --glass-fill-paper: color-mix(in srgb, #1c1727 8.1%, #0e0c12);
     --error: #f0a9b4;
     --warning: #cf9f5e;
     --success: #79baa8;
 
-    --fig-purple-100: #e0d7f2;
-    --fig-purple-400: #7f66a8;
     --fig-oxide-300: #c07f66;
     --fig-oxide-400: #a3654d;
     --fig-dust-300: #8a8890;
     --fig-lawn: #2a2830;
     --fig-turbid: #18161c;
-
-    --lamp-chroma-on-paper: var(--fig-purple-400);
   }
 }
 
@@ -380,58 +364,15 @@
   --dust: #343238;
   --line-strong: #8a8890;
   --brand-pressed: #a08ecd;
-  --glass-fill-paper: #0f0d14;
-  --glass-fill-paper: color-mix(in srgb, #1c1727 8.1%, #0e0c12);
   --error: #f0a9b4;
   --warning: #cf9f5e;
   --success: #79baa8;
 
-  --fig-purple-100: #e0d7f2;
-  --fig-purple-400: #7f66a8;
   --fig-oxide-300: #c07f66;
   --fig-oxide-400: #a3654d;
   --fig-dust-300: #8a8890;
   --fig-lawn: #2a2830;
   --fig-turbid: #18161c;
-
-  --lamp-chroma-on-paper: var(--fig-purple-400);
-}
-
-/* Must sit after the palette blocks: check:contrast takes the first matching selector. --surface-catch
-   is registered with @property so it interpolates; unregistered, the lamp flickers. */
-@property --surface-catch {
-  syntax: "<number>";
-  inherits: true;
-  initial-value: 0;
-}
-
-/* Outside the palette blocks because it is translucent. */
-:root {
-  --glass-pane: color-mix(in srgb, var(--page-paper) 82%, transparent);
-}
-
-:root,
-[data-theme="light"] {
-  --surface-catch: 0.14;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --surface-catch: 0.22;
-  }
-}
-
-[data-theme="dark"] {
-  --surface-catch: 0.22;
-}
-
-/* At zero the gradient renders as a 0% mix, the backdrop, so the reduced case needs no second path. */
-@media (prefers-reduced-transparency: reduce) {
-  :root,
-  [data-theme="light"],
-  [data-theme="dark"] {
-    --surface-catch: 0;
-  }
 }
 
 /* Literal hexes, not var(): check:contrast asserts every token is a hex. */
@@ -460,7 +401,6 @@
 
 /* A transparent outline keeps each control's edge once its fill is gone. */
 @media (forced-colors: active) {
-  .btn-danger,
   .cap-skip {
     outline: var(--line-w) solid transparent;
   }

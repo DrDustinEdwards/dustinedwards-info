@@ -6,6 +6,7 @@ import { listPostsWithImages } from "~/db/posts";
 import { listPublishedProcedures } from "~/db/procedures";
 import { listPublishedRegistrySources, listRegistry } from "~/db/registry";
 import { listRoster } from "~/db/roster";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { listPublishedPublicationSources, listPublishedPublications } from "~/db/publications";
 import { BASES } from "~/kb/bases.mjs";
 import { LIBRARY_BASES } from "~/kb/libraries.mjs";
@@ -185,8 +186,13 @@ export async function gatherSiteUrls(
     listPublishedRegistrySources(env),
     listPostsWithImages(env),
     // The program page's cohort photos, for its image:image entries. A roster that cannot be read leaves them out
-    // rather than taking the whole sitemap down with it; the page itself reports the fault.
-    listRoster(env).catch(() => []),
+    // rather than taking the whole sitemap down with it; the failure is logged.
+    listRoster(env).catch((error) => {
+      console.error(
+        JSON.stringify({ alert: "sitemap-roster-read-failed", detail: errorMessage(error) }),
+      );
+      return [];
+    }),
   ]);
   const titleOf = (path: string) => pageTitles.get(path) ?? DATA_PAGE_TITLES[path];
   const cvDate = treeDate(CV_SOURCE_TREES);

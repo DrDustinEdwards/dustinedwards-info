@@ -1,5 +1,6 @@
-import { createContext } from "react-router";
-import { normalizeEmail, resolveActor, type Actor } from "@dustinedwards/site-runtime/members";
+import { createContext, data } from "react-router";
+import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
+import { can, normalizeEmail, resolveActor, type Actor } from "@dustinedwards/site-runtime/members";
 
 import { getMember } from "~/db/members";
 
@@ -29,4 +30,17 @@ export async function loadLabActor(env: Env, email: string, nowMs: number): Prom
   const who = normalizeEmail(email);
   const row = await getMember(env, who);
   return resolveActor(who, row, labRules(env, nowMs));
+}
+
+/** Headers of every lab answer: a person's records are never cached. */
+export const PRIVATE = { "cache-control": UNCACHED };
+
+/** A refusal and a record that is not there answer alike: a 404, so the lab says nothing about what exists. */
+export function notFound(): never {
+  throw data("Not found.", { status: 404, headers: PRIVATE });
+}
+
+/** A person without the permission is told the page does not exist. */
+export function requirePermission(actor: Actor, permission: Parameters<typeof can>[1]) {
+  if (!can(actor, permission)) notFound();
 }

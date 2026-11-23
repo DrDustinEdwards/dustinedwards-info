@@ -24,8 +24,7 @@
     // The Lab bench path, which app/lib/seo.ts builds ROBOTS_DISALLOW from.
     "app/lab/path.mjs",
     // Listed because `app/lib/seo.ts` IMPORTS it, not because a script here
-    // calls it, which is the same reason `app/lib/media/byte-size.mjs` is
-    // listed below. `publicationsJsonLd` decodes character references so the
+    // calls it. `publicationsJsonLd` decodes character references so the
     // schema.org `headline` it emits is the string a human reads rather than
     // the escaped form the corpus stores, and this project must reach every
     // file a listed file reaches. Dependency-free, so it costs nothing.
@@ -121,12 +120,6 @@
     // The upload allowlist: it holds no script-capable type, so the origin
     // invariant has one source rather than two agreeing lists.
     "app/lib/media/upload-contract.mjs",
-    // Listed because upload-contract.mjs IMPORTS it, not because a script here
-    // calls it: `validateUpload` composes the too-large sentence and the one
-    // owner of "this byte count, as a size a person reads" is this module. A
-    // project must list every file it reaches, so a transitive import of a
-    // listed file lands here too. Dependency-free, so it costs nothing.
-    "app/lib/media/byte-size.mjs",
     // The two webmention retention windows. The admin page labels its sweep
     // with them rather than with a copy of the sentence, on exactly the footing
     // CACHE_SENTENCE below is on: a paraphrase in the route that hard-coded 30
@@ -142,9 +135,6 @@
     // reference this asset", for the same reason classify.mjs is listed: a gate
     // and a writer disagreeing about it is the drift the gate exists to catch.
     "app/lib/media/template-refs.mjs",
-    // The three-state usage model, the per-row flags and the copy snippets. The
-    // route renders from it.
-    "app/lib/media/usage.mjs",
     "app/lib/search/records.mjs",
     // The Research and Teaching page list, which scripts/build-content.mjs validates against.
     "app/lib/content-pages.mjs",
@@ -250,6 +240,7 @@
     // procedure with the SAME modules the operator API's save_procedure runs, so a file CI passes is the
     // file the save tool accepts. No Env and no DOM.
     "app/kb/bases.mjs",
+    "app/kb/md-link.mjs",
     "app/kb/procedures/marks.mjs",
     "app/kb/procedures/parse.mjs",
     "app/kb/procedures/validate.mjs",
@@ -259,6 +250,7 @@
     "app/kb/procedures/key-resources.mjs",
     "app/kb/procedures/compile.mjs",
     "app/kb/procedures/cite.mjs",
+    "app/kb/procedures/gap.mjs",
     "app/kb/procedures/lineage.mjs",
     // The publication file: parsed, judged and compiled by one door that the gates, the build, the sync and the
     // Carrel adapter all call (docs/PUBLICATIONS.md). The content-id rule is shared with the adapter's registry.

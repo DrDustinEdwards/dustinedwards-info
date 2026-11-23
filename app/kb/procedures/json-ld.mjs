@@ -146,6 +146,8 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
   };
 
   if (record.profile === "protocol") {
+    const totalTime = minutesToIso(record.time.total);
+    const parameters = protocolParameters(record);
     return thing("LabProtocol", {
       ...common,
       "http://purl.org/dc/terms/conformsTo": { "@id": LAB_PROTOCOL_PROFILE },
@@ -171,8 +173,8 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
         ? { protocolOutcome: htmlToText(record.expectedResultsHtml) }
         : {}),
       ...(record.limitationsHtml ? { protocolLimitation: htmlToText(record.limitationsHtml) } : {}),
-      ...(minutesToIso(record.time.total) ? { totalTime: minutesToIso(record.time.total) } : {}),
-      ...(protocolParameters(record).length ? { parameter: protocolParameters(record) } : {}),
+      ...(totalTime ? { totalTime } : {}),
+      ...(parameters.length ? { parameter: parameters } : {}),
       step: steps,
     });
   }

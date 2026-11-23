@@ -521,7 +521,7 @@ export const registry = sqliteTable(
 );
 
 // The Knowledge Base's inventory (docs/KNOWLEDGE-BASE.md step 4): D1 is the source, not a copy of a file, because a
-// lot changes daily and is private. Nothing reads or writes these tables yet. A lot names a registry item by address,
+// lot changes daily and is private. A lot names a registry item by address,
 // with no foreign key: the registry is rewritten by sync:content.
 export const kbLocations = sqliteTable("kb_locations", {
   id: integer("id").primaryKey({ autoIncrement: true }),

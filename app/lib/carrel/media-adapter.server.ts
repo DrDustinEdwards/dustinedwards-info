@@ -14,8 +14,7 @@ import {
 import { fromHex } from "@dustinedwards/site-runtime/encoding";
 
 import { mediaRefsFor, mediaStore } from "~/db";
-import { contentKey } from "~/lib/media/classify.mjs";
-import { isManagedKey } from "~/lib/media/core.server";
+import { contentKey, isContentKey } from "~/lib/media/classify.mjs";
 import { resolveCitations } from "~/lib/media/resolvers.server";
 import { suggestFor } from "~/lib/media/suggest.server";
 import { ALLOWED, DATA_TYPES, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
@@ -102,7 +101,7 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
     replaceKeepsSize: true,
     usage: (keys) => usesOf(env, keys),
     // Only an upload's content-addressed key is the library's to change or delete; an older key stays as it is.
-    deletable: (record) => isManagedKey(record.key),
+    deletable: (record) => isContentKey(record.key),
     // MEDIA_REVISIONS, which /media never serves (app/routes/media.$.ts reads MEDIA or OG through bucketFor) and nothing
     // deletes from (check:destructive). Each revision row names its own key,
     // so a revert finds it.

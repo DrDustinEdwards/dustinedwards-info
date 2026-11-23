@@ -1,7 +1,8 @@
 import { readJson } from "@dustinedwards/site-runtime/body";
 import { cloudflareContext, getEnv } from "~/lib/context";
 import { authenticateOperator, meterOperator } from "~/lib/operator/auth.server";
-import { TOOL_DESCRIPTORS, isToolName, runTool, toolNames } from "~/lib/operator/api.server";
+import { TOOL_DESCRIPTORS, isToolName, toolNames } from "~/lib/operator/descriptors";
+import { runTool } from "~/lib/operator/api.server";
 
 import type { Route } from "./+types/api.operator";
 

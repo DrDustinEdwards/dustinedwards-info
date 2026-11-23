@@ -22,8 +22,6 @@ const LLMS_SLUG = "llms";
 const TITLE = "llms.txt";
 const PUBLIC_PATH = "/llms.txt";
 
-/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-
 export function documentHandler(env: DocumentEnv): ContentKindHandler {
   /** A write names the one document, or is refused with the reason. */
   function target(slug: string) {

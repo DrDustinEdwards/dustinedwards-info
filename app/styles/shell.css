@@ -1,5 +1,3 @@
-/* Do not restore the bar padding "just in case": it would be a blank band atop every page. */
-
 /* The columns inside Capsomer's page column (.cap-page, which every .tracks element also carries): the
    reading line, the rail beside it and the wide track. Named .tracks, not .page: .page has live consumers.
    At narrow widths the 1fr track is zero, so no media query. The rail is 0 wide here and a page opts in by

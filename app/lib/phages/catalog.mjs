@@ -5,8 +5,7 @@
 
 import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
-import { foldText } from "../cv/view.mjs";
-import { HOSTS, PHAGES_PAGE_PATH, phageSlug } from "./compile.mjs";
+import { HOSTS, PHAGES_PAGE_PATH, byYearThenName, phageSlug } from "./compile.mjs";
 
 /** @typedef {import("./compile.mjs").Phage} Phage */
 
@@ -15,10 +14,6 @@ function hostLabel(key) {
   const host = /** @type {Record<string, { long: string }>} */ (HOSTS)[key];
   return host ? host.long.replaceAll("*", "") : key;
 }
-
-/** The page's own order: year, then name, folded so case and accents do not matter (the same as `sortPhages`). @param {Phage} a @param {Phage} b */
-const byYearThenName = (a, b) =>
-  a.year - b.year || foldText(a.name).localeCompare(foldText(b.name), "en", { numeric: true });
 
 export const PHAGES = defineCatalog(
   /** @type {import("capsomer/behavior/catalog").CatalogDefinition<Phage>} */ ({

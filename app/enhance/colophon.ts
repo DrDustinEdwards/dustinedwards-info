@@ -49,7 +49,7 @@ function filter(): void {
   if (!chipBar) return;
   const chips = [...chipBar.querySelectorAll<HTMLButtonElement>(".cap-chip[data-value]")];
   const cards = [...document.querySelectorAll<HTMLElement>(".colophon-features > li")];
-  const status = document.querySelector<HTMLElement>(".colophon-status");
+  const status = document.querySelector<HTMLElement>('.cap-sr-only[role="status"]');
   chipBar.hidden = false;
   const choose = (value: string): void => {
     let shown = 0;
@@ -88,7 +88,7 @@ function kinds(): void {
 }
 
 function finders(): void {
-  const status = document.querySelector<HTMLElement>(".colophon-status");
+  const status = document.querySelector<HTMLElement>('.cap-sr-only[role="status"]');
   for (const input of document.querySelectorAll<HTMLInputElement>("[data-find]")) {
     const list = document.querySelector<HTMLElement>(`[data-list="${input.dataset.find}"]`);
     if (!list) continue;

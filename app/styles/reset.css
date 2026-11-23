@@ -214,21 +214,8 @@ input:where([type="button"], [type="reset"], [type="submit"]),
   height: auto;
 }
 
-/* The browser's [hidden] loses to a class rule; this one does not, so a hidden .sr-only element stays
+/* The browser's [hidden] loses to a class rule; this one does not, so a hidden .cap-sr-only element stays
    out of the accessibility tree. */
 [hidden]:where(:not([hidden="until-found"])) {
   display: none !important;
-}
-
-/* Copied from Tailwind so computed values do not move. */
-.sr-only {
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  position: absolute;
-  overflow: hidden;
 }

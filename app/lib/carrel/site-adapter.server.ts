@@ -69,8 +69,6 @@ import { postColumnValues, type PostRecord } from "~/lib/editor/post-rows.server
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 
-export { withPublication };
-
 type CarrelEnv = Env;
 
 type RenderDocument = (
@@ -437,8 +435,10 @@ export function carrelSiteAdapter(options: {
         redirect: everPublic,
       });
       if (!moved) throw new VersionConflictError((await readFile(env, postPath(id)))?.sha ?? null);
-      await forgetPostRows(env, id);
+      // Save under the new slug first: the old rows are harmless (the old address redirects) until the new ones exist, and
+      // a failed save must not leave the post with rows under neither slug. The Ask cron syncs when the count changes.
       const result = await write(to, input.changeId, raw, file.sha);
+      await forgetPostRows(env, id);
       return { ...result, previousPath: everPublic ? `/writing/${id}` : null };
     },
 

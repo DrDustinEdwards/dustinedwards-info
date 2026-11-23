@@ -94,12 +94,12 @@ export function phageSlug(/** @type {string} */ name) {
   return name.toLowerCase();
 }
 
-/** The page's own order: year, then name, folded so case and accents do not matter. */
+/** The page's own order: year, then name, folded so case and accents do not matter. @param {Phage} a @param {Phage} b */
+export const byYearThenName = (a, b) =>
+  a.year - b.year || foldText(a.name).localeCompare(foldText(b.name), "en", { numeric: true });
+
 export function sortPhages(/** @type {Phage[]} */ phages) {
-  return [...phages].sort(
-    (a, b) =>
-      a.year - b.year || foldText(a.name).localeCompare(foldText(b.name), "en", { numeric: true }),
-  );
+  return [...phages].sort(byYearThenName);
 }
 
 /** @param {unknown} value @param {RegExp} pattern @returns {value is string} */
