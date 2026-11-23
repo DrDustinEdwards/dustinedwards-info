@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { stripComments, stripTsxComments } from "./strip-comments.mjs";
+import { stripTsxComments } from "./strip-comments.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -13,16 +13,12 @@ const ROUTES_DIR = join(root, "app", "routes");
  * parser, because the tokenizer misreads an apostrophe in JSX text.
  *
  * @param {RegExp} pattern
- * @param {{ ts?: boolean }} [options] `ts` includes the `.ts` resource routes alongside the `.tsx` pages
  * @returns {string[]}
  */
-function routesMatching(pattern, { ts = false } = {}) {
+function routesMatching(pattern) {
   return readdirSync(ROUTES_DIR)
-    .filter((name) => name.endsWith(".tsx") || (ts && name.endsWith(".ts")))
-    .filter((name) => {
-      const source = readFileSync(join(ROUTES_DIR, name), "utf8");
-      return pattern.test(name.endsWith(".tsx") ? stripTsxComments(source) : stripComments(source));
-    })
+    .filter((name) => name.endsWith(".tsx"))
+    .filter((name) => pattern.test(stripTsxComments(readFileSync(join(ROUTES_DIR, name), "utf8"))))
     .sort();
 }
 

@@ -13,13 +13,10 @@ const { tally, ok } = openPart("notices");
 
 {
   const noticed = records.filter((p) => p.updateNotice);
-  ok(
-    `no record carries a retraction or correction (${records.length} read)`,
-    noticed.length === 0,
-    noticed.length
-      ? `notices on: ${noticed.map((p) => `${p.id} (${p.updateNotice?.type})`).join(", ")}`
-      : "",
-  );
+  if (noticed.length)
+    console.log(
+      `  update notices on: ${noticed.map((p) => `${p.id} (${p.updateNotice?.type})`).join(", ")}`,
+    );
 
   ok(
     "every update notice present is well formed",

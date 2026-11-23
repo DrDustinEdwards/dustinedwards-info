@@ -68,7 +68,7 @@ try {
   browser = await puppeteer.launch({ headless: true });
   registry.record(browser.process()?.pid, "the Puppeteer browser", [".cache/puppeteer"]);
   console.log(`  observing the preview build at ${BASE}\n`);
-  await systems.run({ page: await browser.newPage(), browser });
+  await systems.run({ browser });
   await browser.close();
 
   // The shell, as check:web-vitals uses: Lighthouse fails on puppeteer's default headless.

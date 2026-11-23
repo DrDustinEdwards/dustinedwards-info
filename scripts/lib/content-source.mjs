@@ -25,8 +25,14 @@ export const SOURCE_PATHS = [
   "content/llms.txt",
 ];
 
-/** @param {string} file a repository path */
+/**
+ * Under a source path, in plain path characters with no `..` segment: D1 rows and argv reach the file system and the
+ * shell through this check.
+ * @param {string} file a repository path
+ */
 export const isSourcePath = (file) =>
+  /^[\w./-]+$/.test(file) &&
+  !file.split("/").includes("..") &&
   SOURCE_PATHS.some((p) => file === p || file.startsWith(`${p}/`));
 
 /** Gitignored: written by the pull, removed when ship restores the checkout. */

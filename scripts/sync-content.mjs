@@ -24,6 +24,7 @@ import { REGISTRY_ARTIFACT_PATH } from "./lib/registry.mjs";
 import { ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
+import { requireTarget } from "./lib/target-flag.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
 import { applySqlFile } from "./lib/d1-apply.mjs";
 import { freezeSql } from "./lib/freeze-sql.mjs";
@@ -48,7 +49,6 @@ function buildSql(posts) {
   /** @type {string[]} */
   const out = [];
 
-  // Scoped to rows that came from a file, so hand-authored pages are never touched by a content sync.
   // Never an unscoped delete: an empty keep list is a collapsed artifact, refused upstream and here.
   if (posts.length === 0) throw new Error("buildSql refuses to delete every file-sourced post");
   const keep = posts.map((p) => sql(p.sourcePath)).join(", ");
@@ -689,7 +689,7 @@ function verify(target, posts, records) {
 }
 
 async function main() {
-  const target = PREVIEW || process.argv.includes("--remote") ? "--remote" : "--local";
+  const target = PREVIEW ? "--remote" : requireTarget(process.argv.slice(2), "sync:content");
 
   // The content's source first: a path D1 has never held is copied in from the repository (scripts/seed-sources.mjs).
   const seeded = spawnSync(

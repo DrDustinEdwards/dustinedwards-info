@@ -254,6 +254,8 @@ async function mediaCheck(target, dir) {
   let mediaNote = "media objects NOT pulled (--local reads miniflare, which holds none)";
   if (target === "--remote") {
     const mediaDir = path.join(dir, "media");
+    // A fresh directory, so an object deleted from R2 since the last run is not counted from disk.
+    await rm(mediaDir, { recursive: true, force: true });
     await mkdir(mediaDir, { recursive: true });
     const listed = await retryRead(() => listAllObjects({ bucket: MEDIA_BUCKET, remote: true }), {
       label: "check:backup MEDIA list",
@@ -277,8 +279,10 @@ async function mediaCheck(target, dir) {
           `that silently omits an object it just listed is the failure this gate is for.`,
       );
     }
+    // Verified; a failed run above leaves the files for inspection.
+    await rm(mediaDir, { recursive: true, force: true });
     mediaNote =
-      `${pulled.downloaded} media object(s), ${pulled.bytes} bytes, under ${mediaDir}` +
+      `${pulled.downloaded} media object(s), ${pulled.bytes} bytes, pulled and removed` +
       (listed.length === 0 ? " (the bucket is empty, so this verified nothing)" : "");
   }
   console.log(`  ${mediaNote}`);

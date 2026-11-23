@@ -16,12 +16,13 @@ import { blobSha, jsonRows, ROOT, SOURCE_PATHS } from "./lib/content-source.mjs"
 import { resolveD1Address } from "./lib/d1-address.mjs";
 import { sqlLiteral as sql } from "./lib/sql-literal.mjs";
 import { splitOversizeStatements } from "./lib/split-statements.mjs";
+import { requireTarget } from "./lib/target-flag.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
 import { applySqlFile } from "./lib/d1-apply.mjs";
 
 const PREVIEW = process.argv.includes("--preview");
 const DB_NAME = PREVIEW ? "dustinedwards-preview" : "dustinedwards";
-const target = PREVIEW || process.argv.includes("--remote") ? "--remote" : "--local";
+const target = PREVIEW ? "--remote" : requireTarget(process.argv.slice(2), "seed-sources");
 
 const git = (/** @type {string[]} */ args) =>
   execFileSync("git", ["-c", "core.quotePath=false", ...args], {

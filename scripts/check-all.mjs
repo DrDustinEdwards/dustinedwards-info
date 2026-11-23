@@ -5,10 +5,11 @@ import { gateNames } from "./build-stack.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { availableParallelism } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { assertFloor } from "@dustinedwards/devkit/node";
 import { killTree, readProcessTable, recordedTreeLeftovers } from "./lib/child-processes.mjs";
 import { WINDOWS_CRASH_CODES } from "./lib/windows-crash-codes.mjs";
+import { isMain } from "./lib/is-main.mjs";
 import { mb, peakBetween, startRssSampler, treeSince } from "./lib/rss.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -584,11 +585,8 @@ async function main() {
   process.exitCode = failed.length > 0 ? 1 : environment ? 2 : errored.length > 0 ? 1 : 0;
 }
 
-/*
- * Main guard, so check:changed can import `TIERS`. `pathToFileURL`, because a hand-built
- * `file://C:\...` URL never equals import.meta.url on Windows.
- */
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+/* Main guard, so check:changed can import `TIERS`. */
+if (isMain(import.meta.url)) {
   main().catch((error) => {
     console.error(`\ncheck failed to start. ${errorMessage(error)}\n`);
     process.exit(1);
