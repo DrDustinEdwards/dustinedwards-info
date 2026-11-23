@@ -9,10 +9,10 @@ import { listRegistry } from "~/db/registry";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
 import { TOOLS } from "~/lib/phage-tools.mjs";
 
-import { BASES } from "./bases.mjs";
 import type { KbFile } from "./editor.server";
 import { entryFields, gapReason, itemFields, type FieldSpec } from "./form-fields.mjs";
 import { fileToForm, formToFile, STEP_FLAGS, type FormModel } from "./form.mjs";
+import { entryPathFor } from "./procedures/lineage.mjs";
 import { compile as compileProcedure, saveProcedure } from "./procedures/save.server";
 import { KINDS } from "./registry/kinds.mjs";
 import { SLUG_PATTERN, slugify } from "@drdustinedwards/site-helpers/slug";
@@ -175,7 +175,6 @@ export async function duplicateEntry(
 
   const model = fileToForm(from.raw);
   const profile = String(model.data.profile ?? "protocol");
-  const base = BASES.find((b) => b.profile === profile);
   const version =
     typeof model.data.version === "string" && !gapReason(model.data.version)
       ? model.data.version
@@ -184,7 +183,7 @@ export async function duplicateEntry(
     ...model.data,
     title,
     seo_title: title,
-    path: `${base?.entryRoot ?? "/research/protocols/"}${slug}`,
+    path: entryPathFor(profile, slug),
     draft: true,
     version: "MISSING: A new variant; no version has been assigned yet.",
     forked_from: version ? { slug: from.slug, version } : { slug: from.slug },

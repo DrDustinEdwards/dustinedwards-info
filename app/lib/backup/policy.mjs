@@ -18,6 +18,8 @@ export const NON_DERIVED_TABLES = Object.freeze({
   kb_locations: "Knowledge Base inventory locations, written through site-api (0029)",
   kb_lots: "Knowledge Base inventory lots, written through site-api (0029)",
   kb_audit: "the audit trail of the two inventory tables (0029)",
+  kb_runs: "the lab's append-only run records, private to D1 (0031)",
+  kb_run_lots: "the lots each run used, append-only (0031)",
   members: "lab members and their titles (0030)",
   member_audit: "the audit trail of membership changes (0030)",
   member_terms: "lab term end dates (0030)",

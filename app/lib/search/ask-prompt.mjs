@@ -63,8 +63,7 @@ export const SYSTEM_PROMPT = [
 /**
  * Containment: a tripping answer is never cached, so a leak reaches only the request that caused it.
  * Whitespace is collapsed and case ignored because a model reproducing a prompt reflows it.
- */
-/**
+ *
  * @param {string} answer
  * @returns {boolean}
  */

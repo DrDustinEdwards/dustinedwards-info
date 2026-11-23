@@ -8,6 +8,7 @@
 
 import { VERSION_PATTERN } from "./cite.mjs";
 import { DOI_PATTERN } from "@drdustinedwards/site-helpers/scholar";
+import { GAP, REGISTRY_ID, isGap } from "./gap.mjs";
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 import { allSteps, PLATFORMS, readCalcs, stepConditions } from "./parse.mjs";
 import { proofErrors } from "./proof.mjs";
@@ -85,27 +86,14 @@ const TIME_UNITS = [
   "days",
 ];
 
-/** A recorded gap: the marker and the reason, never the marker alone. */
-const GAP = /^MISSING:\s*(\S.*)$/s;
-
 /** The levels a protocol's `biosafety_level` may name; each is Dustin's to set. */
 export const BIOSAFETY_LEVELS = ["BSL-1", "BSL-2"];
 
 /** Words kept off a protocol's `biosafety` note: the agent only. The separate `biosafety_level` field holds the level. */
 const BIOSAFETY_BANNED = /\b(BSL|biosafety level|IBC|NIH)\b/i;
 
-/** A primer's id in the lab registry (app/kb/registry/compile.mjs ID_PATTERN): a protocol names primers by it and stores no sequence. */
-const PRIMER_ID = /^[a-z0-9][a-z0-9-]{0,62}$/;
-
 const SEO_TITLE_MAX = 60;
 const DESCRIPTION_MAX = 155;
-
-/**
- * @param {unknown} value
- */
-function isGap(value) {
-  return typeof value === "string" && GAP.test(value);
-}
 
 /**
  * @param {Record<string, unknown>} item
@@ -399,6 +387,12 @@ export function validateProcedure(parsed, expect) {
           errors.push(`based_on[${i}] needs a citation`);
         else if (!nonEmptyString(s.for))
           errors.push(`based_on[${s.citation}] needs a "for": what it is the source of`);
+        else if (s.url !== undefined && !/^(\/[^/\s]|https:\/\/\S)/.test(String(s.url)))
+          errors.push(
+            `based_on[${s.citation}].url is a page on this site (/...) or an https address`,
+          );
+        else if (s.doi !== undefined && !DOI_PATTERN.test(String(s.doi)))
+          errors.push(`based_on[${s.citation}].doi is not a DOI`);
       });
     }
   }
@@ -444,7 +438,7 @@ export function validateProcedure(parsed, expect) {
     for (const e of d.equipment) {
       if (typeof e !== "object" || e === null || e.equipment === undefined) continue;
       const at = `equipment[${String(e.name)}]`;
-      if (typeof e.equipment !== "string" || !PRIMER_ID.test(e.equipment)) {
+      if (typeof e.equipment !== "string" || !REGISTRY_ID.test(e.equipment)) {
         errors.push(
           `${at}.equipment is the id of an equipment item in the lab registry (content/registry/equipment/), such as water-bath`,
         );
@@ -739,7 +733,7 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
       for (const s of d.host_strain) {
         const id = s?.strain;
         const at = `host_strain[${typeof id === "string" ? id : "?"}]`;
-        if (typeof id !== "string" || !PRIMER_ID.test(id)) {
+        if (typeof id !== "string" || !REGISTRY_ID.test(id)) {
           errors.push(
             `${at} is { strain: <id> }: the id of a strain in the lab registry (content/registry/strain/), such as foliorum. A protocol names its host strains and types none`,
           );
@@ -838,7 +832,7 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
     // A material that is a reagent of the lab registry names it by id (docs/REGISTRY.md): who supplies it and its catalog number
     // are stored there once, and the protocol keeps its own amount, stock and final.
     if (m.reagent !== undefined) {
-      if (typeof m.reagent !== "string" || !PRIMER_ID.test(m.reagent)) {
+      if (typeof m.reagent !== "string" || !REGISTRY_ID.test(m.reagent)) {
         errors.push(
           `${at}.reagent is the id of a reagent in the lab registry (content/registry/reagent/), such as zinc-chloride`,
         );
@@ -876,7 +870,7 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
       for (const p of d.primers) {
         const id = p?.primer;
         const at = `primers[${typeof id === "string" ? id : "?"}]`;
-        if (typeof id !== "string" || !PRIMER_ID.test(id)) {
+        if (typeof id !== "string" || !REGISTRY_ID.test(id)) {
           errors.push(
             `${at} is { primer: <id> }: the id of a primer in the lab registry (content/registry/primer/), such as lco1490. A protocol names its primers and stores no sequence`,
           );

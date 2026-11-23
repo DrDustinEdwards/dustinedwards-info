@@ -48,10 +48,6 @@ import { parseRegistrySlug } from "~/kb/registry/compile.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
 import { readRegistryItem } from "~/kb/registry/save.server";
 
-// Re-exported so the routes keep one import path for the operator surface.
-export { TOOL_DESCRIPTORS, isToolName, toolNames } from "./descriptors";
-export { syncStatus };
-
 // Validated like the write path: the slug goes into a repository path via `encodeURI`, which does not
 // escape `.`, `/` or `?`.
 function readSlug(args: Record<string, unknown>, tool: string) {
@@ -245,7 +241,7 @@ function translate(error: unknown): ToolResult {
     };
   }
 
-  // Not a recognized failure: logged with its stack, since the caller receives only the message.
+  // Not a recognized failure: logged, since the caller receives only the message.
   console.error(
     JSON.stringify({ alert: "operator-tool-unrecognized-error", detail: errorMessage(error) }),
   );

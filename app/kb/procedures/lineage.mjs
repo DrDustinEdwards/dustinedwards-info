@@ -5,6 +5,11 @@
 import { BASES } from "../bases.mjs";
 import { versionPath } from "./cite.mjs";
 
+/** A record's page: its profile's entry root and its slug. @param {string} profile @param {string} slug */
+export function entryPathFor(profile, slug) {
+  return `${BASES.find((b) => b.profile === profile)?.entryRoot ?? "/research/protocols/"}${slug}`;
+}
+
 /**
  * @typedef {{ title: string, href: string | null, version: string | null }} Lineage
  */
@@ -20,8 +25,7 @@ import { versionPath } from "./cite.mjs";
  */
 export function resolveLineage(forkedFrom, profile, parent) {
   if (!forkedFrom) return null;
-  const root = BASES.find((b) => b.profile === profile)?.entryRoot ?? "/research/protocols/";
-  const path = `${root}${forkedFrom.slug}`;
+  const path = entryPathFor(profile, forkedFrom.slug);
   if (forkedFrom.version && parent.frozen)
     return {
       title: parent.frozen.title,

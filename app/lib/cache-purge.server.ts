@@ -5,6 +5,7 @@ import { LLMS_CACHE_TAG } from "~/lib/llms/validate.mjs";
 import { CV_CACHE_TAG } from "~/lib/cv/route";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { PUBLICATIONS_CACHE_TAG } from "~/lib/publications/paths.mjs";
+import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
 import { cacheTags } from "~/lib/seo";
 
@@ -72,7 +73,7 @@ export async function purgePosts(why: string): Promise<PurgeOutcome> {
 
 /** Every procedure page, sheet and twin carries this one tag (app/kb/procedures/route.ts). */
 export async function purgeProcedures(why: string): Promise<PurgeOutcome> {
-  return purge(["procedures"], why);
+  return purge([PROCEDURES_CACHE_TAG], why);
 }
 
 /**

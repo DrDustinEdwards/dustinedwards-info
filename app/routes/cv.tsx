@@ -445,7 +445,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
         </header>
 
         <section className="cv-overview" aria-labelledby="cv-overview-title">
-          <h2 id="cv-overview-title" className="sr-only">
+          <h2 id="cv-overview-title" className="cap-sr-only">
             At a glance
           </h2>
           <dl className="cv-stats">

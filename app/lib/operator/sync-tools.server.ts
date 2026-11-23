@@ -68,11 +68,8 @@ import {
 } from "~/lib/phages/save.server";
 import { REGISTRY_DIR } from "~/kb/registry/compile.mjs";
 import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
-import {
-  compile as compileRegistryFile,
-  deleteRegistryRow,
-  writeRegistryRow,
-} from "~/kb/registry/save.server";
+import { compile as compileRegistryFile } from "~/kb/registry/host.server";
+import { deleteRegistryRow, writeRegistryRow } from "~/kb/registry/save.server";
 import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
 import {
   compile as compileRosterFile,

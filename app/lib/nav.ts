@@ -209,19 +209,15 @@ function researchMenu(): Menu {
   };
 }
 
-function courseTile(to: string, label: string, icon: NavIcon): MenuLink {
-  return { to, label, icon };
-}
-
 function teachingMenu(): Menu {
   return {
     id: "teaching",
     icon: "teaching",
     heading: "Teaching",
     tiles: [
-      courseTile("/teaching/phage-discovery", "Phage Discovery Program", "bacteriophages"),
-      courseTile("/teaching/virus-isolation", "Virus Isolation", "research"),
-      courseTile("/teaching/phage-bioinformatics", "Phage Bioinformatics", "software"),
+      { to: "/teaching/phage-discovery", label: "Phage Discovery Program", icon: "bacteriophages" },
+      { to: "/teaching/virus-isolation", label: "Virus Isolation", icon: "research" },
+      { to: "/teaching/phage-bioinformatics", label: "Phage Bioinformatics", icon: "software" },
     ],
     rows: [
       {

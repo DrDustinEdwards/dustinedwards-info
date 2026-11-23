@@ -1,8 +1,8 @@
 // The protocol library's one declaration (docs/PROCEDURES.md): the fields a protocol is searched, filtered, sorted
 // and listed by, declared once for Capsomer's catalog. The page, its facets and counts, its sort menu, the CSV and
-// JSON downloads and the markdown twin all read this, so a field is described in exactly one place and a protocol's
-// facts are drawn from its record, never typed again. Pure: the route passes in the records it read from D1.
+// JSON downloads and the markdown twin all read this, so a field is described once. Pure: the route passes in its D1 records.
 
+import { mdLink } from "../md-link.mjs";
 import { mdCell } from "@drdustinedwards/site-helpers/text";
 import { recordsCsv } from "@dustinedwards/site-runtime/csv";
 import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
@@ -216,7 +216,7 @@ export function libraryMarkdown(items, origin) {
   return libraryTable(
     head,
     items.map((p) => [
-      `[${mdCell(p.title)}](${origin}${p.path})`,
+      mdLink(p.title, origin + p.path),
       p.methods.map(methodLabel).join(", "),
       p.organisms.map(organismLabel).join(", "),
       p.targets.join(", "),
@@ -280,7 +280,7 @@ export function overviewMarkdown(overview, origin) {
           "### Start here",
           "",
           ...overview.start.map(
-            (p, i) => `${i + 1}. [${p.title}](${origin}${p.href}): ${p.description}`,
+            (p, i) => `${i + 1}. ${mdLink(p.title, origin + p.href)}: ${p.description}`,
           ),
         ]
       : []),
@@ -554,7 +554,7 @@ export function workflowContext(items, path) {
 export function workflowMarkdown(context, origin) {
   if (!context) return "";
   const links = (/** @type {Array<{ title: string, href: string }>} */ list) =>
-    list.map((p) => `[${p.title}](${origin}${p.href})`).join(", ");
+    list.map((p) => mdLink(p.title, origin + p.href)).join(", ");
   return [
     "## In the phage workflow",
     "",

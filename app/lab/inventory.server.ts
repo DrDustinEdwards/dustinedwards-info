@@ -111,11 +111,15 @@ async function run(
   env: Env,
   statements: D1PreparedStatement[],
   done: string,
+  changedText?: string,
 ): Promise<InventoryResult> {
   try {
     await env.DB.batch(statements);
   } catch (error) {
-    const text = constraintText(error);
+    const text =
+      changedText && /kb_lots_amount_check/.test(errorMessage(error))
+        ? changedText
+        : constraintText(error);
     if (text) return refused(text);
     throw error;
   }
@@ -162,17 +166,25 @@ export async function inventoryAction(
     const update =
       intent === "mark_opened"
         ? env.DB.prepare(
-            "UPDATE kb_lots SET opened = coalesce(opened, ?), updated_at = unixepoch() WHERE id = ?",
+            "UPDATE kb_lots SET opened = coalesce(opened, ?), updated_at = unixepoch() WHERE id = ? AND status = 'in_stock'",
           ).bind(today(nowMs), lot.id)
         : env.DB.prepare(
-            "UPDATE kb_lots SET status = 'empty', updated_at = unixepoch() WHERE id = ?",
+            "UPDATE kb_lots SET status = 'empty', updated_at = unixepoch() WHERE id = ? AND status = 'in_stock'",
           ).bind(lot.id);
+    // A lot that left stock since the read aborts the batch (the impossible amount fails kb_lots_amount_check), as in
+    // recordRun, so a discard is never overwritten.
     return run(
       env,
-      lotChange(env, actor.email, lot.id, update),
+      [
+        env.DB.prepare("UPDATE kb_lots SET amount = -1 WHERE id = ? AND status <> 'in_stock'").bind(
+          lot.id,
+        ),
+        ...lotChange(env, actor.email, lot.id, update),
+      ],
       intent === "mark_opened"
         ? `Lot ${lot.lot_number} marked opened.`
         : `Lot ${lot.lot_number} marked empty.`,
+      "That lot changed; reload.",
     );
   }
 

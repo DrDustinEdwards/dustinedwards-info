@@ -17,7 +17,6 @@ import {
   siteText,
   reagentLabel,
   reagentSource,
-  tmNote,
   type EquipmentRow,
   type InventoryRow,
   type PrimerListRow,
@@ -25,6 +24,7 @@ import {
   type ReagentRow,
   type StrainRow,
 } from "~/kb/registry/catalog.mjs";
+import { TmNote } from "~/components/tm-note";
 import { MAX_MISMATCHES } from "~/kb/registry/align.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
 
@@ -77,7 +77,6 @@ const sequenceCell = (p: PrimerListRow) =>
   p.sequence ? <code className="registry-seq">{p.sequence}</code> : "";
 
 export function LabPrimers({ result }: { result: CatalogResult<PrimerListRow> }) {
-  const note = tmNote();
   return (
     <>
       <div className="registry page-wide">
@@ -93,11 +92,7 @@ export function LabPrimers({ result }: { result: CatalogResult<PrimerListRow> })
           cells={{ sequence: sequenceCell, product: (p) => productText(p.product) ?? "" }}
         />
       </div>
-      <p className="registry-note">
-        {note.statement} The Tm estimate is not an annealing temperature. For the annealing
-        temperature of a particular polymerase, use the{" "}
-        <a href={note.calculator.url}>{note.calculator.name}</a>.
-      </p>
+      <TmNote className="registry-note" />
     </>
   );
 }
@@ -137,7 +132,6 @@ export function LabPrimer({
 }) {
   const mate = mateOf(primer, primers);
   const pair = pairProduct(primer, primers);
-  const note = tmNote();
   return (
     <>
       <dl className="registry-facts">
@@ -164,25 +158,9 @@ export function LabPrimer({
         {primer.tm !== null ? (
           <Fact term="Melting temperature estimate (Tm)">{primer.tm} °C</Fact>
         ) : null}
-        {usedBy.length > 0 ? (
-          <Fact term={usedBy.length === 1 ? "Used in" : "Used in these protocols"}>
-            <ul className="registry-used">
-              {usedBy.map((protocol) => (
-                <li key={protocol.path}>
-                  <a href={protocol.path}>{protocol.title}</a>
-                </li>
-              ))}
-            </ul>
-          </Fact>
-        ) : null}
+        {usedBy.length > 0 ? <UsedIn uses={usedBy} /> : null}
       </dl>
-      {primer.tm !== null ? (
-        <p className="registry-note">
-          {note.statement} The Tm estimate is not an annealing temperature. For the annealing
-          temperature of a particular polymerase, use the{" "}
-          <a href={note.calculator.url}>{note.calculator.name}</a>.
-        </p>
-      ) : null}
+      {primer.tm !== null ? <TmNote className="registry-note" /> : null}
 
       <h2 id="literature">In the literature</h2>
       <dl className="registry-facts">
@@ -324,17 +302,7 @@ export function LabStrain({
         <Fact term="Biosafety level">
           {strain.biosafetyLevel ?? <NotFound reason={strain.biosafetyLevelMissing} />}
         </Fact>
-        {usedBy.length > 0 ? (
-          <Fact term={usedBy.length === 1 ? "Used in" : "Used in these protocols"}>
-            <ul className="registry-used">
-              {usedBy.map((protocol) => (
-                <li key={protocol.path}>
-                  <a href={protocol.path}>{protocol.title}</a>
-                </li>
-              ))}
-            </ul>
-          </Fact>
-        ) : null}
+        {usedBy.length > 0 ? <UsedIn uses={usedBy} /> : null}
       </dl>
 
       <h2 id="phages">Phages isolated on it</h2>

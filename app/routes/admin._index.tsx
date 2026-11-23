@@ -13,7 +13,7 @@ import { timed } from "@dustinedwards/site-runtime/server-timing";
 import { timedLoader } from "~/lib/timing";
 import { humanCheck } from "~/lib/admin/check-copy.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
-import { syncStatus } from "~/lib/operator/api.server";
+import { syncStatus } from "~/lib/operator/sync-tools.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/admin._index";
 import { plural } from "@drdustinedwards/site-helpers/text";

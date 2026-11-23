@@ -165,7 +165,7 @@
   }
 }
 
-/* Inline only: the block padding is prose.css's, and the top is post-enhancements.css's room for Copy. */
+/* Inline only: the block padding is prose.css's. */
 .post-body .prose pre {
   border: 0;
   border-block: var(--line-w) solid var(--dust);

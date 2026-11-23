@@ -112,30 +112,6 @@ function stringList(v) {
 }
 
 /**
- * @param {ReturnType<typeof mediaSyncReport>} report
- * @returns {string}
- */
-export function mediaSyncSummary(report) {
-  if (report.converged) {
-    return (
-      `Site file index converged: ${report.expected} expected, ${report.present} present, ` +
-      `${report.indexed} indexed, ${report.removed} removed.`
-    );
-  }
-  const why = [
-    report.missing.length ? `${report.missing.length} missing` : "",
-    report.extra.length ? `${report.extra.length} extra` : "",
-    report.failures.length ? `${report.failures.length} failed to derive` : "",
-    report.unreadable ? "an unreadable missing, extra or failure list" : "",
-  ].filter(Boolean);
-  return (
-    `MEDIA INDEX STILL DRIFTED: ${report.expected} expected, ${report.present} present` +
-    (why.length ? ` (${why.join(", ")})` : "") +
-    `, after indexing ${report.indexed} and removing ${report.removed}.`
-  );
-}
-
-/**
  * An unreadable count is not a passing count.
  *
  * @param {unknown} a @param {unknown} b

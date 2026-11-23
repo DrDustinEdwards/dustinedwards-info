@@ -196,9 +196,7 @@ export async function writeRow(
 export async function deleteProcedureRow(env: ProcedureEnv, row: { slug: string; path: string }) {
   await env.DB.batch([
     env.DB.prepare(`DELETE FROM procedures WHERE slug = ?1`).bind(row.slug),
-    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(procedureSearchUid(row.path)),
-    env.DB.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
-    env.DB.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+    ...replaceSearchRecords(env.DB, procedureSearchUid(row.path), []),
   ]);
 }
 

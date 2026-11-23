@@ -1,4 +1,5 @@
 import { Field } from "capsomer/react/field";
+import { isGap } from "~/kb/procedures/gap.mjs";
 import { RepeaterField } from "capsomer/react/repeater-field";
 import { FieldFromSpec, SchemaFields, type SpecRenderers } from "capsomer/react/schema-form";
 import type { FieldSpec } from "capsomer/behavior/schema-form";
@@ -15,8 +16,6 @@ export type EquipmentEntry =
   | string
   | (Record<string, unknown> & { name?: string; equipment?: string });
 
-export const isGap = (value: unknown): value is string =>
-  typeof value === "string" && value.startsWith("MISSING:");
 const reason = (value: unknown) => (isGap(value) ? value.replace(/^MISSING:\s*/, "") : null);
 const shown = (value: unknown) =>
   value === undefined || value === null || isGap(value) ? "" : String(value);

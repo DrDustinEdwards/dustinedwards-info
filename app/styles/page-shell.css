@@ -75,8 +75,6 @@
   text-wrap: balance;
 }
 
-/* The shell owns the viewport so the editor has one scroll context; other pages scroll .admin-content. */
-
 /* A legal page's status under its title (content/pages/privacy.md, terms.md): the banner is the single word
    Draft, the date is when the text last changed. Both come from the page's front matter. */
 .legal-status {

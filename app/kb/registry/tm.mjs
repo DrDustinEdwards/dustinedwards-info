@@ -128,7 +128,11 @@ export function tmStatement() {
   );
 }
 
+/** The sentence's words up to the calculator, which a page links and the twin names. */
+export const ANNEALING_LEAD =
+  "The Tm estimate is not an annealing temperature. For the annealing temperature of a particular polymerase, use the";
+
 /** Where the annealing temperature comes from: not from the Tm above. Plain text, with the calculator named. */
 export function annealingSentence() {
-  return `The Tm estimate is not an annealing temperature. For the annealing temperature of a particular polymerase, use the ${NEB_TM_CALCULATOR.name} (${NEB_TM_CALCULATOR.url}).`;
+  return `${ANNEALING_LEAD} ${NEB_TM_CALCULATOR.name} (${NEB_TM_CALCULATOR.url}).`;
 }

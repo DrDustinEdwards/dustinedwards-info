@@ -1112,8 +1112,7 @@ body {
 }
 
 /* ---- site overrides ---- */
-/* Appended to katex.generated.css by build-katex.mjs: run npm run build:katex after editing, since
- * check:content byte-compares the output. */
+/* Appended to katex.generated.css by build-katex.mjs: run npm run build:katex after editing. */
 
 /* KaTeX sets nowrap, so display math scrolls inside itself; overflow-y: hidden avoids a second
  * scrollbar. Not focusable, like .prose pre; change both together or neither. */
