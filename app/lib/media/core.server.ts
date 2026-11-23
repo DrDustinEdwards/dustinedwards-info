@@ -1,4 +1,3 @@
-import { isContentKey } from "./classify.mjs";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 // Measured for the index (the rebuild and the R2 events), whose rows hold what pages size by. Null means the binding answered
@@ -22,8 +21,4 @@ export async function measureDimensions(
     return { width: info.width, height: info.height };
   }
   return null;
-}
-
-export function isManagedKey(key: string) {
-  return isContentKey(key);
 }

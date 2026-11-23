@@ -1,6 +1,6 @@
 import { productsForRows } from "~/kb/registry/align.mjs";
 import { primerFacts } from "~/kb/registry/primer.mjs";
-import { NEB_TM_CALCULATOR, tmStatement } from "~/kb/registry/tm.mjs";
+import { TmNote } from "~/components/tm-note";
 import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
 
 /**
@@ -87,13 +87,7 @@ export function ProcedurePrimers({
           accession&rsquo;s own coordinates.
         </p>
       ) : null}
-      {brief ? null : (
-        <p className="procedure-primers-note">
-          {tmStatement()} The Tm estimate is not an annealing temperature. For the annealing
-          temperature of a particular polymerase, use the{" "}
-          <a href={NEB_TM_CALCULATOR.url}>{NEB_TM_CALCULATOR.name}</a>.
-        </p>
-      )}
+      {brief ? null : <TmNote className="procedure-primers-note" />}
     </>
   );
 }

@@ -17,7 +17,7 @@ import {
   HOME_EDGE_FRESH_SECONDS,
   publicHtmlHeaders,
   scheduledEdgeCacheControl,
-  personJsonLd,
+  personNode,
   SITE,
   SITE_ORIGIN,
   webSiteJsonLd,
@@ -203,7 +203,7 @@ function Row({
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const structuredData = [personJsonLd(SITE_ORIGIN), webSiteJsonLd(SITE_ORIGIN)];
+  const structuredData = [personNode(SITE_ORIGIN), webSiteJsonLd(SITE_ORIGIN)];
   const { posts, featured, recent, papers, paperCount, discovery, podcast } = loaderData;
 
   return (

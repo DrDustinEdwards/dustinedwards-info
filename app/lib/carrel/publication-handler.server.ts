@@ -17,8 +17,6 @@ import type { Publication } from "~/lib/publications/types";
 
 type PublicationEnv = Env;
 
-/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-
 /** The deposited date at its own precision, as the timestamp the contract wants (a partial date reads as its first day). */
 function timestampOf(date: string | null): string | null {
   if (!date) return null;

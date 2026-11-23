@@ -320,6 +320,9 @@ describe("the citation count is never blank while it refreshes", () => {
       .run();
   }
 
+  // A public view starts one refresh per ten minutes (the attempt key), so each case starts without one.
+  beforeEach(() => testEnv.APP_KV.delete("citations:attempt"));
+
   async function read(env: object = {}) {
     const ctx = createExecutionContext();
     const counts = await getCitationCounts(routeContext(ctx, env), [DOI]);
@@ -345,6 +348,19 @@ describe("the citation count is never blank while it refreshes", () => {
       true,
     );
     errors.mockRestore();
+  });
+
+  it("starts one refresh per ten minutes, so a failing OpenAlex is not hit on every view", async () => {
+    await setRow(5, "2026-01-01");
+    let calls = 0;
+    vi.stubGlobal("fetch", async () => {
+      calls += 1;
+      return new Response("{}", { status: 500 });
+    });
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    for (let i = 0; i < 3; i += 1) await read({ OPENALEX_API_KEY: "k" });
+    errors.mockRestore();
+    expect(calls).toBe(1);
   });
 
   it("returns every failure from a bulk refresh and leaves each count where it was", async () => {

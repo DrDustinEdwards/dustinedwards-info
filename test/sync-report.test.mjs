@@ -1,11 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  askSyncReport,
-  mediaSyncReport,
-  mediaSyncSummary,
-} from "../app/lib/operator/sync-report.mjs";
+import { askSyncReport, mediaSyncReport } from "../app/lib/operator/sync-report.mjs";
 
 const SYNCED = { job: "j1", ended: true, expected: 191, present: 191, refused: 0, indexing: 0 };
 
@@ -111,7 +107,6 @@ await test("media: a non-array missing, extra or failure list fails closed witho
   assert.deepEqual(r.failures, []);
   assert.equal(r.converged, false);
   assert.equal(r.unreadable, true);
-  assert.match(mediaSyncSummary(r), /unreadable/);
 
   for (const bad of [{ failures: 7 }, { failures: undefined }, { missing: null }, { extra: "x" }]) {
     assert.equal(mediaSyncReport({ ...CLEAN, ...bad }).converged, false, JSON.stringify(bad));

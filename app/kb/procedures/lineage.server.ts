@@ -1,8 +1,7 @@
 import { getFrozenVersion } from "~/db/procedure-versions";
 import { getProcedureByPath } from "~/db/procedures";
-import { BASES } from "~/kb/bases.mjs";
 
-import { resolveLineage } from "./lineage.mjs";
+import { entryPathFor, resolveLineage } from "./lineage.mjs";
 import type { ProcedureRecord } from "./render.mjs";
 
 /**
@@ -15,8 +14,7 @@ export async function lineageFor(
 ) {
   const from = record.forkedFrom;
   if (!from) return null;
-  const root = BASES.find((b) => b.profile === record.profile)?.entryRoot ?? "/research/protocols/";
-  const path = `${root}${from.slug}`;
+  const path = entryPathFor(record.profile, from.slug);
   const row = await getProcedureByPath(env, path);
   const live =
     row && row.status === "published" ? { title: row.record.title, path: row.path } : null;

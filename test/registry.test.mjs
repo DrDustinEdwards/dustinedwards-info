@@ -6,15 +6,14 @@ import test from "node:test";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
 import {
-  ID_PATTERN,
   compileRegistryItem,
-  isGap,
   itemFromRow,
   parseRegistrySlug,
   registryPath,
   registrySetErrors,
   registrySlug,
 } from "../app/kb/registry/compile.mjs";
+import { REGISTRY_ID, isGap } from "../app/kb/procedures/gap.mjs";
 import { buildRegistry, compileAllRegistry } from "../scripts/lib/registry.mjs";
 
 /* The registry framework (docs/REGISTRY.md), judged with a kind of its own: the registry ships with none, so every
@@ -143,7 +142,7 @@ await test("the address is <kind>/<id> and nothing else, and a kind the registry
   ]) {
     assert.equal(parseRegistrySlug(bad), null, JSON.stringify(bad));
   }
-  assert.ok(ID_PATTERN.test("m13-forward") && !ID_PATTERN.test("-lead"));
+  assert.ok(REGISTRY_ID.test("m13-forward") && !REGISTRY_ID.test("-lead"));
   assert.equal(registryPath(registrySlug("widget", "a-red")), "content/registry/widget/a-red.md");
   const nowhere = await compile("sprocket/a-red", file(["name: A red sprocket"]));
   assert.equal(nowhere.ok, false);

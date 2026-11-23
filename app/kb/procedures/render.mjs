@@ -7,6 +7,7 @@
 // `renderBody` is passed in, not imported: the pipeline is 4 MB, so the Worker loads it lazily
 // (load-pipeline.server.ts) and a Node script imports it directly.
 
+import { mdLink } from "../md-link.mjs";
 import { mdCell, plural } from "@drdustinedwards/site-helpers/text";
 import GithubSlugger from "github-slugger";
 
@@ -621,7 +622,7 @@ export function procedureMarkdown(record, parsed) {
     [
       "Host strain",
       record.hostStrains.length > 0
-        ? record.hostStrains.map((s) => `[${s.name}](${s.path})`).join("; ")
+        ? record.hostStrains.map((s) => mdLink(s.name, s.path)).join("; ")
         : null,
     ],
     ["Biosafety level", record.biosafetyLevel],
@@ -687,7 +688,7 @@ export function procedureMarkdown(record, parsed) {
     }
     // A published reagent links its page, as the page's table does.
     const named =
-      reagent?.status === "published" ? `[${shown}](${itemPath("reagent", reagent.id)})` : shown;
+      reagent?.status === "published" ? mdLink(shown, itemPath("reagent", reagent.id)) : shown;
     out.push(
       `- ${named}${m.group ? ` (${m.group})` : ""}${parts.length ? `: ${parts.join("; ")}.` : ""}${note}`,
     );
@@ -714,7 +715,7 @@ export function procedureMarkdown(record, parsed) {
         ? ` (${[`manufacturer ${item.manufacturer ?? "not recorded"}`, item.rotor ? `rotor ${item.rotor}` : item.rotorGap ? "rotor not recorded" : null].filter(Boolean).join("; ")})`
         : "";
       const named =
-        item?.status === "published" ? `[${name}](${itemPath("equipment", item.id)})` : name;
+        item?.status === "published" ? mdLink(name, itemPath("equipment", item.id)) : name;
       out.push(`- ${named}${facts}${typeof e === "string" || !e.note ? "" : `: ${e.note}`}`);
     }
     out.push("");
@@ -733,12 +734,10 @@ export function procedureMarkdown(record, parsed) {
         ? [...new Set(pair.products.map((x) => x.length))].map((n) => `${n} bp`).join(" or ")
         : "";
       out.push(
-        "| [" +
-          p.name +
-          "](/research/lab/primers/" +
-          p.id +
-          ") | " +
-          (p.direction ?? "") +
+        "| " +
+          mdLink(p.name, "/research/lab/primers/" + p.id) +
+          " | " +
+          mdCell(p.direction) +
           " | " +
           (p.sequence ? "`" + p.sequence + "`" : "") +
           " | " +
@@ -830,7 +829,7 @@ export function procedureMarkdown(record, parsed) {
     out.push(
       "## Explanation",
       "",
-      ...record.explanation.map((e) => `- [${e.title}](${e.url})`),
+      ...record.explanation.map((e) => `- ${mdLink(e.title, e.url)}`),
       "",
     );
 

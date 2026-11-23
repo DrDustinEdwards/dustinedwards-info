@@ -17,6 +17,9 @@ import { timedFetch } from "@dustinedwards/site-runtime/http";
 
 /** A row older than this is refreshed after the response that reads it. The count is shown regardless. */
 const STALE_AFTER_DAYS = 7;
+/** Public views start a refresh at most this often, so a failing OpenAlex is not hit once per page view. */
+const ATTEMPT_KEY = "citations:attempt";
+const ATTEMPT_TTL_SECONDS = 600;
 // A name, not an address: OpenAlex dropped the `mailto` pool, and a secrets gate reads this whole
 // file, comments included, so do not quote the address here either.
 
@@ -177,7 +180,8 @@ export async function getCitationCounts(
         null,
         `OPENALEX_API_KEY is not set, so ${due.length} stale or missing DOI(s) never refresh`,
       );
-    } else {
+    } else if (!(await env.APP_KV.get(ATTEMPT_KEY))) {
+      await env.APP_KV.put(ATTEMPT_KEY, "1", { expirationTtl: ATTEMPT_TTL_SECONDS });
       ctx.waitUntil(refreshCitations(env, due).then(() => undefined));
     }
   }

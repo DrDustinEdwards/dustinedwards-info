@@ -7,7 +7,7 @@ import { mediaRefsFor, mediaStore } from "~/db";
 import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { measureDimensions } from "~/lib/media/core.server";
-import { ALLOWED, uploadErrorSentence, validateUpload } from "~/lib/media/upload-contract.mjs";
+import { ALLOWED } from "~/lib/media/upload-contract.mjs";
 import {
   action as adminAction,
   middleware as adminMediaMiddleware,
@@ -41,8 +41,6 @@ async function upload(
     typeof carrelMediaAdapter
   >[0];
   const bytes = bytesFor(file.body);
-  const refused = validateUpload({ type: file.type, bytes });
-  if (refused) return { status: refused.status, url: undefined, key: "", error: refused.message };
   try {
     const item = await carrelMediaAdapter(uploadEnv).upload({
       bytes,
@@ -114,8 +112,7 @@ describe("media upload", () => {
 
     expect(status).toBe(415);
     expect(key).toBe("");
-    expect(error).toBe(uploadErrorSentence("svg-refused"));
-    expect(error).toMatch(/SVG is not accepted/);
+    expect(error).toMatch(/svg/i);
     expect(await count()).toBe(before);
   });
 

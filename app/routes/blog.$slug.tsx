@@ -211,9 +211,9 @@ function toArticleSeo(post: LoadedPost): Parameters<typeof articleJsonLd>[1] {
   };
 }
 
-/** One day: a post synced the day it was published has been deployed, not revised. */
 // Two screens of text, the length below which a reading bar fills in one flick.
 const READING_BAR_MIN_WORDS = 500;
+/** One day: a post synced the day it was published has been deployed, not revised. */
 const REVISED_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 export default function BlogPost({ loaderData }: Route.ComponentProps) {

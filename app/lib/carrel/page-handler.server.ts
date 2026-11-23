@@ -19,8 +19,6 @@ import { savePage } from "~/lib/pages/save.server";
 
 type PageEnv = Env;
 
-/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-
 const isDraft = (raw: string) => matter(raw).data.draft === true;
 const statusOf = (raw: string): ContentStatus => (isDraft(raw) ? "draft" : "published");
 

@@ -17,8 +17,6 @@ import { COHORT_SLUG, saveRoster } from "~/lib/roster/save.server";
 
 type RosterEnv = Env;
 
-/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-
 /** The title Carrel shows: the cohort's year, which is all a cohort is named. */
 const titleOf = (slug: string) => `${slug} cohort`;
 

@@ -19,8 +19,6 @@ import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.
 
 type CvEnv = Env;
 
-/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-
 /** The name a list shows for a file: the section's plural as the CV prints it. */
 function titleOf(slug: string) {
   const type = cvFileFor(slug)?.type;

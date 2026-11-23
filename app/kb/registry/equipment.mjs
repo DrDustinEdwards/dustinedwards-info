@@ -11,15 +11,7 @@
 // water bath for molten top agar, plate incubator at 29 °C for M. foliorum) and names the record with `equipment: <id>`, so the
 // setting is the protocol's own and the table lists the protocols that name it.
 
-import { stated } from "./primer.mjs";
-
-const LINE = /^[^\r\n]+$/;
-
-/** @param {unknown} value @param {number} max */
-const oneLine = (value, max) =>
-  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max
-    ? null
-    : `is one line of at most ${max} characters`;
+import { oneLine, stated } from "./primer.mjs";
 
 /** @type {import("./kinds.mjs").KindSpec} */
 export const EQUIPMENT = {

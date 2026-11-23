@@ -3,7 +3,8 @@ import { RouterContextProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { getBlogPost } from "~/db";
-import { previewPost, withPublication } from "~/lib/carrel/site-adapter.server";
+import { withPublication } from "~/lib/carrel/front-matter-lines";
+import { previewPost } from "~/lib/carrel/site-adapter.server";
 import { runCarrelSchedules } from "~/lib/carrel/site-api.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
@@ -939,7 +940,6 @@ describe("media: the v0.13.0 library", () => {
       width: 4096,
       resizedFrom: { width: 8000, height: 6000, bytes: bytesFor("resize-case").length },
     });
-    // One history prefix for every earlier set of bytes.
     const [kept] = (await testEnv.MEDIA_REVISIONS.list({ prefix: `replaced/${shrunk.id}/` }))
       .objects;
     expect(kept, "the original was not kept").toBeDefined();

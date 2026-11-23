@@ -25,7 +25,7 @@ import {
 } from "~/lib/content-pages.mjs";
 import { readFile } from "~/lib/source/store.server";
 import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
-import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
+import { PolicyError, decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
 import { PHAGES_PAGE_PATH, type Phage } from "~/lib/phages/compile.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
@@ -133,28 +133,6 @@ async function judge(env: PageEnv, slug: string, raw: string) {
   return errors.length > 0 ? { ok: false as const, errors } : compiled;
 }
 
-/**
- * An operator may edit, unpublish and republish a page, never publish one for the first time: the same
- * rule as posts (the first-publish rule, `WRITE_CAPABILITIES` in `publish-policy.mjs`), read from the prior FILE, the only authority.
- */
-function decidePage(actor: Actor, incomingDraft: boolean, prior: string | null) {
-  const may = WRITE_CAPABILITIES[actor.kind];
-  if (!may.write) {
-    throw new PolicyError(
-      "Refused: this credential is READ ONLY and may not save a page.",
-      "smoke-is-read-only",
-    );
-  }
-  const everPublished = prior !== null && matter(prior).data.draft !== true;
-  if (!may.firstPublish && !incomingDraft && !everPublished) {
-    throw new PolicyError(
-      "Refused: publishing a page for the first time is reserved to the human admin. Save it with " +
-        "draft: true, and ask Dustin to publish it.",
-      "first-publish-requires-admin",
-    );
-  }
-}
-
 export async function writeRow(
   env: PageEnv,
   compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>,
@@ -240,7 +218,13 @@ export async function savePage(
 
   const compiled = await judge(env, slug, raw);
   if (!compiled.ok) throw new PageInvalid(path, compiled.errors);
-  decidePage(actor, compiled.draft, existing?.content ?? null);
+  decideFileWrite({
+    actor,
+    noun: "page",
+    incomingDraft: compiled.draft,
+    priorRaw: existing?.content ?? null,
+    isDraft: (raw) => matter(raw).data.draft === true,
+  });
 
   const written = await commitAndConverge(env, {
     actor,

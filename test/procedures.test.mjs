@@ -316,6 +316,23 @@ await test('"MISSING: reason" is a recorded gap, not an error', () => {
   assert.deepEqual(gaps, [{ field: "version", reason: "not assigned yet" }]);
 });
 
+await test("a source's url must be a site path or https, and its doi a DOI", () => {
+  const withSource = (extra) =>
+    PROTOCOL.replace("    for: the method\n", `    for: the method\n${extra}`);
+  assertError(
+    check("mini", withSource('    url: "javascript:alert(1)"\n')).errors,
+    /based_on\[Test source\]\.url is a page on this site/,
+  );
+  assertError(
+    check("mini", withSource("    doi: nope\n")).errors,
+    /based_on\[Test source\]\.doi is not a DOI/,
+  );
+  assert.deepEqual(
+    check("mini", withSource("    doi: 10.1000/xyz\n    url: https://example.com/a\n")).errors,
+    [],
+  );
+});
+
 await test("a required field left out is an error", () => {
   const { errors } = check("mini", PROTOCOL.replace("limitations: A limit.\n", ""));
   assertError(errors, /^limitations is required/);

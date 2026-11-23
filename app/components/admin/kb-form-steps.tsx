@@ -11,7 +11,8 @@ import type { FormBlock, FormBody, FormStep } from "~/kb/form.mjs";
 import { stepAnchor } from "~/kb/gap-labels.mjs";
 import type { Choice, KbForm } from "~/kb/form.server";
 import { plural } from "@drdustinedwards/site-helpers/text";
-import { DURATIONS, ReferencePicker, UNITS, isGap } from "~/components/admin/kb-form-fields";
+import { DURATIONS, ReferencePicker, UNITS } from "~/components/admin/kb-form-fields";
+import { isGap } from "~/kb/procedures/gap.mjs";
 
 /* The form editor's method (kb-form.tsx): the step cards in their sections, and the body editor that orders them. */
 
@@ -436,7 +437,6 @@ export function BodyEditor({
           </div>
           {section.blocks.map((block, b) =>
             block.type === "prose" ? (
-              // Blank lines between blocks are kept in the file and not shown as an empty box.
               block.text.trim() === "" ? null : (
                 <div className="cap-field" key={b}>
                   <label className="cap-field-label" htmlFor={`kb-prose-${i}-${b}`}>

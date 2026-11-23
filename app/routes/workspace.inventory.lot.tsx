@@ -2,7 +2,6 @@ import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 import { ADMIN_FORM_BYTES } from "~/lib/body.server";
 import { readForm } from "@dustinedwards/site-runtime/body";
 import { Form, Link, data } from "react-router";
-import { can } from "@dustinedwards/site-runtime/members";
 import { changeText } from "capsomer/behavior/history-list";
 import { Button } from "capsomer/react/button";
 import { Field } from "capsomer/react/field";
@@ -12,27 +11,20 @@ import { PageHead } from "capsomer/react/page-head";
 import { crumbLink } from "~/components/admin/shell-parts";
 import { Table } from "capsomer/react/table";
 import { LabStatus } from "~/components/lab/lab-ui";
-import { labActorContext } from "~/lab/actor.server";
+import { PRIVATE, labActorContext, notFound, requirePermission } from "~/lab/actor.server";
 import { inventoryAction, lotPage } from "~/lab/inventory.server";
 import { amountText, idOf } from "~/lab/forms.mjs";
 import { PERMISSION } from "~/lab/titles.mjs";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/workspace.inventory.lot";
-import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta() {
   return [{ title: "Lot · Lab" }, { name: "robots", content: "noindex" }];
 }
 
-const PRIVATE = { "cache-control": UNCACHED };
-
-function notFound(): never {
-  throw data("Not found.", { status: 404, headers: PRIVATE });
-}
-
 export async function loader({ context, params }: Route.LoaderArgs) {
   const actor = context.get(labActorContext);
-  if (!can(actor, PERMISSION.read)) notFound();
+  requirePermission(actor, PERMISSION.read);
   const id = idOf(params.id);
   const page = id ? await lotPage(getEnv(context), actor, id) : null;
   if (!page) notFound();
@@ -41,7 +33,7 @@ export async function loader({ context, params }: Route.LoaderArgs) {
 
 export async function action({ context, request, params }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
-  if (!can(actor, PERMISSION.read)) notFound();
+  requirePermission(actor, PERMISSION.read);
   const id = idOf(params.id);
   if (!id) notFound();
   const form = await readForm(request, ADMIN_FORM_BYTES);

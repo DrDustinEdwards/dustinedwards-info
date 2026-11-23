@@ -220,7 +220,6 @@ function ReagentSource({
   return source.href ? <a href={source.href}>{source.text}</a> : <>{source.text}</>;
 }
 
-/** The protocol's Equipment as a table: its own words for each item, and who makes it where the registry says. */
 /**
  * The Key Resources Table (key-resources.mjs): every strain, reagent, primer and item of equipment the protocol names, with
  * where it comes from and its identifier, grouped as STAR Methods groups them. Drawn from the record, so it never disagrees
@@ -266,6 +265,7 @@ export function KeyResourcesTable({ groups }: { groups: KeyResourceGroup[] }) {
   );
 }
 
+/** The protocol's Equipment as a table: its own words for each item, and who makes it where the registry says. */
 export function EquipmentTable({ record }: { record: ProcedureRecord }) {
   const hasMaker = record.equipment.some((e) => e.item);
   const hasRotor = record.equipment.some((e) => e.item && (e.item.rotor || e.item.rotorGap));

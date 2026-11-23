@@ -12,8 +12,6 @@ import { validateProcedure } from "./validate.mjs";
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 import { wideDashError } from "../../lib/content/front-matter.mjs";
 
-/** The file name a slug is written in; the same rule as a post's. */
-
 /**
  * @param {{
  *   slug: string,

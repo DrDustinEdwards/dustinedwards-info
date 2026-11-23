@@ -2,41 +2,32 @@ import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 import { ADMIN_FORM_BYTES } from "~/lib/body.server";
 import { readForm } from "@dustinedwards/site-runtime/body";
 import { Link, data, redirect } from "react-router";
-import { can } from "@dustinedwards/site-runtime/members";
 import { Panel } from "capsomer/react/panel";
 
 import { PageHead } from "capsomer/react/page-head";
 import { Table } from "capsomer/react/table";
 import { LabStatus } from "~/components/lab/lab-ui";
 import { RunForm } from "~/components/lab/run-form";
-import { labActorContext } from "~/lab/actor.server";
+import { PRIVATE, labActorContext, requirePermission } from "~/lab/actor.server";
 import { recordRun, runsPage } from "~/lab/runs.server";
 import { PERMISSION } from "~/lab/titles.mjs";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/workspace.runs";
-import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta() {
   return [{ title: "Runs · Lab" }, { name: "robots", content: "noindex" }];
 }
 
-const PRIVATE = { "cache-control": UNCACHED };
-
-function requireRecorder(actor: Parameters<typeof can>[0]) {
-  if (!can(actor, PERMISSION.recordRun))
-    throw data("Not found.", { status: 404, headers: PRIVATE });
-}
-
 export async function loader({ context }: Route.LoaderArgs) {
   const actor = context.get(labActorContext);
-  requireRecorder(actor);
+  requirePermission(actor, PERMISSION.recordRun);
   return data(await runsPage(getEnv(context), actor), { headers: PRIVATE });
 }
 
 /** A recorded run opens on its own page; a refusal comes back here with its words. */
 export async function action({ context, request }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
-  requireRecorder(actor);
+  requirePermission(actor, PERMISSION.recordRun);
   const result = await recordRun(
     getEnv(context),
     actor,

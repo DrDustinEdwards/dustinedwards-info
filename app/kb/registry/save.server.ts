@@ -18,6 +18,7 @@ import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
 import { recordsForPapers } from "~/lib/search/records.mjs";
+import { replaceSearchRecords } from "~/lib/search/replace.server";
 
 import {
   parseRegistrySlug,
@@ -43,9 +44,6 @@ export class RegistryInvalid extends ContentInvalid {
     this.name = "RegistryInvalid";
   }
 }
-
-/** The one compile door (host.server.ts): the save, get_registry and sync_registry all read a file through it. */
-export { compile };
 
 type Compiled = Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>;
 
@@ -102,14 +100,6 @@ async function otherItems(env: RegistryEnv, slug: string): Promise<RegistryItem[
   return (await listRegistry(env)).filter((item) => registrySlug(item.kind, item.id) !== slug);
 }
 
-/** The statements that rebuild the two full-text indexes after a change to search_docs, as every kind's write does. */
-function rebuildStatements(db: D1Database) {
-  return [
-    db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
-    db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
-  ];
-}
-
 /**
  * The item's D1 row, the derived store the drift check reads, and its search record (search-inputs.mjs), in one batch so
  * they move together: a search for a primer's sequence finds the primer's own page as well as the protocols that use it. A
@@ -138,34 +128,7 @@ export async function writeRegistryRow(env: RegistryEnv, compiled: Compiled) {
         compiled.sourcePath,
         compiled.sourceBlobSha,
       ),
-    db
-      .prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`)
-      .bind(registrySearchUid(item.kind, item.id)),
-    ...records.map((r) =>
-      db
-        .prepare(
-          `INSERT INTO search_docs (uid, url, type, title, body, tags, doc_tags, doc_uid,
-             doc_title, doc_url, anchor, ordinal, status, publish_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
-        )
-        .bind(
-          r.uid,
-          r.url,
-          r.type,
-          r.title,
-          r.body,
-          r.tags,
-          r.docTags,
-          r.docUid,
-          r.docTitle,
-          r.docUrl,
-          r.anchor,
-          r.ordinal,
-          r.status,
-          null,
-        ),
-    ),
-    ...rebuildStatements(db),
+    ...replaceSearchRecords(db, registrySearchUid(item.kind, item.id), records),
   ]);
 }
 
@@ -179,10 +142,7 @@ export async function deleteRegistryRow(env: RegistryEnv, row: { slug: string })
       address.kind,
       address.id,
     ),
-    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(
-      registrySearchUid(address.kind, address.id),
-    ),
-    ...rebuildStatements(env.DB),
+    ...replaceSearchRecords(env.DB, registrySearchUid(address.kind, address.id), []),
   ]);
 }
 

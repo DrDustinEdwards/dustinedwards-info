@@ -18,8 +18,6 @@ import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.
 
 type DictionaryEnv = Env;
 
-/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-
 /** The source with its draft flag set to `draft`, touching no line when it already says so. */
 const withDraft = (raw: string, draft: boolean) =>
   fileIsDraft(raw) === draft ? raw : withPublication(raw, { draft });

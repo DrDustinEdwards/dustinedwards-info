@@ -1,11 +1,11 @@
 // How the registry reads on the site (docs/REGISTRY.md): its addresses, the master inventory over every kind and the
 // phages, and each kind's own catalog, declared once for Capsomer's catalog so the page, its facets and counts, its
 // sort menu and the markdown twin all read one declaration. Pure: the routes hand it the rows they read from D1.
-//
 // Nothing is typed again here. A primer's length, GC content, reverse complement and Tm come from its sequence, the
 // protocols that use it are found by that sequence, and a phage in the inventory is read from the phages table, never
 // copied into the registry.
 
+import { mdLink } from "../md-link.mjs";
 import { defineCatalog } from "capsomer/behavior/catalog";
 
 import { HOSTS } from "../../lib/phages/compile.mjs";
@@ -421,9 +421,9 @@ export function strainMarkdown(strain, usedBy, origin) {
       ? "No phage in the lab's table names this host."
       : `${plural(strain.phages.length, "phage")}, found ${years}, counted from the phages table.`,
     "",
-    ...strain.phages.map((phage) => `- [${phage.name}](${origin}${phage.path}), ${phage.year}`),
+    ...strain.phages.map((phage) => `- ${mdLink(phage.name, origin + phage.path)}, ${phage.year}`),
     "",
-    ...usedBy.map((protocol) => `- Used in: [${protocol.title}](${origin}${protocol.path})`),
+    ...usedBy.map((protocol) => `- Used in: ${mdLink(protocol.title, origin + protocol.path)}`),
   ];
   return itemTwin(strain.name, lines);
 }
@@ -588,7 +588,7 @@ export function reagentsMarkdown(reagents, origin) {
         ? `[recipe](${origin}${r.recipePath})`
         : "";
   const uses = (/** @type {ReagentRow} */ r) =>
-    r.uses.map((u) => `[${mdCell(u.title)}](${origin}${u.path})`).join(", ");
+    r.uses.map((u) => mdLink(u.title, origin + u.path)).join(", ");
   const lines = reagents.map(
     (r) =>
       `| ${mdCell(reagentLabel(r))} | ${mdCell(reagentSource(r))} | ${mdCell(r.catalogNumber)} | ${link(r)} | ${uses(r)} |`,
@@ -620,7 +620,7 @@ export function reagentItemMarkdown(r, origin) {
       : `- Catalog number: ${r.catalogNumber ?? `not found (${r.catalogNumberMissing ?? "not recorded"})`}`,
     r.productUrl ? `- Product page: ${r.productUrl}` : "",
     "",
-    ...r.uses.map((u) => `- Used in: [${u.title}](${origin}${u.path})`),
+    ...r.uses.map((u) => `- Used in: ${mdLink(u.title, origin + u.path)}`),
   ];
   return itemTwin(r.name, lines);
 }
@@ -730,7 +730,7 @@ function equipmentGapText(e) {
  */
 export function equipmentMarkdown(items, origin) {
   const uses = (/** @type {EquipmentRow} */ e) =>
-    e.uses.map((u) => `[${mdCell(u.title)}](${origin}${u.path})`).join(", ");
+    e.uses.map((u) => mdLink(u.title, origin + u.path)).join(", ");
   const lines = items.map(
     (e) => `| ${mdCell(e.name)} | ${mdCell(e.manufacturer)} | ${mdCell(e.rotor)} | ${uses(e)} |`,
   );
@@ -759,7 +759,7 @@ export function equipmentItemMarkdown(e, origin) {
         ? `- Rotor: not found (${e.rotorMissing})`
         : "",
     "",
-    ...e.uses.map((u) => `- Used in: [${u.title}](${origin}${u.path})`),
+    ...e.uses.map((u) => `- Used in: ${mdLink(u.title, origin + u.path)}`),
   ];
   return itemTwin(e.name, lines);
 }
@@ -985,7 +985,7 @@ export function primerMarkdown(primer, primers, usedBy, origin) {
     primer.direction ? `- Direction: ${primer.direction}` : "",
     primer.target ? `- Target: ${primer.target}` : "",
     primer.set ? `- Set: ${primer.set}` : "",
-    mate ? `- Pairs with: [${mate.name}](${origin}${mate.path})` : "",
+    mate ? `- Pairs with: ${mdLink(mate.name, origin + mate.path)}` : "",
     primer.length ? `- Length: ${primer.length} nt` : "",
     primer.gcPercent !== null ? `- GC content: ${primer.gcPercent}%` : "",
     primer.tm !== null ? `- Melting temperature estimate (Tm): ${primer.tm} °C` : "",
@@ -1021,7 +1021,7 @@ export function primerMarkdown(primer, primers, usedBy, origin) {
         )
       : []),
     "",
-    ...usedBy.map((protocol) => `- Used in: [${protocol.title}](${origin}${protocol.path})`),
+    ...usedBy.map((protocol) => `- Used in: ${mdLink(protocol.title, origin + protocol.path)}`),
   ];
   return `${itemTwin(primer.name, lines)}${primer.tm !== null ? `\n${tmNote().statement} ${tmNote().annealing}\n` : ""}`;
 }
