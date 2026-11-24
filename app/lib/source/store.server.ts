@@ -58,21 +58,20 @@ export async function readFile(env: SourceEnv, path: string, at?: string) {
   return row?.content != null && row.sha ? { content: row.content, sha: row.sha } : null;
 }
 
-/** The files directly in a directory (not below it), as the repository listing answered: name, path, sha, size. */
+/** The files directly in a directory (not below it), as the repository listing answered: name, path, sha. */
 export async function listDirectory(env: SourceEnv, dir: string) {
   const prefix = `${dir.replace(/\/$/, "")}/`;
   const rows = await env.DB.prepare(
-    `SELECT path, sha, length(CAST(content AS BLOB)) AS size FROM source_files
+    `SELECT path, sha FROM source_files
      WHERE substr(path, 1, ?2) = ?1 AND instr(substr(path, ?2 + 1), '/') = 0 ORDER BY path`,
   )
     .bind(prefix, prefix.length)
-    .all<{ path: string; sha: string; size: number }>();
+    .all<{ path: string; sha: string }>();
   return (rows.results ?? []).map((r) => ({
     name: r.path.slice(prefix.length),
     path: r.path,
     sha: r.sha,
     type: "file",
-    size: r.size,
   }));
 }
 
