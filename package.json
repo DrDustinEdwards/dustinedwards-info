@@ -138,7 +138,7 @@
     "typescript": "5.9.3",
     "unpdf": "2.2.1",
     "vite": "8.3.8",
-    "vitest": "4.1.12",
+    "vitest": "5.1.1",
     "wrangler": "4.166.0"
   },
   "overrides": {
