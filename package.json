@@ -136,7 +136,7 @@
     "satori": "0.63.2",
     "sharp": "0.35.5",
     "typescript": "5.9.3",
-    "unpdf": "1.9.1",
+    "unpdf": "2.2.1",
     "vite": "8.3.8",
     "vitest": "4.1.12",
     "wrangler": "4.162.0"
