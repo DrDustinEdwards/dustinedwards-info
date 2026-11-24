@@ -28,7 +28,7 @@
     "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.59.2",
     "@modelcontextprotocol/conformance": "0.2.0-alpha.12",
     "typescript": "6.0.3",
-    "wrangler": "4.162.0"
+    "wrangler": "4.166.0"
   },
   "overrides": {
     "@modelcontextprotocol/client": "2.4.0",
