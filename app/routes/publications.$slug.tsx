@@ -99,6 +99,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       title,
       description: truncateForSerp(summary, SERP_DESCRIPTION),
       path: pagePath,
+      keepTrailingSlash: true, // the page is served at its slash; the slashless address redirects (paths.mjs)
       type: "article",
       trail: paperTrail(title, pagePath),
     }),
