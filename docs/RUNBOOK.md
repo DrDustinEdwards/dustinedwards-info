@@ -242,7 +242,7 @@ Empty children before parents:
 npx wrangler d1 execute dustinedwards --remote --command "DELETE FROM webmentions; DELETE FROM verification; DELETE FROM settings; DELETE FROM session; DELETE FROM search_docs; DELETE FROM post_tags; DELETE FROM tags; DELETE FROM posts; DELETE FROM media_refs; DELETE FROM media; DELETE FROM account; DELETE FROM \"user\";"
 ```
 
-Never `DELETE FROM` a search index (`posts_fts`, `search_identity`,
+Never `DELETE FROM` a search index (`search_identity` or
 `search_prose`). The per-table backup rule: the repair there is `('rebuild')`, which is
 step 4.
 

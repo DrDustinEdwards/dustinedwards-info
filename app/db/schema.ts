@@ -149,7 +149,6 @@ export const mediaRefs = sqliteTable(
     primaryKey({
       columns: [t.mediaKey, t.sourceType, t.sourceId, t.form, t.detail],
     }),
-    index("media_refs_key_idx").on(t.mediaKey),
     index("media_refs_source_idx").on(t.sourceType, t.sourceId),
   ],
 );
