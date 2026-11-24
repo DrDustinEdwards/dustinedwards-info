@@ -47,6 +47,7 @@
     "0043_ask_uploads.sql": "0f49c683c99e8301b1e3213b0593b49df8c59a043dab6deaec149fa03371bfcf",
     "0044_shared_media_store.sql": "2623f148ca481c30a02fdb3a899832cc33c18b138d42bbb30762c2324b8c47b1",
     "0045_drop_ask_uploads.sql": "4354ddf196147e283e407fe111cebb1515e3f899dd56010ffa3a94683e486347",
-    "0046_drop_posts_fts.sql": "93c79873b669052d52ba931507be52a224d97d7e5bbfee37a4c44321f480f3b6"
+    "0046_drop_posts_fts.sql": "93c79873b669052d52ba931507be52a224d97d7e5bbfee37a4c44321f480f3b6",
+    "0047_drop_posts_excerpt.sql": "77d49eac17dc9023c9d858d5001d2dbeffdca7f690e7cf07f4e740d6cfa4e7db"
   }
 }
