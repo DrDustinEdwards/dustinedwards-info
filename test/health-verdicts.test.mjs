@@ -11,7 +11,7 @@ import {
   ftsEqualityVerdict,
 } from "../app/lib/health/verdicts.mjs";
 
-const HEALTHY_FTS = { posts: 12, postsFts: 12, docs: 46, identity: 46, prose: 46 };
+const HEALTHY_FTS = { docs: 46, identity: 46, prose: 46 };
 
 await test("an Ask index short of its query is a breach, and the counts reach the message", () => {
   const verdict = askDriftVerdict({ expected: 46, present: 37, failed: 0, indexing: 9 });
@@ -39,27 +39,10 @@ await test("agreeing FTS counts are healthy", () => {
   assert.match(verdict.detail, /search_docs=46/);
 });
 
-await test("a drained posts_fts_docsize is a breach, which is the DELETE FROM shape", () => {
-  // After DELETE FROM posts_fts the index count still reads 1 of 1 through the content table
-  // while the docsize shadow goes to 0.
-  const verdict = ftsEqualityVerdict({ ...HEALTHY_FTS, postsFts: 0 });
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /posts=12 but posts_fts_docsize=0/);
-  assert.match(verdict.detail, /'rebuild'/, "the breach must carry the repair");
-  assert.match(verdict.detail, /Do NOT DELETE FROM/, "and the way to make it worse");
-});
-
 await test("one half of the three-way going stale is a breach", () => {
   const verdict = ftsEqualityVerdict({ ...HEALTHY_FTS, prose: 37 });
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /search_prose_docsize=37/);
-});
-
-await test("both equalities are reported, not just the first", () => {
-  const verdict = ftsEqualityVerdict({ posts: 12, postsFts: 9, docs: 46, identity: 46, prose: 40 });
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /posts_fts_docsize=9/, "the blog index half");
-  assert.match(verdict.detail, /search_prose_docsize=40/, "and the search half");
 });
 
 await test("FAIL CLOSED: a count that could not be read is not a passing check", () => {

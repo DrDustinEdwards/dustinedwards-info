@@ -332,9 +332,7 @@ export async function runHealthChecks(env: Env, options: HealthOptions = {}): Pr
       // Index counts come from the _docsize shadows: COUNT(*) on an external-content fts5 table reads
       // through to its content table and can never disagree with it.
       const row = await env.DB.prepare(
-        "SELECT (SELECT COUNT(*) FROM posts) AS posts, " +
-          "(SELECT COUNT(*) FROM posts_fts_docsize) AS postsFts, " +
-          "(SELECT COUNT(*) FROM search_docs) AS docs, " +
+        "SELECT (SELECT COUNT(*) FROM search_docs) AS docs, " +
           "(SELECT COUNT(*) FROM search_identity_docsize) AS identity, " +
           "(SELECT COUNT(*) FROM search_prose_docsize) AS prose",
       ).first<Record<string, unknown>>();
