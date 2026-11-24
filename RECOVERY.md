@@ -591,7 +591,7 @@ the difference.
 **Posts, tags and the search index.** `content/posts/*.md` is the source of
 truth and the only committed form; `content/generated/posts.json` is a
 gitignored local build product `build:content` writes. `sync:content` rewrites
-`posts`, `post_tags`, `posts_fts`, `search_docs` and both FTS5 indexes from it
+`posts`, `post_tags`, `search_docs` and both FTS5 indexes from it
 (run `build:content` first). Inside the Worker the same rebuild is
 `regenerateAllFromRepo`, reachable as the admin's "Regenerate all" and as
 `sync_posts` on the operator API: one Contents directory listing, then every
