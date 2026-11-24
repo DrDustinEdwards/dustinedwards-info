@@ -1,4 +1,5 @@
-import { pageRecordStore } from "~/lib/page-dates.server";
+import { kvPageRecord } from "@drdustinedwards/site-helpers/lastmod";
+import { PAGE_DATES_KEY } from "~/lib/page-dates.server";
 import { listBlogPosts, listBlogSeries, listBlogTags, nextScheduledPublishAt } from "~/db";
 import { listPublishedPageSources, listPublishedPageTitles } from "~/db/pages";
 import { listPostsWithImages } from "~/db/posts";
@@ -310,7 +311,7 @@ export async function gatherSiteUrls(
     ),
   ];
   if (options.tracked !== false) {
-    const record = await pageRecordStore(env).load();
+    const record = await kvPageRecord(env.APP_KV, PAGE_DATES_KEY).load();
     for (const url of urls) {
       const day = record?.[url.path]?.lastmod;
       if (!url.lastmod && day) url.lastmod = new Date(day);
