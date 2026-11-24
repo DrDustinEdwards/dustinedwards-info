@@ -20,6 +20,7 @@ export const posts = sqliteTable(
     kind: text("kind", { enum: ["page", "post"] }).notNull(),
     title: text("title").notNull(),
     body: text("body").notNull(),
+    excerpt: text("excerpt"),
     status: text("status", { enum: ["draft", "published"] }).notNull(),
     publishAt: integer("publish_at", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })

@@ -94,11 +94,12 @@ const UNSAVED_PREVIEW_SLUG = "carrel-preview";
  */
 async function previewRow(env: CarrelEnv, record: PostRecord): Promise<PostRow> {
   const stored = await env.DB.prepare(
-    `SELECT id, og_image, created_at, updated_at FROM posts WHERE slug = ?1`,
+    `SELECT id, excerpt, og_image, created_at, updated_at FROM posts WHERE slug = ?1`,
   )
     .bind(record.slug)
     .first<{
       id: number;
+      excerpt: string | null;
       og_image: string | null;
       created_at: number;
       updated_at: number;
@@ -108,6 +109,7 @@ async function previewRow(env: CarrelEnv, record: PostRecord): Promise<PostRow> 
   const raw: Record<string, unknown> = {
     id: stored?.id ?? PREVIEW_ROW_ID,
     kind: "post",
+    excerpt: stored?.excerpt ?? null,
     og_image: stored?.og_image ?? null,
     created_at: stored?.created_at ?? now,
     ...postColumnValues(record),
