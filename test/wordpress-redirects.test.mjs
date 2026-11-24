@@ -132,6 +132,7 @@ const CUTOVER_EXPLICIT_ROWS = /** @type {Array<[string, string | null]>} */ ([
   ["/knowledge-base/pcr-wolbachia-16s-rrna/", "/research/protocols"],
   ["/gentech-2018a/", "/research/protocols"],
   ["/sitemap_index.xml", "/sitemap.xml"],
+  ["/feed", "/writing/rss.xml"],
   ["/", null],
   ["/contact/", null],
   ["/login/", null],
