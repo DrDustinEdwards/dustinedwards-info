@@ -141,9 +141,6 @@ function buildSql(posts) {
     }
   }
 
-  // Full rebuild rather than trusting per-row triggers across a bulk write.
-  out.push(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild');`);
-
   return `${out.join("\n")}\n`;
 }
 
@@ -642,7 +639,7 @@ async function applySql(target, file, body, label, failure) {
 function verify(target, posts, records) {
   const verify = runWrangler(
     `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
-      '"SELECT (SELECT COUNT(*) FROM posts) AS posts, (SELECT COUNT(*) FROM posts_fts_docsize) AS fts, ' +
+      '"SELECT (SELECT COUNT(*) FROM posts) AS posts, ' +
       "(SELECT COUNT(*) FROM posts WHERE source_path IS NOT NULL) AS file_posts, " +
       "(SELECT COUNT(*) FROM post_tags) AS post_tags, (SELECT COUNT(*) FROM tags) AS tags, " +
       "(SELECT COUNT(*) FROM search_docs) AS docs, " +
@@ -658,16 +655,9 @@ function verify(target, posts, records) {
   if (!match) throw new Error(`could not parse verification output:\n${verify.output}`);
   const row = JSON.parse(match[0])[0].results[0];
 
-  console.log(
-    `sync:content posts=${row.posts} posts_fts=${row.fts} tags=${row.tags} post_tags=${row.post_tags}`,
-  );
+  console.log(`sync:content posts=${row.posts} tags=${row.tags} post_tags=${row.post_tags}`);
   console.log(`sync:content search_docs=${row.docs} identity=${row.identity} prose=${row.prose}`);
 
-  if (row.posts !== row.fts) {
-    throw new Error(
-      `FTS drift: posts=${row.posts} but posts_fts=${row.fts}. The rebuild did not take.`,
-    );
-  }
   // File-sourced rows only: hand-authored pages would otherwise make up a shortfall in the posts.
   if (row.file_posts < posts.length) {
     throw new Error(

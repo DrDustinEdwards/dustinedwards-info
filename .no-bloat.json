@@ -68,12 +68,12 @@
       "scripts/check-contrast.mjs": 737,
       "scripts/check-links.mjs": 755,
       "scripts/machine-readable/microformats.mjs": 573,
-      "scripts/sync-content.mjs": 920,
+      "scripts/sync-content.mjs": 910,
       "test/worker/carrel-site-api.test.ts": 1488
     },
     "tests": {
       "files": 171,
-      "cases": 1081
+      "cases": 1079
     },
     "comments": {
       "lines": 16829,

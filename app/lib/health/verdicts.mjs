@@ -295,7 +295,7 @@ function sourceDriftVerdict(files, rows, { label, noun, tool }) {
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
  */
 export function ftsEqualityVerdict(counts) {
-  const NAMES = ["posts", "postsFts", "docs", "identity", "prose"];
+  const NAMES = ["docs", "identity", "prose"];
 
   const unreadable = NAMES.filter((n) => !Number.isInteger(counts[n]) || Number(counts[n]) < 0);
   if (unreadable.length > 0) {
@@ -308,14 +308,11 @@ export function ftsEqualityVerdict(counts) {
     };
   }
 
-  const posts = Number(counts.posts);
-  const postsFts = Number(counts.postsFts);
   const docs = Number(counts.docs);
   const identity = Number(counts.identity);
   const prose = Number(counts.prose);
 
   const broken = [];
-  if (posts !== postsFts) broken.push(`posts=${posts} but posts_fts_docsize=${postsFts}`);
   if (identity !== docs || prose !== docs) {
     broken.push(
       `search_docs=${docs} but search_identity_docsize=${identity} and ` +
@@ -326,9 +323,7 @@ export function ftsEqualityVerdict(counts) {
   if (broken.length === 0) {
     return {
       ok: true,
-      detail:
-        `FTS indexes agree: posts=${posts}=posts_fts_docsize, ` +
-        `search_docs=${docs}=identity=prose.`,
+      detail: `FTS indexes agree: search_docs=${docs}=identity=prose.`,
     };
   }
 
@@ -338,11 +333,8 @@ export function ftsEqualityVerdict(counts) {
       `FTS index drift: ${broken.join("; ")}. ` +
       `Rebuild with INSERT INTO <index>(<index>) VALUES('rebuild'). ` +
       `Do NOT DELETE FROM either index; that corrupts it further.`,
-    // The first disagreeing pair only; the full five are in detail, which stays off the wire.
-    counts:
-      posts !== postsFts
-        ? { expected: posts, present: postsFts }
-        : { expected: docs, present: identity !== docs ? identity : prose },
+    // The first disagreeing pair only; the full three are in detail, which stays off the wire.
+    counts: { expected: docs, present: identity !== docs ? identity : prose },
   };
 }
 

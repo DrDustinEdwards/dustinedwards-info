@@ -21,8 +21,6 @@ const clearSearchDocs = (db: D1Database, slug: string) =>
   db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(`post:${slug}`);
 const clearMediaRefs = (db: D1Database, slug: string) =>
   db.prepare(`DELETE FROM media_refs WHERE source_type = 'post' AND source_id = ?1`).bind(slug);
-const rebuildPostsFts = (db: D1Database) =>
-  db.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`);
 const rebuildSearchIndexes = (db: D1Database) => [
   db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
   db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
@@ -144,7 +142,6 @@ export async function syncPostToD1(env: PublishEnv, record: PostRecord) {
         )
         .bind(record.slug, tag),
     ),
-    rebuildPostsFts(db),
     ...searchStatements(db, record),
     ...mediaRefStatements(db, record),
   ];
@@ -216,7 +213,6 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
   await db.batch([
     clearPostTags(db, slug),
     db.prepare(`DELETE FROM posts WHERE slug = ?1`).bind(slug),
-    rebuildPostsFts(db),
     clearSearchDocs(db, slug),
     ...rebuildSearchIndexes(db),
     clearMediaRefs(db, slug),

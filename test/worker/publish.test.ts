@@ -126,7 +126,7 @@ describe("savePost", () => {
     expect(result.record.slug).toBe("provenance");
   });
 
-  it("writes the fts and search_docs rows in the same batch as the post", async () => {
+  it("writes the search_docs rows in the same batch as the post", async () => {
     await savePost(publishEnv(), {
       slug: "indexed",
       raw: post("indexed"),
@@ -135,12 +135,6 @@ describe("savePost", () => {
     });
 
     expect(await countRows("search_docs", "WHERE doc_uid = ?1", "post:indexed")).toBeGreaterThan(0);
-    /* The FTS index is rebuilt rather than left to per-row triggers, so the
-     * assertion is that it holds the post, not that a trigger fired. */
-    const fts = await env.DB.prepare("SELECT COUNT(*) AS n FROM posts_fts WHERE posts_fts MATCH ?1")
-      .bind("indexed")
-      .first<{ n: number }>();
-    expect(fts?.n ?? 0).toBeGreaterThan(0);
   });
 
   it("keeps a cited image from being deleted while any citation of it remains", async () => {
@@ -457,7 +451,7 @@ describe("renderAndWrite", () => {
 });
 
 describe("the FTS indexes", () => {
-  const INDEXES = ["posts_fts", "search_identity", "search_prose"];
+  const INDEXES = ["search_identity", "search_prose"];
   const ftsEquality = async () =>
     (await runHealthChecks(publishEnv())).checks.find((c) => c.name === "fts-equality");
 
@@ -482,9 +476,13 @@ describe("the FTS indexes", () => {
 
     /* A hook, not a `finally`: a rebuild that threw there would replace the assertion's failure. */
     onTestFinished(async () => {
-      await env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`).run();
+      await env.DB.prepare(
+        `INSERT INTO search_identity (search_identity) VALUES ('rebuild')`,
+      ).run();
     });
-    await env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('delete-all')`).run();
+    await env.DB.prepare(
+      `INSERT INTO search_identity (search_identity) VALUES ('delete-all')`,
+    ).run();
     expect(await ftsEquality()).toMatchObject({ ok: false });
   });
 });
