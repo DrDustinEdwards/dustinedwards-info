@@ -135,10 +135,10 @@
     "puppeteer": "25.17.0",
     "satori": "0.63.2",
     "sharp": "0.35.5",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "unpdf": "2.2.1",
     "vite": "8.3.8",
-    "vitest": "4.1.12",
+    "vitest": "5.1.1",
     "wrangler": "4.166.0"
   },
   "overrides": {

@@ -5,7 +5,7 @@
  * that must be exact, read the syntax tree (@dustinedwards/devkit/node/syntax).
  */
 
-import { createRequire } from "node:module";
+import { ts } from "@dustinedwards/devkit/node/syntax";
 
 /**
  * One left-to-right pass: "is this a comment opener" depends on everything to its left, which no
@@ -157,7 +157,6 @@ export function stripCommentsAndStrings(source) {
  * @returns {string}
  */
 export function stripTsxComments(source) {
-  const ts = createRequire(import.meta.url)("typescript");
   const file = ts.createSourceFile(
     "x.tsx",
     source,
