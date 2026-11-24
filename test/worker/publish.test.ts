@@ -476,9 +476,13 @@ describe("the FTS indexes", () => {
 
     /* A hook, not a `finally`: a rebuild that threw there would replace the assertion's failure. */
     onTestFinished(async () => {
-      await env.DB.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`).run();
+      await env.DB.prepare(
+        `INSERT INTO search_identity (search_identity) VALUES ('rebuild')`,
+      ).run();
     });
-    await env.DB.prepare(`INSERT INTO search_identity (search_identity) VALUES ('delete-all')`).run();
+    await env.DB.prepare(
+      `INSERT INTO search_identity (search_identity) VALUES ('delete-all')`,
+    ).run();
     expect(await ftsEquality()).toMatchObject({ ok: false });
   });
 });

@@ -655,9 +655,7 @@ function verify(target, posts, records) {
   if (!match) throw new Error(`could not parse verification output:\n${verify.output}`);
   const row = JSON.parse(match[0])[0].results[0];
 
-  console.log(
-    `sync:content posts=${row.posts} tags=${row.tags} post_tags=${row.post_tags}`,
-  );
+  console.log(`sync:content posts=${row.posts} tags=${row.tags} post_tags=${row.post_tags}`);
   console.log(`sync:content search_docs=${row.docs} identity=${row.identity} prose=${row.prose}`);
 
   // File-sourced rows only: hand-authored pages would otherwise make up a shortfall in the posts.

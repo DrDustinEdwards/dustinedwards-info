@@ -323,8 +323,7 @@ export function ftsEqualityVerdict(counts) {
   if (broken.length === 0) {
     return {
       ok: true,
-      detail:
-        `FTS indexes agree: search_docs=${docs}=identity=prose.`,
+      detail: `FTS indexes agree: search_docs=${docs}=identity=prose.`,
     };
   }
 
