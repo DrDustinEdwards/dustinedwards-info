@@ -26,9 +26,6 @@
  */
 
 /**
- * Where a reagent comes from, in the words a protocol's table and twin use: a bought reagent's supplier and catalog number, linked to
- * its product page where there is one; a reagent prepared in the lab, linked to its recipe where one exists.
- *
  * @param {StoredReagent} reagent
  * @returns {{ text: string, href: string | null }}
  */

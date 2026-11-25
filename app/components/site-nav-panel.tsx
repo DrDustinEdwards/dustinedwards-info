@@ -3,15 +3,13 @@ import { Link } from "react-router";
 import type { Menu, MenuLink, MenuRow, NavIcon } from "~/lib/nav-menus";
 
 /*
- * The structured panel (app/lib/nav.ts): one shape for all five sections, top to bottom a header band, a
- * row of three tiles, a band with grouped rows on the left and one spotlight on the right, and three quick
- * links. It is the site's own contents of a Capsomer site-header panel (site-header.md, "the site's own
- * panel"): Capsomer's SiteHeader wraps it in the manual popover its button opens with no script
- * (popovertarget), and its behavior adds hover, light dismiss, Escape, arrow keys and focus return.
+ * The structured panel (app/lib/nav.ts), one shape for all five sections: a header band, three tiles, grouped
+ * rows with one spotlight, and three quick links. It is the site's own contents of a Capsomer site-header panel,
+ * which wraps it in a manual popover that opens with no script (popovertarget).
  *
- * Everything in it is a plain list of links: no menu roles, which would promise arrow-key menus it does
- * not have (W3C disclosure navigation). The lists are named with aria-label, not headings: the panel is
- * in every page's markup ahead of its h1, and headings there would open every page's outline with them.
+ * Plain lists of links, no menu roles, which would promise arrow-key menus it does not have (W3C disclosure
+ * navigation). Lists are named with aria-label, not headings: the panel precedes every page's h1 in the markup,
+ * and headings there would open every page's outline with them.
  */
 
 // The design's line icons (most from the structured panels mock): a 24 grid drawn at 18px, 1.7 stroke, round caps and joins, in currentColor.

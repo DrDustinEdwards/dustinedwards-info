@@ -14,8 +14,6 @@ import { renderSections } from "./render-sections.mjs";
 export const GAP = /^MISSING:/;
 
 /**
- * The value, or null when it is a recorded gap or absent.
- *
  * @template T
  * @param {T} value
  * @returns {T | null}

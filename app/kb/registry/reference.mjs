@@ -54,8 +54,6 @@ export function parseReference(text) {
 }
 
 /**
- * A 1-based position on the reference's own sequence, as the accession numbers it.
- *
  * @param {Reference} reference
  * @param {number} position 1-based on `reference.sequence`
  */

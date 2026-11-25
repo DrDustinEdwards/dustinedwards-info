@@ -146,9 +146,6 @@ export function showQuantity(q, factor, system, gramsPerCup = null) {
 const toScale = (t, to) => Math.round((to === "F" ? (t * 9) / 5 + 32 : ((t - 32) * 5) / 9) / 5) * 5;
 
 /**
- * A step's words with its temperatures in the asked-for system's scale: "180 °C" reads "355 °F" in imperial, and the reverse in
- * metric. HTML in, HTML out: only the text of a temperature changes.
- *
  * @param {string} html
  * @param {UnitSystem | null} system
  */
@@ -240,9 +237,6 @@ export function ingredientNames(record) {
 }
 
 /**
- * The mise-en-place: every ingredient once, with its total amount at the reader's servings and units, in the order of the
- * ingredient list; and the same as plain lines, a shopping list to copy (R5).
- *
  * @param {import("./render.mjs").ProcedureRecord} record
  * @param {number} factor
  * @param {UnitSystem | null} system

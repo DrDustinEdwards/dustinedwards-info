@@ -1,15 +1,13 @@
-// Scheduled updates (site-api v0.10.0, the `schedules` group): a live post carries one waiting update in the
-// scheduled_updates table (drizzle/0033), and the per-minute cron (workers/app.ts scheduled(), site-api's
-// runSchedules) puts it live at its time. Posts only: every other kind refuses, as it did before the group existed.
-//
-// A post that was never live goes live by its publish_at, with no write. So the publish hooks (IndexNow, the cache
-// purge, webmentions) still hear it, the schedule leaves a row in scheduled_publishes (drizzle/0038), which `due` lists
-// as kind "publish" once its time comes, and `apply` answers the post's write without writing and drops it (v0.17.0).
-//
-// One departure from the package's contract, recorded here: a post's version is the git blob sha of its file
-// (site-adapter.server.ts), so storing or dropping an update does not move it. A write to the post itself still
-// moves it, and apply checks the stored update's time and change id before it writes, so a reschedule or a cancel
-// made in between is never overwritten.
+/*
+ * Scheduled updates (site-api's `schedules` group): a live post carries one waiting update in scheduled_updates
+ * (drizzle/0033), and the per-minute cron (runSchedules) puts it live at its time. Posts only.
+ * A post never live goes live by its publish_at with no write, so the publish hooks (IndexNow, cache purge,
+ * webmentions) still hear it: the schedule leaves a row in scheduled_publishes (drizzle/0038), which `due` lists
+ * as kind "publish" and `apply` answers without writing, then drops.
+ * One departure from the package's contract: a post's version is the git blob sha of its file
+ * (site-adapter.server.ts), so storing or dropping an update does not move it. `apply` checks the stored
+ * update's time and change id before it writes, so a reschedule or cancel made in between is never overwritten.
+ */
 
 import { NotFoundError, RefusedError, VersionConflictError } from "@dustinedwards/site-api";
 import type { SchedulesAdapter, WriteResult } from "@dustinedwards/site-api";

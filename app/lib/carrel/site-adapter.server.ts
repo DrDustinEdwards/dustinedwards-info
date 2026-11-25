@@ -1,12 +1,11 @@
-// The dustinedwards.info side of Carrel's site API (the site-api package): the package owns the
-// route, the key, the rate limit and every body's shape; this adapter maps its content and preview
-// calls onto the site's own save, render and history code. Nothing here writes around savePost.
-// Media (v0.2.0) is its own module, over the site's media code, and so are mentions (mentions-adapter.server.ts).
-//
-// v0.17.0 on posts: trash and restore (a trashed post is a draft listed only in the trash, content_trash), rename (the
-// file and its history move, and the old address of a post ever public answers a 301, post_redirects), a publish under
-// a date Carrel names (the post's `date` and `publish_at`), the list's kind, tag and published filters
-// (content-kinds.server.ts) and the render version. State the file does not hold is post-state.server.ts.
+/*
+ * The dustinedwards.info side of Carrel's site API (the site-api package): the package owns the route, key, rate
+ * limit and every body's shape; this adapter maps its content and preview calls onto the site's own save, render
+ * and history code. Nothing here writes around savePost. Media and mentions are their own modules.
+ * Posts: trash and restore (content_trash), rename (the old address of a once-public post answers a 301,
+ * post_redirects) and the list filters (content-kinds.server.ts). State the file does not hold is
+ * post-state.server.ts.
+ */
 
 import { RENDER_VERSION } from "@drdustinedwards/site-helpers/render/nomath";
 import {

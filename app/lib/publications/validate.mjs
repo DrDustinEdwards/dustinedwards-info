@@ -96,8 +96,6 @@ const isObject = (value) => Boolean(value) && typeof value === "object" && !Arra
 const isFilled = (value) => isString(value) && value.trim() !== "";
 
 /**
- * DOI names are case-insensitive: the one key the corpus joins on.
- *
  * @param {string | null | undefined} doi
  */
 export const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
@@ -416,7 +414,6 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
     }
   }
 
-  // update notice and accessions
   const noticeProblem = updateNoticeProblem(data.updateNotice);
   if (noticeProblem) bad("updateNotice", noticeProblem);
 

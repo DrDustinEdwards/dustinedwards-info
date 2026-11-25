@@ -40,7 +40,6 @@ function asMemberRow(row: {
   return { ...row, status: row.status as MemberRow["status"] };
 }
 
-/** One person's row by their normalized email, or null. */
 export async function getMember(env: Env, email: string): Promise<MemberRow | null> {
   const row = await getDb(env).select(ROW).from(members).where(eq(members.email, email)).get();
   return row ? asMemberRow(row) : null;

@@ -22,7 +22,6 @@ import { checkRegistryItem, saveRegistryItem } from "./registry/save.server";
 
 type EditorEnv = Env;
 
-/** What is being edited: an entry by its slug, or a registry item by its kind and id. */
 export type KbTarget = { type: "entry"; slug: string } | { type: "item"; kind: string; id: string };
 
 /** A recorded gap: its path in the file, its reason, and the same place in words with the id of the input it is filled in at. */

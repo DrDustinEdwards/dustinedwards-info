@@ -18,8 +18,6 @@ export function sentenceCount(text) {
 }
 
 /**
- * The method: step numbering, flags, calculators, the @material and #equipment a step names, commands and photos.
- *
  * @param {import("./parse.mjs").ParsedProcedure} parsed
  * @param {string} profile
  * @param {string[]} errors

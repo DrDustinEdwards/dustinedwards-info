@@ -21,9 +21,6 @@ function chartYears(all) {
 }
 
 /**
- * The stacked timeline's input: output per start year by type, for entries matching every filter but
- * the year range, which the chart marks instead.
- *
  * @param {Facts[]} all
  * @param {CvState} state
  */

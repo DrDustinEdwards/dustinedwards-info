@@ -27,7 +27,6 @@ export const CV_PDF_KEY = "derived/dustin-edwards-cv.pdf";
 /** The custom-metadata field that carries the stamp of the CV data and print document the object was drawn from (cvPdfStamp). */
 export const FINGERPRINT_FIELD = "fingerprint";
 
-/** The font URLs the client build emits, by the file name PDF_FONTS names. */
 const FONT_URLS: Record<(typeof PDF_FONTS)[number]["file"], string> = {
   "source-serif-4-latin-normal.woff2": serifNormalUrl,
   "source-serif-4-latin-italic.woff2": serifItalicUrl,

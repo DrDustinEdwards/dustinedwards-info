@@ -61,7 +61,6 @@ export async function listPublishedProcedures(env: Env) {
     .orderBy(asc(procedures.path));
 }
 
-/** For the operator's list_procedures: every row, drafts included. */
 export async function listProceduresForOperator(env: Env) {
   const rows = await getDb(env)
     .select({

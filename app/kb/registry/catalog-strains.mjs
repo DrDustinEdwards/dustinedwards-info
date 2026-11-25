@@ -105,9 +105,6 @@ export const STRAINS = defineCatalog(
 );
 
 /**
- * The protocols that use a strain: each published protocol names its host strains by id, so the use is read from the
- * protocols and never listed on the strain.
- *
  * @param {{ id: string }} strain
  * @param {Array<{ path: string, title: string, hostStrains?: Array<{ id: string }> }>} protocols
  */

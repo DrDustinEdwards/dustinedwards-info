@@ -310,7 +310,6 @@ export function contentPageTrail(page, titleOf = () => undefined) {
   return trail;
 }
 
-/** The search uid of a page path: a removal needs it to find the page's records. */
 export function contentPageSearchUid(/** @type {string} */ path) {
   return `page:${path.slice(1).replaceAll("/", ":")}`;
 }

@@ -34,9 +34,6 @@ function splitTemperatures(text) {
 }
 
 /**
- * A step's text as pieces: its words, and a chip for each mark and each temperature. pieces.map(p => p.raw).join("") is
- * the text.
- *
  * @param {string} text
  * @returns {Piece[]}
  */
@@ -82,9 +79,6 @@ export function stepPieces(text) {
 }
 
 /**
- * A chip written in the procedure format's spelling: `@name|shown{=amount%unit}`, `#name{}`, `~label{amount%unit}`,
- * `55 to 60 °C`.
- *
  * @param {Piece} piece
  * @returns {string}
  */

@@ -17,8 +17,6 @@ export function itemPath(kind, id, kinds = KINDS) {
 }
 
 /**
- * The kind a URL segment names (its plural), or null.
- *
  * @param {string} segment
  * @param {Readonly<Record<string, import("./kinds.mjs").KindSpec>>} [kinds]
  */
@@ -27,9 +25,6 @@ export function kindFromSegment(segment, kinds = KINDS) {
 }
 
 /**
- * The library's tabs for the registry: one for each kind that has a published item, linking to the kind's page, in the
- * order the kinds are defined. A kind with no item has no tab, so none points at an empty page.
- *
  * @param {import("./kinds.mjs").RegistryItem[]} items
  * @param {Readonly<Record<string, import("./kinds.mjs").KindSpec>>} [kinds]
  */
@@ -59,9 +54,6 @@ export function itemTwin(name, lines) {
 }
 
 /**
- * Whether a kind has a page for each item. Every kind does today (docs/KNOWLEDGE-BASE.md, A1); a kind that is only ever one table
- * says `itemPages: false`.
- *
  * @param {string} kind
  * @param {Readonly<Record<string, import("./kinds.mjs").KindSpec>>} [kinds]
  */

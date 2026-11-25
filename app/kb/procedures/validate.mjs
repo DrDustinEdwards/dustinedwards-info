@@ -25,10 +25,6 @@ const SEO_TITLE_MAX = 60;
 const DESCRIPTION_MAX = 155;
 
 /**
- * The version history, newest first: each version with its date, what changed and, once Zenodo has minted
- * one, its DOI. The first entry is the version the page is at, so the version is stored once in `version`
- * and the history cannot disagree with it.
- *
  * @param {Record<string, any>} d
  * @param {string[]} errors
  */
@@ -75,8 +71,6 @@ function validateHistory(d, errors) {
 }
 
 /**
- * Checks one parsed procedure.
- *
  * @param {import("./parse.mjs").ParsedProcedure} parsed
  * @param {{ slug: string, primers?: ReadonlySet<string> | null, strains?: ReadonlySet<string> | null, reagents?: ReadonlySet<string> | null, equipment?: ReadonlySet<string> | null }} expect the slug its file name gives, and the ids of the primers and
  *   host strains the lab registry holds (null or absent when the registry is not at hand, which `compileProcedure` refuses for a protocol that lists primers)

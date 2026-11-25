@@ -6,7 +6,6 @@ export function italicizeOrganisms(text: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   let cursor = 0;
 
-  // matchAll does not disturb ORGANISM_PATTERN.lastIndex.
   for (const match of text.matchAll(ORGANISM_PATTERN)) {
     const start = match.index ?? 0;
     if (start > cursor) nodes.push(text.slice(cursor, start));

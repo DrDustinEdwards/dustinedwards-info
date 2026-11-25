@@ -30,10 +30,6 @@ function reagentUses(id, protocols) {
 }
 
 /**
- * A reagent as the pages read it: the record's own fields and the protocols that use it, computed from the protocols. A reagent is
- * bought (a supplier and a catalog number, each stated or a gap with its reason) or prepared in the lab (a recipe, which is a
- * procedure with the recipe profile, or a gap with its reason).
- *
  * @param {import("./kinds.mjs").RegistryItem} item
  * @param {Parameters<typeof reagentUses>[1]} [protocols]
  */
@@ -141,9 +137,6 @@ function reagentGapText(r) {
 }
 
 /**
- * The reagents as one markdown table for the twin, then every gap with its reason, so a machine reads what a person sees and what
- * is still missing.
- *
  * @param {ReagentRow[]} reagents
  * @param {string} origin
  */
@@ -206,9 +199,6 @@ export function equipmentUses(id, protocols) {
 }
 
 /**
- * An equipment item as the pages read it: the record's own fields, with a maker or rotor nobody has recorded said with its reason,
- * and the protocols that use it, computed from the protocols.
- *
  * @param {import("./kinds.mjs").RegistryItem} item
  * @param {Parameters<typeof equipmentUses>[1]} [protocols]
  */
@@ -289,9 +279,6 @@ function equipmentGapText(e) {
 }
 
 /**
- * The equipment as one markdown table for the twin, then every gap with its reason, so a machine reads what a person sees and what
- * is still missing.
- *
  * @param {EquipmentRow[]} items
  * @param {string} origin
  */

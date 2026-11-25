@@ -34,9 +34,6 @@ function overviewSentence(overview) {
 }
 
 /**
- * The overview for the twin: the count sentence, the workflow as a list with a link for each stage that has
- * protocols, and the methods with their counts, so a machine reads what the page shows.
- *
  * @param {ReturnType<typeof libraryOverview>} overview
  * @param {string} origin
  */
@@ -98,10 +95,6 @@ function methodHref(methods) {
 }
 
 /**
- * What the library says about itself, counted from its rows: how many protocols, over how many methods and
- * organisms, when the newest changed, a tile for each method that has a protocol, and the phage workflow with the
- * number of protocols under each stage. Nothing here is typed: a protocol saved changes every figure.
- *
  * @param {LibraryItem[]} items
  */
 export function libraryOverview(items) {
@@ -185,11 +178,6 @@ export function libraryOverview(items) {
 }
 
 /**
- * The tabs over the catalog: All, then each kind of work with the number of protocols in it. A tab is a link, so a
- * tab, Back and a bookmark all work with no script. The current one is the tab whose methods are exactly the method
- * filter in the address; All is current while no method is chosen. The registry's kinds (primers, as they land) follow the
- * calculators as links to their own pages, counted from the registry and never the current tab here.
- *
  * @param {LibraryItem[]} items
  * @param {readonly string[]} chosen the method ids in the address
  * @param {Array<{ id: string, label: string, count: number, href: string }>} [registry] one entry for each registry kind that has items

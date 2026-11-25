@@ -272,7 +272,6 @@ export async function fileRevisions(env: SourceEnv, path: string | null) {
   }));
 }
 
-/** One file as it stood at a version, for Carrel: null for an absent path or an unknown version. */
 export async function fileRevisionSource(env: SourceEnv, path: string | null, version: string) {
   if (!path) return null;
   return (await readFile(env, path, version))?.content ?? null;

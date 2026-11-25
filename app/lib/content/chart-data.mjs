@@ -4,8 +4,6 @@
 // Must stay loadable by node:test: no binding, no `.server` module.
 
 /**
- * The media key a chart's src names, or null when it is not a CSV in the media library.
- *
  * @param {string} src
  * @returns {string | null}
  */

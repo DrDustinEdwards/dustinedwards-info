@@ -12,9 +12,6 @@ import {
 } from "./procedures/taxonomy.mjs";
 
 /**
- * Capsomer's field spec (schema-form) with the kinds this form uses: Capsomer's own, then the Knowledge Base's, which
- * the editor draws itself (kb-form-fields.tsx).
- *
  * @typedef {Extract<import("capsomer/behavior/schema-form").FieldKind, "text" | "textarea" | "lines" | "date" | "number" | "checkbox" | "select" | "multi" | "choice" | "readonly">} SharedKind
  * @typedef {SharedKind | "materials" | "equipment" | "primers" | "strains" | "yaml"} FieldKind
  * @typedef {Omit<import("capsomer/behavior/schema-form").FieldSpec, "kind"> & { kind: FieldKind }} FieldSpec
@@ -153,9 +150,6 @@ const FIXED = [
 ];
 
 /**
- * The fields of an entry of `profile`, then every other field the file has, as YAML. The organism list is the registry's
- * strains and the non-strain organisms, the list the validator holds `organism` to.
- *
  * @param {string} profile
  * @param {Record<string, unknown>} data
  * @param {Array<{ value: string, label: string }>} strains
@@ -178,8 +172,6 @@ export function entryFields(profile, data, strains) {
 }
 
 /**
- * A field's label as the form shows it, for any key a file of `profile` can have.
- *
  * @param {string} profile
  * @param {string} key
  */
@@ -190,9 +182,6 @@ export function fieldLabel(profile, key) {
 }
 
 /**
- * A registry item's fields: its name, whether it is a draft, then every field its kind declares. A field that holds true
- * or false is a checkbox; every other is text, since a kind's fields are words (docs/REGISTRY.md).
- *
  * @param {string[]} declared
  * @param {Record<string, unknown>} data
  * @returns {FieldSpec[]}

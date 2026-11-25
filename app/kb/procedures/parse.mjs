@@ -206,8 +206,6 @@ function readStep(first, rest, line, number) {
 }
 
 /**
- * A section's lines as blocks: numbered items become steps; everything else at the margin is prose.
- *
  * @param {string[]} lines
  * @param {number} firstLine the file line of lines[0]
  * @returns {{ blocks: Block[], problems: string[] }}

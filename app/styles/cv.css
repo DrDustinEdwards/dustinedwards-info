@@ -11,8 +11,6 @@
   --cv-gap: var(--space-5-5);
 }
 
-/* Head */
-
 .cv-head {
   padding-block-end: var(--space-6);
 }
@@ -120,8 +118,6 @@
   color: var(--text-secondary);
   font-size: var(--t-small-size);
 }
-
-/* Filters */
 
 .cv-filters {
   display: grid;

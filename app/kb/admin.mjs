@@ -70,8 +70,6 @@ export function kbTabs(entries, gaps) {
 }
 
 /**
- * A base's entries, narrowed by a search over the title, description and slug (case and accents folded), in title order.
- *
  * @param {KbEntry[]} entries
  * @param {string} tab
  * @param {string} [q]
@@ -94,9 +92,6 @@ function itemHref(item) {
 }
 
 /**
- * Every recorded gap (`MISSING: <why>`), entries first in title order, then registry items in the registry's order, each
- * with the field and the reason as written.
- *
  * @param {KbEntry[]} entries
  * @param {KbItem[]} items
  * @returns {KbGap[]}

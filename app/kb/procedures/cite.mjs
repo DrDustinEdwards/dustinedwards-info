@@ -21,9 +21,6 @@ import { METHODS } from "./taxonomy.mjs";
 export const VERSION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 /**
- * The path of a version's frozen copy. The newest version also answers here, so a citation made today still
- * resolves to the same words when the page has moved on.
- *
  * @param {string} path the procedure's own path
  * @param {string} version
  */
@@ -54,9 +51,6 @@ export function sheetAddress(record, origin) {
 }
 
 /**
- * What a citation of the record's current version needs, or null when it has no version or no date to cite.
- * The date is the one the history gives the version, else the date the page was last updated.
- *
  * @param {{ version: string | null, updated: string | null, history?: Array<{ version: string, date: string, doi: string | null }> }} record
  * @returns {CiteFacts | null}
  */
@@ -89,8 +83,6 @@ const initials = (given) =>
     .join(" ");
 
 /**
- * The address a citation points at: the version's DOI when it has one, else its frozen copy.
- *
  * @param {{ path: string }} record
  * @param {CiteFacts} facts
  * @param {string} origin

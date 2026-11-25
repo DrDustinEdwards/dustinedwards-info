@@ -61,9 +61,6 @@ export function protocolParameters(record) {
 }
 
 /**
- * The procedure a variant was copied from, as `isBasedOn` names it (P3): its address, at the version copied when there is
- * a frozen copy of it, and its title. Resolved at request time from the parent's row (lineage.server.ts).
- *
  * @param {import("./lineage.mjs").Lineage | null} lineage
  * @param {string} origin
  */

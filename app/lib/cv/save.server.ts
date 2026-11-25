@@ -1,12 +1,11 @@
-// The one CV save, called by the site-api adapter for Carrel (app/lib/carrel/cv-handler.server.ts), and the reads
-// sync_cv and the cv-drift check use. The CV is edited through Carrel and nothing else: there is no
-// save tool and no admin editor. A save judges the file the way CI does (compile.mjs), joins it to the other
-// files D1 holds and to the publications, compiles the page its search records come from, refuses it with every
-// message if any of that fails, commits it to the repository (unless it is byte-identical, commitUnlessUnchanged),
-// then writes its D1 row and the CV's search records, so the page, its twin and its charts change on the next
-// request with no build or deploy. The commit is never reverted when the D1 write fails; the error
-// says the commit landed and how to repair the row. A save cannot create a file: the set of files is structure
-// and lives in CV_FILES.
+/*
+ * The one CV save, called by the site-api adapter for Carrel (app/lib/carrel/cv-handler.server.ts), plus the reads
+ * sync_cv and the cv-drift check use. A save judges the file the way CI does (compile.mjs), joins it to the other
+ * files D1 holds and to the publications, compiles the page its search records come from, refuses it with every
+ * message if any of that fails, commits it (unless byte-identical), then writes its D1 row and the CV's search
+ * records. The commit is never reverted when the D1 write fails: the error says so and how to repair the row. A
+ * save cannot create a file: the set of files is structure and lives in CV_FILES.
+ */
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { listCvRows, readCv } from "~/db/cv";

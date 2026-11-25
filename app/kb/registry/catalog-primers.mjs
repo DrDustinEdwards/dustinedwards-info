@@ -11,10 +11,6 @@ import { mdCell, plural } from "@drdustinedwards/site-helpers/text";
 import { itemPath, itemTwin, kindPath } from "./address.mjs";
 
 /**
- * A primer as the pages read it: the record's own fields, the literature as read (and what could not be), and what is
- * computed: from its sequence, its length, GC content, Tm and reverse complement; from its reference, its placement; and by
- * comparison, whether its sequence matches the one the paper prints. Nothing computed is stored.
- *
  * @param {import("./kinds.mjs").RegistryItem} item
  */
 export function primerRow(item) {
@@ -159,9 +155,6 @@ export const PRIMERS = defineCatalog(
 );
 
 /**
- * The primer in the same set that pairs with this one: the other direction, in the same set. Null when it has no set or
- * the set holds no mate.
- *
  * @param {PrimerRow} primer
  * @param {PrimerRow[]} primers
  */
@@ -175,10 +168,6 @@ export function mateOf(primer, primers) {
 }
 
 /**
- * The product the pair of a primer makes on its reference, computed from the two sequences and the reference they share
- * (align.mjs), so it is stored nowhere and shown on both primers. Null when the primer has no mate, the pair shares no
- * reference, or either primer does not bind it.
- *
  * @param {PrimerRow} primer
  * @param {PrimerRow[]} primers
  */
@@ -205,9 +194,6 @@ export function pairProduct(primer, primers) {
 }
 
 /**
- * The protocols that use a primer: each published protocol names its primers by id (and carries the registry's facts for
- * them), so the use is read from the protocols and never listed on the primer.
- *
  * @param {PrimerRow} primer
  * @param {Array<{ path: string, title: string, primers: Array<{ id: string }> }>} protocols
  */
@@ -233,8 +219,6 @@ export function siteText(site) {
 }
 
 /**
- * The span of a product on its reference and the sites that make it, in words.
- *
  * @param {{ length: number, start: number, end: number }} product
  */
 export function productSpanText(product) {
@@ -273,9 +257,6 @@ export function tmNote() {
 }
 
 /**
- * One primer as markdown for the twin: the same facts the page states, with the computed ones computed, and what could not be
- * found said with its reason rather than left out.
- *
  * @param {PrimerRow} primer
  * @param {PrimerRow[]} primers every published primer, for the mate and the pair's product
  * @param {Array<{ path: string, title: string }>} usedBy

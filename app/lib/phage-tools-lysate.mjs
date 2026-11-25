@@ -6,8 +6,6 @@ import { planDilution, planLines, readCount, titer } from "./phage-tools-dilutio
 /** @typedef {import("./phage-tools-base.mjs").ToolResult} ToolResult */
 
 /**
- * µl of lysate per plate = pfu wanted per plate / titer (pfu/ml) x 1,000 µl/ml, the FAQ's formula.
- *
  * @param {{ titerPfuPerMl: number, pfuPerPlate: number }} input
  */
 export function lysatePerPlate({ titerPfuPerMl, pfuPerPlate }) {
@@ -15,8 +13,6 @@ export function lysatePerPlate({ titerPfuPerMl, pfuPerPlate }) {
 }
 
 /**
- * Lysate back from flooding: plates x the lab's 5 to 7 ml per plate.
- *
  * @param {{ plates: number, lowMl?: number, highMl?: number }} input
  */
 export function floodYield({ plates, lowMl = LAB.yieldLowMl, highMl = LAB.yieldHighMl }) {
@@ -24,9 +20,6 @@ export function floodYield({ plates, lowMl = LAB.yieldLowMl, highMl = LAB.yieldH
 }
 
 /**
- * Plates to flood for a lysate volume: ml wanted / 5 to 7 ml per plate, rounded up. Fewest plates at
- * the high yield, most at the low one.
- *
  * @param {{ mlWanted: number, lowMl?: number, highMl?: number }} input
  */
 export function platesForLysate({ mlWanted, lowMl = LAB.yieldLowMl, highMl = LAB.yieldHighMl }) {
@@ -176,8 +169,6 @@ export function runMoi(values) {
 }
 
 /**
- * EOP = titer on the test host / titer on the reference host.
- *
  * @param {{ testPfuPerMl: number, referencePfuPerMl: number }} input
  */
 export function eop({ testPfuPerMl, referencePfuPerMl }) {
@@ -225,7 +216,7 @@ export function runEop(values) {
   return { ok: true, sections: [eopSection(test, reference)] };
 }
 
-/** One host's titer line for the EOP-from-counts steps. @param {string} host @param {{ plaques: number, volumeUl: number, n: number }} count @param {number} pfuPerMl */
+/** @param {string} host @param {{ plaques: number, volumeUl: number, n: number }} count @param {number} pfuPerMl */
 function countLine(host, { plaques, volumeUl, n }, pfuPerMl) {
   const undo = n === 0 ? "" : ` x 10^${n}`;
   return `Titer on the ${host}: ${formatNumber(plaques)} / ${formatNumber(volumeUl)} µl x 1,000${undo} = ${formatScientific(pfuPerMl)} pfu/ml.`;
@@ -282,9 +273,6 @@ export function runEopCounts(values) {
 }
 
 /**
- * Lysate for a run of plates: (pfu per plate x plates) / titer (pfu/ml) x 1,000 µl/ml, the webbed
- * plate formula for all the plates at once.
- *
  * @param {{ titerPfuPerMl: number, pfuPerPlate: number, plates: number }} input
  */
 export function lysateForPlates({ titerPfuPerMl, pfuPerPlate, plates }) {

@@ -69,9 +69,6 @@ function summaryOf(item) {
 }
 
 /**
- * The inventory's rows: every published registry item, and every phage read from the phages table. A phage is its own
- * table's and page's, so its row links to its section on /research/phages and states nothing the table does not.
- *
  * @param {import("./kinds.mjs").RegistryItem[]} items
  * @param {Array<{ name: string, year: number, host: string | null, county: string | null }>} phages
  */
@@ -83,7 +80,6 @@ export function inventoryRows(items, phages) {
       kindLabel: kindLabel(item.kind),
       name: item.name,
       summary: summaryOf(item),
-      // A kind that is one table has no page for the item: its row goes to the table.
       path: hasItemPage(item.kind) ? itemPath(item.kind, item.id) : kindPath(item.kind),
     })),
     ...phages.map((phage) => ({

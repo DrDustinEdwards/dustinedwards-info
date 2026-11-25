@@ -152,9 +152,6 @@ export const LIBRARY = defineCatalog(
 );
 
 /**
- * The library as rows for a download: every fact the page shows, for the filter state in the address, as ids with
- * their words, so a machine reads what a person sees. The CSV and the JSON are both this.
- *
  * @param {LibraryItem[]} items
  * @param {URLSearchParams | string} params
  * @param {string} origin
@@ -193,9 +190,6 @@ export function libraryCsv(rows) {
 }
 
 /**
- * The twin's table: every protocol with the facts the page shows, drawn from the same items. Links are to the
- * protocols' own pages, so an agent can follow them.
- *
  * @param {LibraryItem[]} items
  * @param {string} origin
  */

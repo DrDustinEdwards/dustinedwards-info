@@ -302,9 +302,6 @@ export function procedureSearchUid(path) {
 }
 
 /**
- * What the search index takes for this procedure, in the shape recordsForPages reads, with the uid
- * `procedureSearchUid` names.
- *
  * @param {ProcedureRecord} record
  * @param {import("./parse.mjs").ParsedProcedure} parsed
  */

@@ -32,9 +32,6 @@ export const cellAnchor = (
 const ROW_LISTS = new Set(["materials"]);
 
 /**
- * A step card's id, from its section's heading and its number, so a gap in a step lands on its card. A heading's own
- * `{#id}` is left out, as the page leaves it out.
- *
  * @param {string} section
  * @param {number} number
  */
@@ -55,9 +52,6 @@ const shortHeading = (heading) =>
     ?.trim() ?? heading;
 
 /**
- * Each gap with its label and the id of the input it is filled in at. A step's section is named only when two gaps are
- * in steps with the same number.
- *
  * @template {{ field: string, reason: string, where?: string[], section?: string }} G
  * @param {G[]} gaps
  * @param {string | null} profile null for a registry item, whose fields are its kind's

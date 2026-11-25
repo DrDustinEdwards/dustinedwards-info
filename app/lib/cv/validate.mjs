@@ -218,8 +218,6 @@ function checkShared(entry, where, errors) {
 }
 
 /**
- * One entry of a section file, held to its type's shape.
- *
  * @param {import("./types.ts").CvType} type
  * @param {unknown} entry
  * @param {string} where
@@ -339,8 +337,6 @@ function checkProfile(data, errors) {
 }
 
 /**
- * Parses and judges one CV file.
- *
  * @param {{ slug: string, type: import("./types.ts").CvType | "profile" }} file the registry's entry for it
  * @param {string} raw the whole file, front matter included
  * @returns {{ ok: false, errors: string[] } | { ok: true, errors: [], record: import("./types.ts").CvFileRecord }}

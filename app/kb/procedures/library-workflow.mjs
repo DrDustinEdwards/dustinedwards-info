@@ -22,11 +22,6 @@ export function toolLink(id) {
 }
 
 /**
- * Where a protocol sits in the phage workflow, drawn from the same stages the library's strip uses: its stage (the first
- * whose methods it carries out), the protocols of the nearest earlier and later stage that has any, and the calculators
- * of its stage. Nothing is typed per protocol: a protocol saved changes its neighbors' links. A protocol outside the
- * workflow (a PCR primer set) has none, and so does a stage with nothing before or after it.
- *
  * @param {LibraryItem[]} items every published library entry
  * @param {string} path the protocol's own path
  */
