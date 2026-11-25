@@ -2,7 +2,7 @@ import { kvPageRecord } from "@drdustinedwards/site-helpers/lastmod";
 import { PAGE_DATES_KEY } from "~/lib/page-dates.server";
 import { listBlogPosts, listBlogSeries, listBlogTags, nextScheduledPublishAt } from "~/db";
 import { listPublishedPageSources, listPublishedPageTitles } from "~/db/pages";
-import { listPostsWithImages } from "~/db/posts";
+import { listPostsWithImages } from "~/db/posts-series";
 import { listPublishedProcedures } from "~/db/procedures";
 import { listPublishedRegistrySources, listRegistry } from "~/db/registry";
 import { listRoster } from "~/db/roster";

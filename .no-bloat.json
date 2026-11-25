@@ -42,7 +42,6 @@
       "app/components/admin/kb-form-steps.tsx": 524,
       "app/components/admin/kb-form.tsx": 501,
       "app/components/procedure.tsx": 622,
-      "app/db/posts.ts": 676,
       "app/kb/procedures/library.mjs": 568,
       "app/kb/procedures/render.mjs": 919,
       "app/kb/procedures/validate.mjs": 1011,

@@ -1,21 +1,6 @@
 // Posts, tags, series and the feeds, as read by the site, the admin and the operator.
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gt,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  max,
-  ne,
-  or,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+
+import { and, asc, count, desc, eq, gt, inArray, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import {
   HOME_CARDS,
   HOME_PICKS,
@@ -26,10 +11,9 @@ import {
 import { inList } from "@dustinedwards/site-runtime/d1";
 import { pageEnvelope } from "capsomer/react/pagination";
 import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
-import { seriesSlug } from "../lib/series-path.mjs";
 import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { postTags, posts, tags } from "./schema";
 import { type Timings } from "../lib/timing";
-import { media, postTags, posts, tags } from "./schema";
 import { getDb, type DB, publiclyVisible, isBlogPost } from "./client";
 
 /** Ask's cache replay re-checks visibility here because KV invalidation lags. */
@@ -72,7 +56,7 @@ export async function nextScheduledPublishAt(env: Env): Promise<Date | null> {
  */
 const groupKey = sql<number>`COALESCE(CASE WHEN "posts"."series" IS NULL THEN NULL ELSE (SELECT MAX(g.id) FROM posts g WHERE g.kind = 'post' AND g.status = ${PUBLISHED_STATUS} AND g.publish_at = "posts"."publish_at" AND g.series = "posts"."series") END, "posts"."id")`;
 const partKey = sql<number>`COALESCE(${posts.part}, 0)`;
-const newestFirstOrder = (direction: typeof desc | typeof asc = desc) => [
+export const newestFirstOrder = (direction: typeof desc | typeof asc = desc) => [
   direction(posts.publishAt),
   direction(groupKey),
   direction(partKey),
@@ -80,7 +64,7 @@ const newestFirstOrder = (direction: typeof desc | typeof asc = desc) => [
 ];
 
 /** Columns the index and feed need. Deliberately excludes body and html. */
-const postCard = {
+export const postCard = {
   slug: posts.slug,
   title: posts.title,
   description: posts.description,
@@ -99,7 +83,7 @@ const postCard = {
  * missing the visibility predicate. Years come from SQLite, as in `listBlogYears`, so two
  * conversions cannot disagree across a new year in another time zone.
  */
-function listingSpanSelect(db: DB, ...narrowing: (SQL | undefined)[]) {
+export function listingSpanSelect(db: DB, ...narrowing: (SQL | undefined)[]) {
   return db
     .select({
       total: count(),
@@ -116,7 +100,7 @@ function listingSpanSelect(db: DB, ...narrowing: (SQL | undefined)[]) {
 }
 
 /** A NULL is not a zero: an empty list has no span, and the row omits itself. */
-function spanOf(
+export function spanOf(
   row: { firstYear: string | null; lastYear: string | null; minutes: number | null } | undefined,
 ) {
   return {
@@ -127,7 +111,7 @@ function spanOf(
 }
 
 /** A subquery, not a join: a join would multiply rows. */
-function carriesTag(db: DB, tagSlug: string) {
+export function carriesTag(db: DB, tagSlug: string) {
   return inArray(
     posts.id,
     db
@@ -163,10 +147,14 @@ function groupValues<R, K, V>(rows: Iterable<R>, key: (row: R) => K, value: (row
 }
 
 /** The year a post was published, as SQL; a new chunk each call, because `.as()` marks the chunk it is called on. */
-const publishYear = <T = unknown>() => sql<T>`strftime('%Y', ${posts.publishAt}, 'unixepoch')`;
+export const publishYear = <T = unknown>() =>
+  sql<T>`strftime('%Y', ${posts.publishAt}, 'unixepoch')`;
 
 /** Each row with its tags, by slug, from the admin's tag rows. */
-function withTags<R extends { slug: string }>(rows: R[], tagRows: { slug: string; tag: string }[]) {
+export function withTags<R extends { slug: string }>(
+  rows: R[],
+  tagRows: { slug: string; tag: string }[],
+) {
   const tagsBySlug = groupValues(
     tagRows,
     (row) => row.slug,
@@ -175,7 +163,7 @@ function withTags<R extends { slug: string }>(rows: R[], tagRows: { slug: string
   return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
 }
 
-async function tagsForPosts(db: DB, postIds: number[]) {
+export async function tagsForPosts(db: DB, postIds: number[]) {
   if (postIds.length === 0) return new Map<number, string[]>();
 
   const rows = await db
@@ -193,7 +181,8 @@ async function tagsForPosts(db: DB, postIds: number[]) {
 }
 
 /** Leaves out a post marked noindex (site-api's search field), for the sitemap and llms-full.txt. */
-const indexable = () => sql`COALESCE(json_extract(${posts.searchFields}, '$.noindex'), 0) = 0`;
+export const indexable = () =>
+  sql`COALESCE(json_extract(${posts.searchFields}, '$.noindex'), 0) = 0`;
 
 export async function listBlogPosts(
   env: Env,
@@ -337,105 +326,6 @@ export async function listHomeStartHere(
   return { featured, recent, total: countRows[0]?.total ?? 0 };
 }
 
-export async function listBlogYears(env: Env) {
-  return getDb(env)
-    .select({
-      year: publishYear<string>().as("year"),
-      total: count(),
-    })
-    .from(posts)
-    .where(isBlogPost())
-    .groupBy(publishYear())
-    .orderBy(desc(publishYear()));
-}
-
-export async function listSeriesParts(env: Env, series: string) {
-  return getDb(env)
-    .select({ slug: posts.slug, title: posts.title, part: posts.part })
-    .from(posts)
-    .where(and(isBlogPost(), eq(posts.series, series)))
-    .orderBy(asc(posts.part));
-}
-
-export async function listBlogSeries(env: Env) {
-  return getDb(env)
-    .select({ name: posts.series, total: count(posts.id), lastmod: max(posts.updatedAt) })
-    .from(posts)
-    .where(and(isBlogPost(), isNotNull(posts.series)))
-    .groupBy(posts.series)
-    .orderBy(asc(posts.series));
-}
-
-/** Ambiguous slugs are refused. */
-export async function getBlogSeries(env: Env, slug: string) {
-  const all = await listBlogSeries(env);
-  const matches = all.filter((row) => row.name !== null && seriesSlug(row.name) === slug);
-  const row = matches.length === 1 ? matches[0] : undefined;
-  if (!row) return null;
-  return { name: row.name as string, slug, total: Number(row.total) };
-}
-
-/** One series as cards, oldest part first. Separate so post pages skip the tag join. */
-export async function listSeriesPosts(
-  env: Env,
-  series: string,
-  options: { page?: number; perPage?: number } = {},
-) {
-  const db = getDb(env);
-  const perPage = options.perPage ?? POSTS_PER_PAGE;
-  const page = Math.max(1, options.page ?? 1);
-  const where = and(isBlogPost(), eq(posts.series, series));
-
-  const [statRows, rows] = await db.batch([
-    /* The same statement the index counts with, so every evidence row uses one arithmetic. */
-    listingSpanSelect(db, eq(posts.series, series)),
-    db
-      .select({ ...postCard, id: posts.id })
-      .from(posts)
-      .where(where)
-      .orderBy(asc(posts.part), asc(posts.id))
-      .limit(perPage)
-      .offset((page - 1) * perPage),
-  ]);
-
-  const total = Number(statRows[0]?.total ?? 0);
-  const tagMap = await tagsForPosts(
-    db,
-    rows.map((r) => r.id),
-  );
-  return {
-    posts: rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] })),
-    total,
-    page,
-    pageCount: pageEnvelope(page, perPage, total).pageCount,
-    span: spanOf(statRows[0]),
-  };
-}
-
-export async function listBlogTags(env: Env) {
-  return getDb(env)
-    .select({
-      slug: tags.slug,
-      name: tags.name,
-      total: count(posts.id),
-      lastmod: max(posts.updatedAt),
-    })
-    .from(tags)
-    .innerJoin(postTags, eq(postTags.tagId, tags.id))
-    .innerJoin(posts, eq(posts.id, postTags.postId))
-    .where(isBlogPost())
-    .groupBy(tags.slug, tags.name)
-    .orderBy(asc(tags.slug));
-}
-
-/** For the sitemap's image entries: each public post that renders an image, with its HTML. */
-export async function listPostsWithImages(env: Env) {
-  return getDb(env)
-    .select({ slug: posts.slug, html: posts.html })
-    .from(posts)
-    .where(and(isBlogPost(), sql`${posts.html} LIKE '%<img%'`));
-}
-
 export async function getBlogPost(env: Env, slug: string) {
   const db = getDb(env);
   const rows = await db
@@ -509,168 +399,4 @@ async function withNeighbors(db: DB, post: PostRow, tagSlugs: string[]) {
     previous: previous ?? null,
     next: next ?? null,
   };
-}
-
-/** Admin only, so exempt from visibility. The files the media page lists: the library's, not trashed. */
-export async function adminNavCounts(env: Env) {
-  const mediaRow = await getDb(env)
-    .select({ n: count() })
-    .from(media)
-    .where(isNull(media.trashedAt));
-  return { media: Number(mediaRow[0]?.n ?? 0) };
-}
-
-export async function listAllPostsForAdmin(env: Env) {
-  const [rows, tagRows] = await Promise.all([
-    getDb(env)
-      .select({
-        slug: posts.slug,
-        title: posts.title,
-        status: posts.status,
-        publishAt: posts.publishAt,
-        updatedAt: posts.updatedAt,
-        featured: posts.featured,
-      })
-      .from(posts)
-      .where(eq(posts.kind, "post"))
-      .orderBy(desc(posts.publishAt)),
-    listAllPostTagsForAdmin(env),
-  ]);
-  return withTags(rows, tagRows);
-}
-
-/** Corpus for `withRelated`, drafts included: it filters candidates itself. */
-export async function listPostCorpusForRelated(env: Env) {
-  const rows = await getDb(env)
-    .select({
-      slug: posts.slug,
-      title: posts.title,
-      status: posts.status,
-      publishAt: posts.publishAt,
-      // For each neighbor's description in a saved related list; not scored.
-      description: posts.description,
-    })
-    .from(posts)
-    .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
-  const tagRows = await listAllPostTagsForAdmin(env);
-
-  return withTags(rows, tagRows);
-}
-
-/** Drafts included: it filters the linking post itself. Carries `html` because a backlink is read out of a rendered body. */
-export async function listPostLinkCorpus(env: Env) {
-  return getDb(env)
-    .select({
-      slug: posts.slug,
-      title: posts.title,
-      status: posts.status,
-      publishAt: posts.publishAt,
-      html: posts.html,
-    })
-    .from(posts)
-    .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
-}
-
-/** The stored `related` and `backlinks` JSON of every file-sourced post, for the save's neighbor refresh to diff against. */
-export async function listPostDerivedLists(env: Env) {
-  return getDb(env)
-    .select({ slug: posts.slug, related: posts.related, backlinks: posts.backlinks })
-    .from(posts)
-    .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
-}
-
-/** Markdown and covers for the citation scan, drafts included: they still block deletion. */
-export async function listPostSourcesForCitations(env: Env) {
-  return getDb(env)
-    .select({
-      slug: posts.slug,
-      title: posts.title,
-      body: posts.body,
-      coverImage: posts.coverImage,
-    })
-    .from(posts)
-    .where(eq(posts.kind, "post"));
-}
-
-/** All post tags, drafts included, for the related and backlinks corpora; `listBlogTags` hides drafts. */
-async function listAllPostTagsForAdmin(env: Env) {
-  return getDb(env)
-    .select({ slug: posts.slug, tag: tags.slug })
-    .from(postTags)
-    .innerJoin(posts, eq(posts.id, postTags.postId))
-    .innerJoin(tags, eq(tags.id, postTags.tagId))
-    .where(eq(posts.kind, "post"))
-    .orderBy(asc(tags.slug));
-}
-
-/** `id` is for the tag join, stripped after. */
-const FEED_COLUMNS = {
-  id: posts.id,
-  slug: posts.slug,
-  title: posts.title,
-  description: posts.description,
-  publishAt: posts.publishAt,
-  updatedAt: posts.updatedAt,
-  coverImage: posts.coverImage,
-};
-
-type FeedOptions = {
-  perPage?: number;
-  tag?: string | null;
-  series?: string | null;
-  /** `part` for a series feed; anything else is newest first. */
-  orderBy?: "date" | "part";
-  indexedOnly?: boolean;
-};
-
-/** The filter and order both feed listings share. Narrowed in the query: slicing afterwards would cap before narrowing. */
-function feedScope(db: DB, options: FeedOptions) {
-  const clauses = [isBlogPost()];
-  if (options.tag) clauses.push(carriesTag(db, options.tag));
-  if (options.series) clauses.push(eq(posts.series, options.series));
-  if (options.indexedOnly) clauses.push(indexable());
-  const order = options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : newestFirstOrder();
-  return { where: and(...clauses), order };
-}
-
-/** Attaches each row's tags and strips the `id` the join needed. */
-async function withFeedTags<R extends { id: number }>(db: DB, rows: R[]) {
-  const tagMap = await tagsForPosts(
-    db,
-    rows.map((r) => r.id),
-  );
-  return rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] }));
-}
-
-/** Visible posts with markdown, newest first; limited in SQL because bodies are heavy. */
-export async function listBlogPostsFullText(env: Env, options: FeedOptions = {}) {
-  const db = getDb(env);
-  const { where, order } = feedScope(db, options);
-  const query = db
-    .select({ ...FEED_COLUMNS, body: posts.body })
-    .from(posts)
-    .where(where)
-    .orderBy(...order);
-  return withFeedTags(db, await (options.perPage ? query.limit(options.perPage) : query));
-}
-
-/** Same posts with rendered HTML, for RSS. A sibling, not a union-returning flag. */
-export async function listBlogPostsRendered(env: Env, options: FeedOptions = {}) {
-  const db = getDb(env);
-  const { where, order } = feedScope(db, options);
-  const query = db
-    .select({ ...FEED_COLUMNS, html: posts.html })
-    .from(posts)
-    .where(where)
-    .orderBy(...order);
-  return withFeedTags(db, await (options.perPage ? query.limit(options.perPage) : query));
-}
-
-export async function getBlogPostMarkdown(env: Env, slug: string) {
-  const rows = await getDb(env)
-    .select({ body: posts.body, title: posts.title })
-    .from(posts)
-    .where(and(eq(posts.slug, slug), isBlogPost()))
-    .limit(1);
-  return rows[0] ?? null;
 }
