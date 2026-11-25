@@ -1,4 +1,3 @@
-import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
@@ -6,10 +5,10 @@ import { runTool } from "~/lib/operator/api.server";
 import { ZERO_RESULT_RETENTION_SECONDS } from "~/lib/search/zero-result.mjs";
 
 import { testEnv } from "./test-env";
+import { operatorEnv } from "./route-helpers";
 
 const OPERATOR: Actor = { kind: "operator", id: "test-operator" };
 const CTX = { waitUntil: () => undefined, passThroughOnException: () => undefined } as never;
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 
 /* Raw D1, not the drizzle builder: the column is `mode: "timestamp"`, so the builder wants a Date and
    this helper wants to plant an exact epoch second, the same way test/worker/seed.ts seeds received_at. */

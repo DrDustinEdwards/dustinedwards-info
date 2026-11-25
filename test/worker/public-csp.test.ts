@@ -12,6 +12,8 @@ import { SITE_ORIGIN } from "~/lib/seo";
 
 import worker from "../../workers/app";
 
+import { fetchPage } from "./route-helpers";
+
 /*
  * A public page through the REAL root (its Layout, loader and middleware) and the real server
  * entry: the site header with its island markers, a second marker, and a JSON-LD block. What the policy has to allow is whatever this renders, so it is asserted here
@@ -78,14 +80,7 @@ vi.mock("virtual:react-router/server-build", async () => {
 });
 
 async function render(path: string) {
-  const ctx = createExecutionContext();
-  const response = await worker.fetch(
-    new Request(`https://example.com${path}`) as never,
-    env as never,
-    ctx,
-  );
-  const html = await response.text();
-  await waitOnExecutionContext(ctx);
+  const { response, html } = await fetchPage(path);
   const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].map(
     ([, attrs, text]) => ({
       type: /\btype="([^"]*)"/.exec(attrs ?? "")?.[1] ?? "",

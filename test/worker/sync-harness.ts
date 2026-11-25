@@ -9,7 +9,7 @@ import { runTool } from "~/lib/operator/api.server";
 
 const operator = { kind: "operator", id: "test" } as const;
 
-export function syncOf(tool: string, check: string) {
+export function syncOf(tool: Parameters<typeof runTool>[2], check: string) {
   const sync = () => runTool(env as unknown as Parameters<typeof runTool>[0], operator, tool, {});
   const driftCheck = async () =>
     (await runHealthChecks(env as never)).checks.find((c) => c.name === check);

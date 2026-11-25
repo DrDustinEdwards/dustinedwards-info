@@ -14,7 +14,7 @@ import {
   commits,
 } from "./source-stub";
 import { expectDrift, expectIdempotent, expectSynced, syncOf } from "./sync-harness";
-import { purgedTagsOf, recordPurges } from "./route-helpers";
+import { purgedTagsOf, recordPurges, operatorEnv, operator } from "./route-helpers";
 
 /* The registry framework, end to end, with no real kind: the registry ships with none (app/kb/registry/kinds.mjs),
  * so this file brings one, a "widget", and holds the save, sync_registry, the registry-drift check, the operator's
@@ -80,8 +80,6 @@ const rowFor = (kind: string, id: string) =>
     }>();
 const count = async () =>
   (await env.DB.prepare("SELECT COUNT(*) AS n FROM registry").first<{ n: number }>())?.n ?? -1;
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const { sync, driftCheck } = syncOf("sync_registry", "registry-drift");
 const purgedTags = () => purgedTagsOf(purge);
 

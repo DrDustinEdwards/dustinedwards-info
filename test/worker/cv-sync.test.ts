@@ -5,6 +5,7 @@ import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { contentPageSearchUid } from "~/lib/content-pages.mjs";
 import { CV_FILES, cvSourcePath } from "~/lib/cv/parse.mjs";
 
+import { rawOf, repository } from "./cv-source";
 import { putSource, stubSources, type SourceStub } from "./source-stub";
 import { expectDrift, expectIdempotent, expectSynced, syncOf } from "./sync-harness";
 import { seedPublications } from "./seed";
@@ -12,19 +13,6 @@ import { seedPublications } from "./seed";
 /* sync_cv and the cv-drift check: D1 converges to content/cv through the compile and write doors a CV save
  * uses (the repository is the source). Each case starts from an empty cv table and a repository
  * ahead of it. */
-
-const FILES = import.meta.glob("../../content/cv/*.md", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-}) as Record<string, string>;
-const rawOf = (slug: string) => {
-  const found = FILES[`../../content/cv/${slug}.md`];
-  if (found === undefined) throw new Error(`no content/cv/${slug}.md`);
-  return found;
-};
-const repository = () =>
-  Object.fromEntries(CV_FILES.map(({ slug }) => [cvSourcePath(slug), rawOf(slug)]));
 
 const ADDED = "Added Through Git Equipment Award";
 

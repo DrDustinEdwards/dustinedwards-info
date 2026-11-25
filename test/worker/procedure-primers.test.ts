@@ -7,12 +7,18 @@ import { ProcedureSheet, ProcedureView } from "~/components/procedure";
 import { runTool } from "~/lib/operator/api.server";
 import { procedurePath } from "~/kb/procedures/parse.mjs";
 import { saveRegistryItem } from "~/kb/registry/save.server";
-import { loader as pageLoader } from "~/routes/procedure";
 import { loader as twinLoader } from "~/routes/procedure[.md]";
 
 import coi from "../../content/procedures/coi-primers.md?raw";
 
-import { routeContext, recordPurges, purgedTagsOf } from "./route-helpers";
+import {
+  routeContext,
+  recordPurges,
+  purgedTagsOf,
+  operatorEnv,
+  operator,
+  procedureRecord,
+} from "./route-helpers";
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles } from "./seed";
 
@@ -39,9 +45,7 @@ const PAGE = `https://example.com/research/protocols/${SLUG}`;
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
 recordPurges(purge);
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 const gitEnv = () => env as unknown as Parameters<typeof saveRegistryItem>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const carrel = { kind: "carrel", changeId: "chg-primer" } as const;
 
 let gh: SourceStub;
@@ -66,14 +70,7 @@ const save = async () => {
   const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw: coi });
   expect(saved.ok, JSON.stringify(saved)).toBe(true);
 };
-const record = async () =>
-  (
-    await pageLoader({
-      request: new Request(PAGE),
-      context: routeContext(),
-      params: { slug: SLUG },
-    } as never)
-  ).record;
+const record = () => procedureRecord(SLUG);
 const stored = async () =>
   JSON.parse(
     (

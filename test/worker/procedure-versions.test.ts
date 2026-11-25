@@ -14,7 +14,7 @@ import { loader as versionTwinLoader } from "~/routes/procedure.version[.md]";
 
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 
-import { routeContext } from "./route-helpers";
+import { routeContext, operatorEnv, operator } from "./route-helpers";
 import { putSource, stubSources, writes, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
@@ -22,8 +22,6 @@ import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
  * copy of every version at <page>/v/<version>, written once and never changed, so a printed sheet's QR code and a
  * citation keep meaning what they did. The file is the repository's own phage-isolation, given versions here. */
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const SLUG = "phage-isolation";
 const PAGE = `https://example.com/research/protocols/${SLUG}`;
 const PATH = `/research/protocols/${SLUG}`;

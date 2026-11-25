@@ -1,4 +1,3 @@
-import { env } from "cloudflare:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -6,20 +5,17 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ProcedureSheet, ProcedureView } from "~/components/procedure";
 import { runTool } from "~/lib/operator/api.server";
 import { procedurePath } from "~/kb/procedures/parse.mjs";
-import { loader as pageLoader } from "~/routes/procedure";
 import { loader as twinLoader } from "~/routes/procedure[.md]";
 
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 
-import { routeContext } from "./route-helpers";
+import { routeContext, operatorEnv, operator, procedureRecord } from "./route-helpers";
 import { stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /* Calculators folded under the steps that name them (docs/PROCEDURES.md): what a reader, a machine and the printed
  * sheet are given. The file is the repository's own phage-isolation, whose steps 2, 3 and 4 name a calculator each. */
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const SLUG = "phage-isolation";
 const PAGE = `https://example.com/research/protocols/${SLUG}`;
 
@@ -39,12 +35,7 @@ afterEach(async () => {
 async function record(raw: string) {
   const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw });
   expect(saved.ok).toBe(true);
-  const out = await pageLoader({
-    request: new Request(PAGE),
-    context: routeContext(),
-    params: { slug: SLUG },
-  } as never);
-  return out.record;
+  return procedureRecord(SLUG);
 }
 
 describe("calculators in a procedure's steps", () => {

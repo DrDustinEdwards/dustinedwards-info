@@ -1,9 +1,8 @@
-import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
 import { createElement as h, lazy, Suspense } from "react";
 import { Outlet } from "react-router";
 import { expect, it, vi } from "vitest";
 
-import worker from "../../workers/app";
+import { fetchPage } from "./route-helpers";
 
 /*
  * An admin document route whose one Suspense boundary resolves after the shell has flushed, so
@@ -51,17 +50,7 @@ vi.mock("virtual:react-router/server-build", async () => {
   return { ...build, default: build };
 });
 
-async function render(path: string) {
-  const ctx = createExecutionContext();
-  const response = await worker.fetch(
-    new Request(`https://example.com${path}`) as never,
-    env as never,
-    ctx,
-  );
-  const html = await response.text();
-  await waitOnExecutionContext(ctx);
-  return { response, html };
-}
+const render = fetchPage;
 
 const nonceOf = (response: Response) =>
   /'nonce-([^']+)'/.exec(response.headers.get("content-security-policy") ?? "")?.[1];

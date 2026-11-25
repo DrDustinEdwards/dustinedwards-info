@@ -1,4 +1,3 @@
-import { env } from "cloudflare:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -10,7 +9,7 @@ import VersionSheetRoute, { loader as versionSheetLoader } from "~/routes/proced
 
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 
-import { routeContext } from "./route-helpers";
+import { routeContext, operatorEnv, operator } from "./route-helpers";
 import { stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
@@ -18,8 +17,6 @@ import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
  * frozen copy of that exact version, so a sheet printed now still opens the words it was printed from after the page has
  * moved on, and a sheet reprinted from an old version opens that version. */
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const SLUG = "phage-isolation";
 const PATH = `/research/protocols/${SLUG}`;
 const ORIGIN = "https://dustinedwards.info";

@@ -4,13 +4,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runTool } from "~/lib/operator/api.server";
 
 import { post } from "./fixtures";
+import { operatorEnv, operator } from "./route-helpers";
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 
 /* sync_posts refuses a content/posts listing with no markdown instead of deleting every post row, as the
  * other kinds' syncs do. */
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const SLUG = "posts-sync-empty-listing";
 const PATH = `content/posts/${SLUG}.md`;
 

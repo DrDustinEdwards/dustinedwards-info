@@ -1,11 +1,13 @@
-import { createExecutionContext, env } from "cloudflare:test";
+import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RouterContextProvider, createRoutesStub } from "react-router";
 import { expect, vi } from "vitest";
 
+import { runTool } from "~/lib/operator/api.server";
+import { loader as procedureLoader } from "~/routes/procedure";
 import { carrelStep } from "~/lib/carrel/site-api.server";
-import { Renderer } from "../../workers/app";
+import worker, { Renderer } from "../../workers/app";
 import {
   cloudflareContext,
   documentHandlerContext,
@@ -201,4 +203,31 @@ export async function sitemapPaths() {
   return [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(
     (m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/",
   );
+}
+
+/** The operator's door, as the sync and save tools see it. */
+export const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
+export const operator = { kind: "operator", id: "test" } as const;
+
+/** The compiled record of a procedure, as its page loader hands it to the route. */
+export async function procedureRecord(slug: string) {
+  const out = await procedureLoader({
+    request: new Request(`https://example.com/research/protocols/${slug}`),
+    context: routeContext(),
+    params: { slug },
+  } as never);
+  return out.record;
+}
+
+/** One request through the Worker's fetch, with the execution context settled: the response and its body. */
+export async function fetchPage(path: string) {
+  const ctx = createExecutionContext();
+  const response = await worker.fetch(
+    new Request(`https://example.com${path}`) as never,
+    env as never,
+    ctx,
+  );
+  const html = await response.text();
+  await waitOnExecutionContext(ctx);
+  return { response, html };
 }
