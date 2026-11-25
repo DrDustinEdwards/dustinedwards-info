@@ -1,0 +1,224 @@
+/* Results */
+
+.cv-group {
+  margin-block-start: var(--space-7);
+}
+
+.cv-group[hidden],
+.cv-part[hidden],
+.cv-entry[hidden] {
+  display: none;
+}
+
+.cv-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin: 0;
+  padding-block: var(--space-4) var(--space-3);
+  border-block-start: var(--line-w-thick) solid var(--text);
+  font-family: var(--font-sans);
+  font-size: clamp(var(--title-3), 1.3rem + 0.7vw, var(--title-2));
+  font-weight: var(--weight-heading);
+  line-height: var(--leading-tight);
+}
+
+.cv-group-count {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: var(--weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+.cv-group-note {
+  max-width: 48rem;
+  margin: var(--space-4) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--t-small-size);
+  line-height: 1.55;
+}
+
+.cv-part-title {
+  margin: var(--space-6) 0 0;
+  padding-block-end: var(--space-2);
+  border-block-end: var(--line-w) solid var(--text);
+  color: var(--text);
+  line-height: var(--leading-loose);
+}
+
+.cv-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cv-entry {
+  display: grid;
+  grid-template-columns: var(--cv-rail) minmax(0, 1fr);
+  column-gap: var(--cv-gap);
+  padding-block: var(--space-4-5);
+  border-block-end: var(--line-w) solid var(--dust);
+  scroll-margin-top: calc(var(--header-h) + var(--space-5));
+}
+
+.cv-when {
+  padding-block-start: 0.2rem;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-relaxed);
+}
+
+.cv-body {
+  min-width: 0;
+}
+
+.cv-body > p {
+  margin: 0;
+}
+
+.cv-title {
+  max-width: 62ch;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-page);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-compact);
+}
+
+.cv-title a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.cv-title a:hover {
+  color: var(--brand);
+}
+
+.cv-amount {
+  margin-inline-end: var(--space-3);
+  color: var(--brand);
+  font-family: var(--font-mono);
+  font-size: var(--fs-lead);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.cv-authors,
+.cv-meta {
+  max-width: 70ch;
+  margin-block-start: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--t-small-size);
+  line-height: var(--leading-normal);
+}
+
+.cv-authors {
+  color: var(--text);
+}
+
+.cv-me {
+  font-weight: 650;
+}
+
+.cv-venue {
+  font-style: italic;
+}
+
+.cv-tags {
+  margin-block-start: var(--space-2-5);
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
+  font-weight: 560;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.cv-paper-more,
+.cv-duties {
+  margin-block-start: var(--space-3);
+  font-size: var(--t-small-size);
+}
+
+.cv-paper-more summary,
+.cv-duties summary {
+  width: fit-content;
+  min-height: var(--control-min-dense);
+  color: var(--brand);
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.cv-paper-more summary:focus-visible,
+.cv-duties summary:focus-visible {
+  outline: var(--focus-width) solid var(--brand);
+  outline-offset: var(--focus-offset);
+}
+
+.cv-paper-panel,
+.cv-duty {
+  margin-block-start: var(--space-4);
+  padding-inline-start: var(--space-5);
+  border-inline-start: var(--line-w-thick) solid var(--tint-brand);
+}
+
+.cv-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cv-panel-label {
+  margin: var(--space-4) 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+}
+
+.cv-cite,
+.cv-authors-full {
+  margin: 0;
+  max-width: 72ch;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.cv-cite {
+  padding: var(--space-3) var(--space-4);
+  border: var(--line-w) solid var(--dust);
+  border-radius: 0;
+  font-family: var(--font-serif);
+  user-select: all;
+}
+
+.cv-cite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0 0;
+}
+
+.cap-copy[hidden] {
+  display: none;
+}
+
+.cv-duty ul {
+  margin: 0;
+  padding-inline-start: 1.125rem;
+  line-height: 1.55;
+}
+
+.cv-foot {
+  margin: var(--space-7) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--t-small-size);
+}

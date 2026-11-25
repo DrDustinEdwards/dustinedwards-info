@@ -38,7 +38,6 @@
     },
     "legacy": {},
     "size": {
-      "app/app.css": 515,
       "app/components/admin/kb-form-steps.tsx": 524,
       "app/components/admin/kb-form.tsx": 501,
       "app/components/procedure.tsx": 622,
@@ -56,7 +55,6 @@
       "app/lib/search/search.server.ts": 541,
       "app/routes/colophon.tsx": 605,
       "app/routes/cv.tsx": 629,
-      "app/styles/cv.css": 613,
       "app/styles/katex.generated.css": 1124,
       "mcp/scripts/check-wrapper.mjs": 722,
       "scripts/build-og.mjs": 541,
