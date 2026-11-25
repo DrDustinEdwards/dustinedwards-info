@@ -52,7 +52,6 @@
       "app/lib/editor/publish.server.ts": 508,
       "app/lib/operator/sync-tools.server.ts": 610,
       "app/lib/search/search.server.ts": 541,
-      "app/routes/colophon.tsx": 605,
       "app/styles/cv.css": 613,
       "app/styles/katex.generated.css": 1124,
       "mcp/scripts/check-wrapper.mjs": 722,
