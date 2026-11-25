@@ -27,7 +27,7 @@
   "devDependencies": {
     "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.64.0",
     "@modelcontextprotocol/conformance": "0.2.0-alpha.12",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "wrangler": "4.166.0"
   },
   "overrides": {
