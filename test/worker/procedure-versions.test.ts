@@ -3,7 +3,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { ProcedureView, VersionNotice } from "~/components/procedure";
+import { ProcedureView } from "~/components/procedure";
+import { VersionNotice } from "~/components/procedure-versions";
 import { getFrozenVersion, listFrozenVersions } from "~/db/procedure-versions";
 import { readProcedureSides } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";

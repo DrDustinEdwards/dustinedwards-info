@@ -3,7 +3,8 @@ import { data } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
-import { ProcedureView, VersionNotice } from "~/components/procedure";
+import { ProcedureView } from "~/components/procedure";
+import { VersionNotice } from "~/components/procedure-versions";
 import { getFrozenVersion, listFrozenVersions } from "~/db/procedure-versions";
 import { getProcedureByPath } from "~/db/procedures";
 import { getEnv } from "~/lib/context";

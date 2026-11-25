@@ -41,7 +41,6 @@
       "app/app.css": 515,
       "app/components/admin/kb-form-steps.tsx": 524,
       "app/components/admin/kb-form.tsx": 501,
-      "app/components/procedure.tsx": 622,
       "app/db/posts.ts": 676,
       "app/db/schema.ts": 792,
       "app/lab/members.server.ts": 505,
