@@ -15,7 +15,7 @@ import { BASES } from "./bases.mjs";
 import { labelGaps } from "./gap-labels.mjs";
 import { procedurePath } from "./procedures/parse.mjs";
 import { compile as compileProcedure, saveProcedure } from "./procedures/save.server";
-import { hasItemPage, itemPath, kindPath } from "./registry/catalog.mjs";
+import { hasItemPage, itemPath, kindPath } from "./registry/address.mjs";
 import { registryPath } from "./registry/compile.mjs";
 import { KINDS } from "./registry/kinds.mjs";
 import { checkRegistryItem, saveRegistryItem } from "./registry/save.server";

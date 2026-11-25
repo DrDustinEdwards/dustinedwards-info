@@ -7,7 +7,7 @@ import {
   equipmentMarkdown,
   equipmentRows,
   equipmentUses,
-} from "../app/kb/registry/catalog.mjs";
+} from "../app/kb/registry/catalog-reagents.mjs";
 import { buildRegistry } from "../scripts/lib/registry.mjs";
 
 /* The equipment kind (docs/REGISTRY.md): the instruments and labware the protocols list, held as one table with a page for each item (A1),

@@ -296,7 +296,11 @@
     "app/kb/registry/strain.mjs",
     "app/kb/registry/tm.mjs",
     // How the registry reads on the site: scripts/check-links.mjs names each page from it, and it reads the primer arithmetic.
+    "app/kb/registry/address.mjs",
     "app/kb/registry/catalog.mjs",
+    "app/kb/registry/catalog-primers.mjs",
+    "app/kb/registry/catalog-reagents.mjs",
+    "app/kb/registry/catalog-strains.mjs",
     "app/lib/primers.mjs",
     // Where a primer binds a reference and the product a pair makes (docs/REGISTRY.md), with the references it reads.
     "app/kb/registry/align.mjs",

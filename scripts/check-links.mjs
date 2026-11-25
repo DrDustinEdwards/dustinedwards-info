@@ -51,7 +51,7 @@ import { buildDictionary } from "./lib/dictionary.mjs";
 import { renderPost } from "./lib/content.mjs";
 import { buildProcedures } from "./lib/procedures.mjs";
 import { buildRegistry } from "./lib/registry.mjs";
-import { hasItemPage, itemPath, kindPath } from "../app/kb/registry/catalog.mjs";
+import { hasItemPage, itemPath, kindPath } from "../app/kb/registry/address.mjs";
 import { buildPublications } from "./lib/publications.mjs";
 import { fixedSectionIds } from "../app/kb/procedures/render.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";

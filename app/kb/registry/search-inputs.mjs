@@ -3,7 +3,8 @@
 // it. The record is derived from the item and nothing else, so a save, sync_registry and sync:content write the same text, and a
 // draft has none. Like a paper's, it is one record with no deep links: an item has no sections to link to.
 
-import { itemPath, primerRow, siteText } from "./catalog.mjs";
+import { itemPath } from "./address.mjs";
+import { primerRow, siteText } from "./catalog-primers.mjs";
 import { stated } from "./primer.mjs";
 import { designationOf } from "./strain.mjs";
 

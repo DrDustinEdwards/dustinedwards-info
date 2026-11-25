@@ -7,7 +7,7 @@ import { lineageText, type Lineage } from "~/kb/procedures/lineage.mjs";
 import { HOWTO_TYPES } from "~/kb/procedures/validate.mjs";
 import type { KeyResourceGroup } from "~/kb/procedures/key-resources.mjs";
 import { BASES } from "~/kb/bases.mjs";
-import { itemPath } from "~/kb/registry/catalog.mjs";
+import { itemPath } from "~/kb/registry/address.mjs";
 import {
   UNIT_SYSTEMS,
   ingredientSteps,

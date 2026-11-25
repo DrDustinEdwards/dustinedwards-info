@@ -5,7 +5,7 @@
 import { foldText } from "../lib/cv/view.mjs";
 import { BASES } from "./bases.mjs";
 import { labelGaps } from "./gap-labels.mjs";
-import { hasItemPage, itemPath, kindPath } from "./registry/catalog.mjs";
+import { hasItemPage, itemPath, kindPath } from "./registry/address.mjs";
 import { isGap } from "./procedures/gap.mjs";
 import { KINDS } from "./registry/kinds.mjs";
 

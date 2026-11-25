@@ -13,7 +13,7 @@ import GithubSlugger from "github-slugger";
 
 import { TOOLS } from "../../lib/phage-tools.mjs";
 import { productsForRows } from "../registry/align.mjs";
-import { itemPath } from "../registry/catalog.mjs";
+import { itemPath } from "../registry/address.mjs";
 import { plainText } from "../../lib/search/records.mjs";
 import { keyResources, keyResourcesMarkdown } from "./key-resources.mjs";
 import { proofFromFile } from "./proof.mjs";

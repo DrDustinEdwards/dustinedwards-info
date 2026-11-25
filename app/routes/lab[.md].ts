@@ -5,30 +5,30 @@ import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
+import { LAB_PATH, itemPath, kindFromSegment, kindPath } from "~/kb/registry/address.mjs";
+import { INVENTORY, inventoryRows } from "~/kb/registry/catalog.mjs";
 import {
-  LAB_PATH,
-  INVENTORY,
   STRAINS,
-  inventoryRows,
-  itemPath,
-  kindFromSegment,
-  kindPath,
+  protocolsUsingStrain,
+  strainMarkdown,
+  strainRows,
+} from "~/kb/registry/catalog-strains.mjs";
+import {
   primerMarkdown,
   primerRow,
   primerRows,
   primersMarkdown,
   protocolsUsing,
-  protocolsUsingStrain,
+  tmNote,
+} from "~/kb/registry/catalog-primers.mjs";
+import {
   equipmentItemMarkdown,
   equipmentMarkdown,
   equipmentRows,
   reagentItemMarkdown,
   reagentRows,
   reagentsMarkdown,
-  strainMarkdown,
-  strainRows,
-  tmNote,
-} from "~/kb/registry/catalog.mjs";
+} from "~/kb/registry/catalog-reagents.mjs";
 import { LAB_CACHE_TAGS } from "~/kb/registry/route";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 

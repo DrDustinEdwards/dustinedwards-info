@@ -11,7 +11,7 @@ import { listPublishedPublicationSources, listPublishedPublications } from "~/db
 import { BASES } from "~/kb/bases.mjs";
 import { LIBRARY_BASES } from "~/kb/libraries.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
-import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/kb/registry/catalog.mjs";
+import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/kb/registry/address.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
 import {
   CONTENT_PAGE_PATHS,

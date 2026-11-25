@@ -4,7 +4,7 @@
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { gitBlobSha } from "../../lib/content/hashes.mjs";
-import { itemPath } from "../registry/catalog.mjs";
+import { itemPath } from "../registry/address.mjs";
 import { NON_STRAIN_ORGANISMS } from "./taxonomy.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";
 import { procedureSearchInput, renderProcedure } from "./render.mjs";

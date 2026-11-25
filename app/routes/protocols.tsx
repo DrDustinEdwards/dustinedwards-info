@@ -33,7 +33,7 @@ import {
   type LibraryItem,
 } from "~/kb/procedures/library.mjs";
 import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
-import { registryTabs } from "~/kb/registry/catalog.mjs";
+import { registryTabs } from "~/kb/registry/address.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import { SITE, SITE_ORIGIN, pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
