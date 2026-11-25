@@ -282,6 +282,8 @@ export async function savePublication(
     slug,
     ...written,
     draft: compiled.draft,
-    askSync: written.note ? null : await askSyncAfterWrite(env, `paper saved: ${compiled.record.slug}`),
+    askSync: written.note
+      ? null
+      : await askSyncAfterWrite(env, `paper saved: ${compiled.record.slug}`),
   };
 }
