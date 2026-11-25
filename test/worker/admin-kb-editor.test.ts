@@ -265,7 +265,7 @@ describe("the Knowledge Base form", () => {
         '<h1 class="page-title cap-layout-grid">Phage DNA extraction, previewed</h1>',
       );
       expect(drawn.html).toContain('class="prose procedure"');
-      expect(drawn.styles).toHaveLength(5);
+      expect(drawn.styles).toHaveLength(6);
       const refused = await preview({
         ...form.model,
         data: { ...form.model.data, status: "sometimes" },
