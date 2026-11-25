@@ -10,7 +10,7 @@ import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/
 
 import { listDictionaryRows } from "~/db/dictionary";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { asSiteApiError, fileForSave } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { dictionaryPath, parseDictionaryEntry } from "~/lib/dictionary/parse.mjs";
 import { fileIsDraft, saveDictionaryEntry } from "~/lib/dictionary/save.server";
@@ -103,9 +103,7 @@ export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
     // Keeps the stored status, as a post does: a save to a live entry edits it live, and a new entry starts as
     // a draft. First publication is a separate call, which Carrel's key may make.
     async saveDraft(key, input) {
-      const file = await readFile(env, dictionaryPath(key));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      const file = await fileForSave(env, dictionaryPath(key), input.expectedVersion);
       const raw = withDraft(input.source, file ? fileIsDraft(file.content) : true);
       return write(key, input.changeId, raw, input.expectedVersion);
     },

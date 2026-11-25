@@ -1,5 +1,4 @@
-import { KbFileEditor } from "~/components/admin/kb-file-editor";
-import { KbFormEditor } from "~/components/admin/kb-form";
+import { KbEditPage } from "~/components/admin/kb-edit";
 import { kbEditorAction, kbEditorLoader } from "~/kb/editor-route.server";
 
 import type { Route } from "./+types/admin.kb.item";
@@ -22,19 +21,5 @@ export function action(args: Route.ActionArgs) {
 }
 
 export default function EditItem({ loaderData, actionData }: Route.ComponentProps) {
-  const { file, form, view, saved, created } = loaderData;
-  // The form is the editor; the file itself is behind Advanced (?view=file).
-  if (view === "form" && form) {
-    return (
-      <KbFormEditor
-        key={file.sha}
-        file={file}
-        form={form}
-        saved={saved}
-        created={created}
-        actionData={actionData}
-      />
-    );
-  }
-  return <KbFileEditor key={file.sha} file={file} saved={saved} actionData={actionData} />;
+  return <KbEditPage loaderData={loaderData} actionData={actionData} />;
 }

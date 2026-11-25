@@ -10,7 +10,7 @@ import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import { listCvRows } from "~/db/cv";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { asSiteApiError, fileForSave } from "~/lib/carrel/errors.server";
 import { CV_PAGE } from "~/lib/cv/entries.mjs";
 import { CV_DIR, CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { saveCvFile } from "~/lib/cv/save.server";
@@ -121,9 +121,7 @@ export function cvHandler(
     // A file always exists, so a save that names no version is a conflict, as a page's is.
     async saveDraft(slug, input) {
       const found = target(slug);
-      const file = await readFile(env, found);
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      const file = await fileForSave(env, found, input.expectedVersion);
       if (!file)
         throw new RefusedError(
           `The file ${found} is missing from the repository, so it cannot be saved.`,

@@ -10,7 +10,7 @@ import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import { listPhageRows } from "~/db/phages";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { asSiteApiError, fileForSave } from "~/lib/carrel/errors.server";
 import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { PHAGES_PAGE_PATH, phagePath } from "~/lib/phages/compile.mjs";
 import { PHAGE_SLUG, savePhage } from "~/lib/phages/save.server";
@@ -89,9 +89,7 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
         throw new RefusedError(
           `"${slug}" is not a phage file key; a phage is named for its name in lower case, such as acorn15.`,
         );
-      const file = await readFile(env, phagePath(slug));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      await fileForSave(env, phagePath(slug), input.expectedVersion);
       return write(slug, input.changeId, input.source, input.expectedVersion);
     },
 
