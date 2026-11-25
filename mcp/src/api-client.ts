@@ -1,27 +1,14 @@
 /**
- * The API LEG: wrapper to app.
+ * The API LEG: wrapper to app. The ONLY way this Worker reaches the publish machinery: every tool call becomes
+ * authenticated HTTP to /api/operator on the dustinedwards Worker, where the validators, first-publish policy,
+ * Git Data commit, D1 sync and AI index sync live. Nothing here interprets a rule, and it must never learn.
  *
- * This is the ONLY way this Worker reaches the publish machinery, and that is
- * the whole architecture in one file. Every tool call becomes authenticated
- * HTTP to /api/operator on the dustinedwards Worker, where the validators, the
- * first-publish policy, the atomic Git Data commit, the D1 sync and the AI
- * index sync all live.
+ * It goes over the `SITE` service binding: a public URL is a needless internet hop and, on this zone, the
+ * same-zone Worker-to-Worker fetch that answers Cloudflare error 1042. A service binding is still HTTP, with the
+ * same bearer, authentication and rate limiter; it is not an in-process call.
  *
- * OVER THE `SITE` SERVICE BINDING. The public operator URL would be
- * one hop through the internet for a call between two Workers on one account,
- * and on the dustinedwards.info zone it would also be the Worker-to-Worker
- * same-zone fetch that answers Cloudflare error 1042. A
- * service binding is still HTTP: the request carries the same bearer, crosses
- * the same operator authentication and the same rate limiter, and the site
- * cannot tell it from any other operator call. It is not an in-process call.
- *
- * Nothing here interprets a rule. It does not know what the first-publish policy
- * is, it cannot tell a policy refusal from a validation failure except by
- * reading what the API said, and it must never learn.
- *
- * The credential here identifies WHAT this Worker may do. It is deliberately a
- * different value from the client-leg credential, which identifies WHO is
- * operating. A failure of one must read differently from a refusal by the other.
+ * This credential identifies WHAT this Worker may do, deliberately a different value from the client-leg
+ * credential, which identifies WHO is operating, so a failure of one reads differently from a refusal by the other.
  */
 
 import { ApiLegError, callApi } from "@dustinedwards/site-runtime/mcp-server";

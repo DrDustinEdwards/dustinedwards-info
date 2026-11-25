@@ -51,7 +51,6 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/site-api",
   "/software/d1-dump",
   "/software/devkit",
-  // The CV. Its entries are the files in content/cv/ (docs/CV.md), not a markdown page kept in content/pages/.
   "/cv",
   // The legal pages, in Carrel with the rest. /terms is also the terms the site's data is
   // published under: the `license` of every Dataset (app/lib/license.mjs).
@@ -121,7 +120,6 @@ export function draftContentPagePaths(published) {
  */
 export const CONTENT_PAGES_OWN_ROUTE = ["/about"];
 
-/** Every path a file in content/pages/ may name: the listed pages and the ones with a route of their own. */
 export const PAGE_FILE_PATHS = /** @type {readonly string[]} */ ([
   ...CONTENT_PAGE_PATHS,
   ...CONTENT_PAGES_OWN_ROUTE,
@@ -133,7 +131,6 @@ export const PAGE_FILE_PATHS = /** @type {readonly string[]} */ ([
  */
 const PAGE_SEQUENCES = /** @type {const} */ ([
   {
-    // The Phage Discovery Program's two semesters, in teaching order (content/pages/teaching.md).
     paths: ["/teaching/virus-isolation", "/teaching/phage-bioinformatics"],
     prev: "Previous semester",
     next: "Next semester",
@@ -141,8 +138,6 @@ const PAGE_SEQUENCES = /** @type {const} */ ([
 ]);
 
 /**
- * The pages either side of `path` in its sequence, or nulls for a page in none.
- *
  * @param {string} path
  * @returns {{ prev: { path: string, label: string } | null, next: { path: string, label: string } | null }}
  */
@@ -179,8 +174,6 @@ export function contentPageFile(path) {
 }
 
 /**
- * The markdown twin's URL: the page path plus `.md`. Not `contentPageFile`, which is the repo filename.
- *
  * @param {string} path
  */
 export function contentPageMarkdownPath(path) {
@@ -292,7 +285,6 @@ export function markdownTableFacts(markdown) {
 export const SEO_TITLE_MAX = 60;
 export const DESCRIPTION_MAX = 155;
 
-/** The hubs, and the trail label each gives the pages under it. */
 const HUBS = /** @type {const} */ ([
   ["/research", "Research"],
   ["/teaching", "Teaching"],

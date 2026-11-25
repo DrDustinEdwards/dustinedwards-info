@@ -1,25 +1,11 @@
-// The nightly D1 dump, run by the site Worker's own cron at 05:00 UTC (app/lib/cron-run.server.ts), and by hand
-// as the same job through the operator API's run_job.
-//
-// BACKUPS holds the dumps under backups/json/ and the files backups under files/<name>/, both from d1-dump, and
-// Capsid's nightly off-account copy (capsid-backups offaccount.yml) takes both to Amazon. check:destructive lets only
-// the d1-dump functions touch it: pruneDumps deletes dump runs outside retention, and backupFiles removes a copy 30 days
-// after its source is gone.
-//
-// WHAT ELSE THE SITE HOLDS, AND HOW EACH IS COVERED (area 8, B6 and B7):
-// - MEDIA (R2): the uploaded originals, copied nightly to files/media/ by d1-dump's files backup (backupMedia below).
-// - MEDIA_REVISIONS (R2): every earlier set of a file's bytes, kept by site-api's media library under
-//   `replaced/<key>/<sha256>` before an overwrite,
-//   with a deleted file's last bytes, and never deleted (media-adapter.server.ts), copied nightly to files/revisions/ the same way. It is a bucket of its own
-//   because a revert reads it back and MEDIA's listing is the media index's truth (media-index-drift).
-// Not backed up, because each is derived or transient:
-// - OG (R2): share cards and the CV PDF, rebuilt by build:og and the next CV save.
-// - APP_KV: caches (Ask answers, drift, the health snapshot) and the publication check's mailed DOIs, each
-//   rewritten by its next read or firing.
-// - ASK_BUDGET (Durable Object): rate-limit counters, which reset by design.
-// - AI_SEARCH: the Ask index, rebuilt from the published pages by ship's sync_ask.
-// - The queues: messages in flight; a lost media event is caught by Capsid's watcher's sync_media repair, and a
-//   webmention row waiting on verification stays in D1 (dumped) as `unverified`.
+// The nightly D1 dump, run by the site Worker's cron at 05:00 UTC (app/lib/cron-run.server.ts) and by hand
+// through the operator API's run_job. BACKUPS holds backups/json/ and files/<name>/, both from d1-dump, and
+// Capsid's off-account copy takes both. check:destructive lets only the d1-dump functions touch it.
+// Also backed up: MEDIA (R2, to files/media/) and MEDIA_REVISIONS (every earlier set of a file's bytes, kept
+// under `replaced/<key>/<sha256>`, to files/revisions/; its own bucket because MEDIA's listing is the media
+// index's truth). Not backed up, being derived or transient: OG (rebuilt by build:og and the next CV save),
+// APP_KV (caches), ASK_BUDGET (counters), AI_SEARCH (rebuilt by sync_ask), the queues (a lost media event is
+// caught by sync_media; a webmention awaiting verification stays in D1 as `unverified`).
 
 import { createSiteBackup, type BackupHealth, type SiteBackupStatus } from "@dustinedwards/d1-dump";
 import { EXCLUDED_TABLES, REQUIRED_TABLES } from "~/lib/backup/policy.mjs";

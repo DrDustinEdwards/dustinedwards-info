@@ -3,18 +3,11 @@
 //
 //   node scripts/refresh-system-model.mjs [url]
 //
-// The fetched document passes the same check the page loads it with (app/lib/systems.mjs), or
-// nothing is written and the run fails: a model the site would refuse never reaches a pull
-// request. The file is written only when the model says something new; a new date alone is
-// not a change. Prints `changed=true` or `changed=false` (against the committed file, main's), and
-// writes the same line to $GITHUB_OUTPUT when the workflow sets it.
-//
-// Nor does a model that leaves out a part a public system's Wrangler config declares
-// (scripts/lib/system-drift.mjs): the run fails naming each one, and nothing is written.
-//
-// OPEN_MODEL names the model on the refresh pull request already open, when there is one. Then it
-// also prints `same_as_open=true` when the fetched model says what that one says, so a day that
-// changes only the date leaves the open pull request alone.
+// The fetched document must pass the page's own check (app/lib/systems.mjs) and declare every part a public
+// system's Wrangler config declares (scripts/lib/system-drift.mjs), or nothing is written and the run fails. The
+// file is written only when the model says something new (a new date alone is not). Prints `changed=true|false`
+// to stdout and $GITHUB_OUTPUT. OPEN_MODEL names the model on the open refresh pull request; `same_as_open=true`
+// is printed when the fetched one says the same, so a date-only day leaves that pull request alone.
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 

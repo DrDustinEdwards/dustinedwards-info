@@ -31,17 +31,11 @@ import { stubSources } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /*
- * THE AGENT PATH WITH NO VISIBLE LINK nothing a person sees points an
- * agent at the machine surfaces, so these cases walk the routes an agent actually takes. robots.txt (Prelum's
- * standardFiles, tested there) names the sitemap and llms.txt; the head of a page with a markdown twin declares it with
- * <link rel="alternate" type="text/markdown">; every twin and both llms files answer with a
- * Link: rel="canonical" naming the HTML page; and the sitemap lists HTML pages only.
- *
- * The home page has no twin and is reached through llms.txt and llms-full.txt. Research and teaching
- * pages have twins at the page path plus `.md`.
- *
- * The paper twins are a route since publications moved to D1: their canonical Link, noindex and cache tag
- * are asserted here with the paper's head and its llms.txt listing.
+ * THE AGENT PATH WITH NO VISIBLE LINK: nothing a person sees points an agent at the machine surfaces, so these
+ * cases walk the routes an agent takes. robots.txt names the sitemap and llms.txt; a page with a markdown twin
+ * declares it with <link rel="alternate" type="text/markdown">; every twin and both llms files answer with
+ * Link: rel="canonical" naming the HTML page; the sitemap lists HTML pages only. The home page has no twin.
+ * The paper twins' canonical Link, noindex and cache tag are asserted with the paper's head and llms.txt listing.
  */
 
 type Loader = (args: never) => unknown;

@@ -1,12 +1,8 @@
 // The one door from a phage file to the row the phage table on /research/phages is drawn from (docs/PHAGES.md):
-// parse, validate, hash, and the markdown a row becomes. build:content, sync:content, the gates and the adapter's
-// phage save all call compilePhage, and the page compile (app/lib/pages/compile.mjs) calls expandPhagePage with
-// the rows, so a file CI passes is the file the save accepts and the page draws. Pure and dependency-light, so
-// the Worker and the Node scripts import the same module.
-//
-// A phage is ONE record: the row's fields (name, year, host, county, notes) and the PhagesDB link fields. The validator REFUSES any other field, so nothing a
-// visitor cannot already read in the table can enter the repository or D1: no sample, location beyond the county
-// the table shows, or personal data.
+// parse, validate, hash, and the markdown a row becomes. build:content, sync:content, the gates and the
+// adapter's phage save all call compilePhage, so a file CI passes is the file the save accepts.
+// A phage is ONE record. The validator REFUSES any other field, so nothing a visitor cannot already read in
+// the table (no sample, location beyond the county, personal data) can enter the repository or D1.
 
 import { gitBlobSha } from "../content/hashes.mjs";
 import { foldText } from "../cv/view.mjs";
@@ -20,7 +16,6 @@ export function phagePath(/** @type {string} */ slug) {
   return `${PHAGES_DIR}/${slug}.md`;
 }
 
-/** The one page the table is drawn into. */
 export const PHAGES_PAGE_PATH = "/research/phages";
 
 /**
@@ -47,7 +42,6 @@ export const HOSTS = Object.freeze({
   foliorum: { short: "*M. foliorum*", long: "*Microbacterium foliorum*" },
 });
 
-/** The table's columns, in order: the header the page has always had. */
 const TABLE_HEADER =
   "| Phage | Year | Host | County | PhagesDB | Paper |\n|---|---|---|---|---|---|";
 
@@ -69,7 +63,6 @@ const REQUIRED = ["name", "year", "host", "county", "phagesdb"];
 /** A phage's name: letters and digits, so its lower-case form is the file key, the heading id and the old address. */
 const NAME_PATTERN = /^[A-Za-z][A-Za-z0-9]*$/;
 const SLUG_PATTERN = /^[a-z][a-z0-9]*$/;
-/** A PhagesDB record name, as the PhagesDB address spells it. */
 const PHAGESDB_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 const PAPER_PATTERN = /^[0-9a-z][0-9a-z-]*$/;
 const COUNTY_PATTERN = /^(?:Texas|[A-Z][A-Za-z]+(?: [A-Z][A-Za-z]+)* County)$/;
@@ -207,7 +200,6 @@ export async function compilePhage({ slug, raw, host, pipeline, sourcePath }) {
       );
     }
   }
-  // The genome announcement's own numbers, so a page states them from the record instead of typing them.
   for (const [field, value, low, high] of /** @type {const} */ ([
     ["genome_bp", genomeBp, 1_000, 10_000_000],
     ["genes", genes, 1, 5_000],
@@ -274,7 +266,6 @@ export function phageSetErrors(phages) {
   return errors;
 }
 
-/** A former name, as the table writes it after the phage's own: " (formerly Jentrie)" or "". */
 export function formerlyText(/** @type {Phage} */ { formerly }) {
   return formerly ? ` (formerly ${formerly})` : "";
 }
@@ -309,7 +300,6 @@ export function withPhageRowIds(path, html, phages) {
   );
 }
 
-/** The table's text: its header and one row per phage, in the page's order, no trailing newline. */
 export function phageTableMarkdown(/** @type {Phage[]} */ phages) {
   return [TABLE_HEADER, ...sortPhages(phages).map(phageTableRow)].join("\n");
 }

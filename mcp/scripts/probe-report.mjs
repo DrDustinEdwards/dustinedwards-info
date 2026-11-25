@@ -1,19 +1,9 @@
 /**
- * Reads the probe's capture log out of KV and answers the two questions that
- * decide the wrapper's shape:
- *
- *   1. Which ERA does the client speak? `initialize` means legacy, so the
- *      compatibility shim (the era seam in src/mcp-handler.ts) is load-bearing. `server/discover`
- *      means the shim's removal condition is met for that client.
- *   2. Does it send the 2026-07-28 request headers and _meta fields?
- *
- * A capture holds header names, a few protocol header values and the body's
- * protocol shape; never a cookie, token, address or argument (src/probe.ts).
- *
- * Reads through `wrangler kv`, NOT through an HTTP endpoint on the Worker. The
- * probe deliberately has no control plane: a capture log that describes a
- * client's authentication behavior should not be reachable from the internet,
- * and this way there is no probe credential to leak in the first place.
+ * Reads the probe's capture log out of KV and answers two questions: which ERA does the client speak
+ * (`initialize` means legacy, so the era seam in src/mcp-handler.ts is load-bearing; `server/discover` means its
+ * removal condition is met), and does it send the 2026-07-28 request headers and _meta fields. A capture holds
+ * header names, a few protocol header values and the body's protocol shape, never a cookie, token or address.
+ * Reads through `wrangler kv`, NOT an HTTP endpoint: the probe deliberately has no control plane to leak.
  *
  *   node scripts/probe-report.mjs
  *   node scripts/probe-report.mjs --reset         # delete every capture

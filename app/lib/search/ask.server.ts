@@ -34,18 +34,16 @@ export function askAvailable(env: Env): boolean {
 }
 
 /**
- * The raw upstream SSE is handed through untouched: the client already parses SSE. The binding takes no
- * signal, so a call that has not started answering by ASK_TIMEOUT_MS is abandoned here (guardAsk
- * bounds the rest). `max_tokens` is not in the binding's documented parameters; Cloudflare's own
- * ai-search-provider sends it there, and its docs say it reaches the model and truncates the answer, so the guard
- * reads each answer's finish_reason and a cut one is never cached (guardAsk).
+ * The raw upstream SSE is handed through untouched: the client already parses SSE. The binding takes no signal,
+ * so a call that has not started answering by ASK_TIMEOUT_MS is abandoned here (guardAsk bounds the rest).
+ * `max_tokens` is not in the binding's documented parameters, but Cloudflare's own ai-search-provider sends it and
+ * its docs say it truncates the answer, so the guard reads each answer's finish_reason and a cut one is never
+ * cached (guardAsk).
  *
  * The gateway (checklist G1, C13): AI Search has no per-request gateway option and no route through site-runtime's
- * shared caller, which speaks Anthropic's Messages API. Every AI Search instance is connected to an AI Gateway, and
- * "query rewriting and response generation also run through your gateway"
- * (https://developers.cloudflare.com/ai-search/configuration/models/ai-gateway/); the instance's `ai_gateway_id`
- * names it (https://developers.cloudflare.com/ai-search/api/instances/workers-binding/). What a request can set is
- * `custom_metadata`, up to two entries on the gateway's log, so Ask's calls are told apart by app and feature.
+ * shared caller. Every instance is connected to an AI Gateway (the instance's `ai_gateway_id`;
+ * developers.cloudflare.com/ai-search/configuration/models/ai-gateway/), so what a request can set is
+ * `custom_metadata`, up to two entries on the gateway's log, telling Ask's calls apart by app and feature.
  */
 export async function askStream(env: Env, question: string): Promise<ReadableStream> {
   return withTimeout(
@@ -120,18 +118,16 @@ export function replayCachedAnswer(cached: { answer: string; chunks: unknown[] }
 }
 
 /*
- * The index. The instance's data source is this site's D1 (ASK_INDEX_QUERY in search.server.ts), so AI Search reads
- * the corpus itself on every sync: new rows are indexed, changed rows re-indexed, unchanged rows skipped, and a row the
- * query no longer returns (a draft, a post set back to draft, a renamed or deleted post) is removed once the whole
- * result has been read. Nothing is uploaded and nothing is pruned here. A sync runs when a post or paper is published
- * or withdrawn, when a scheduled post goes live (askIndexTick), on every deploy (sync_ask), and once a day on the
- * instance's own schedule as a safety net.
+ * The index. The instance's data source is this site's D1 (ASK_INDEX_QUERY in search.server.ts), so AI Search
+ * reads the corpus itself on every sync: new rows indexed, changed rows re-indexed, a row the query no longer
+ * returns removed once the whole result has been read. Nothing is uploaded or pruned here. A sync runs when a
+ * post or paper is published or withdrawn, when a scheduled post goes live (askIndexTick), on every deploy
+ * (sync_ask), and daily on the instance's own schedule as a safety net.
  *
- * The instance was created once through the API (type "d1", source this database, token_id the account's AI Search
- * service token, whose Index Engine permission holds D1 Read; template content_only, so only the title and content
- * are embedded; sync_interval 86400, the default, because the triggers above cover every change and each sync reads
- * the whole query result from D1; hybrid search with reranking; the public endpoint with MCP on and chat completions
- * off). A missing instance is never re-created here, because creating one needs that token.
+ * The instance was created once through the API (type "d1", this database, token_id the account's AI Search
+ * service token, whose Index Engine permission holds D1 Read; content_only; sync_interval 86400; hybrid search
+ * with reranking; public endpoint with MCP on and chat completions off). A missing instance is never re-created
+ * here, because creating one needs that token.
  */
 
 const QUERY_KEY = "ask:index:query";

@@ -1,17 +1,10 @@
 #!/usr/bin/env node
 /**
- * Create every Queue the site's wrangler config names that does not exist on the account yet.
- *
- * `wrangler deploy` refuses a producer or consumer whose queue is missing, so the
- * deploy workflow runs this first, with the deploy's own token, which already holds
- * Queues Edit (the "Edit Cloudflare Workers" template; the probe step above it checks the read).
- *
- * It only ever CREATES, never deletes or edits: a queue the config stops naming stays on the
- * account until someone removes it by hand. Names come from producers, consumers and each
- * consumer's dead_letter_queue, at the top level and in every env block.
- *
- * Env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID. Argument: the config path (default
- * wrangler.jsonc).
+ * Create every Queue the site's wrangler config names that does not exist on the account yet: `wrangler deploy`
+ * refuses a producer or consumer whose queue is missing, so the deploy workflow runs this first. It only ever
+ * CREATES: a queue the config stops naming stays until removed by hand. Names come from producers, consumers
+ * and each consumer's dead_letter_queue, at the top level and in every env block.
+ * Env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID. Argument: the config path (default wrangler.jsonc).
  */
 import { isMain } from "./lib/is-main.mjs";
 import { parseJsonc } from "./lib/wrangler-surface.mjs";

@@ -1,16 +1,10 @@
-// The CV's PDF: rendered in the Worker by Browser Run after each CV save, kept as ONE object in the OG bucket,
-// and served at /dustin-edwards-cv.pdf by app/routes/cv-pdf.ts (docs/CV.md, "The PDF").
-//
-// THE OBJECT IS DERIVED. The CV rows are the source and the PDF is a function of them, stamped with
-// the fingerprint of the data it was drawn from (cvFingerprint, on the PDF's last line) and, in custom metadata,
-// that fingerprint with the print document's (cvPdfStamp), so a change to either leaves it stale. A
-// failed render never reverts a save: the save has already committed and written D1, and the stale or missing
-// object shows as the `cv-pdf-drift` health check, which Capsid's watcher repairs through `sync_cv_pdf`.
-//
-// WHY OG, NOT MEDIA. OG is the bucket for derived, regenerable objects, with no backup mirror and no site code
-// that treats it as irreplaceable. MEDIA is the irreplaceable bucket: a put there queues a backup copy and a
-// delete there is policed (check:destructive). The key sits under `derived/`, not `og/`, because build:og prunes
-// everything under `og/` that no post references, and would delete this.
+// The CV's PDF: rendered by Browser Run after each CV save, kept as ONE object in the OG bucket and served at
+// /dustin-edwards-cv.pdf by app/routes/cv-pdf.ts (docs/CV.md, "The PDF").
+// THE OBJECT IS DERIVED. Its stamp (cvFingerprint on the last line; cvPdfStamp in custom metadata, which adds the
+// print document's) goes stale when either input changes. A failed render never reverts a save: it shows as the
+// `cv-pdf-drift` check, which Capsid's watcher repairs through `sync_cv_pdf`.
+// WHY OG, NOT MEDIA: OG holds derived objects, with no backup mirror; a put to MEDIA queues a backup copy and a
+// delete there is policed. The key is under `derived/`, not `og/`, because build:og prunes unreferenced `og/` keys.
 
 import { readCv } from "~/db/cv";
 import { purgeCv, type PurgeOutcome } from "~/lib/cache-purge.server";

@@ -307,8 +307,6 @@ export function groupEntries(facts, sort) {
 }
 
 /**
- * The headline counts for the matching entries.
- *
  * @param {Facts[]} shown
  */
 export function headline(shown) {
@@ -357,8 +355,6 @@ export function yearHref(state, year) {
 }
 
 /**
- * One sentence for a screen reader and the status line: what is shown out of what.
- *
  * @param {number} shown
  * @param {number} total
  */
@@ -394,8 +390,6 @@ export function facetCounts(all, state) {
 }
 
 /**
- * Every year an entry starts in, ascending: the year pickers' options.
- *
  * @param {Facts[]} all
  */
 export function yearOptions(all) {

@@ -46,21 +46,12 @@ function sourceFiles() {
 }
 
 /**
- * TWO strippers, and picking the wrong one silently disables an assertion.
- * Verified the hard way: the first version of this gate used codeOnly()
- * everywhere, and three of eleven planted violations went undetected because the
- * thing being searched for lived in a string literal that codeOnly() had already
- * removed.
- *
- * withoutComments  strips comments, KEEPS strings. Use for assertions about
- *                  string CONTENT: urls, paths, config values, option values.
- * codeOnly         strips comments AND strings. Use for assertions about
- *                  executable code: identifiers, branches, property access.
- *
- * Both strip comments, because this file's own prose and the source's module
- * headers name the very things being forbidden. A parser that reads comments
- * finds the documentation before the code, which is a trap this portfolio has now
- * hit three times.
+ * TWO strippers, and picking the wrong one silently disables an assertion (a first version used codeOnly()
+ * everywhere and three of eleven planted violations went undetected, their target being in a string literal).
+ * withoutComments strips comments, KEEPS strings: for string CONTENT (urls, paths, config values).
+ * codeOnly strips comments AND strings: for executable code (identifiers, branches, property access).
+ * Both strip comments, because this file's prose and the source's module headers name the very things being
+ * forbidden, and a parser that reads comments finds the documentation before the code.
  */
 export function withoutComments(text) {
   return text.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
@@ -74,21 +65,11 @@ export function codeOnly(text) {
 }
 
 /**
- * Resolve the wrangler config.
- *
- * The real `wrangler.jsonc` is gitignored, because it carries live KV namespace
- * ids and this repo is public. So a fresh clone has only
- * `wrangler.jsonc.example`, and this gate has to work there too or it becomes a
- * gate that only its author can run.
- *
- * Every assertion here is about binding SHAPE (which keys exist, which binding
- * names, whether the DO migration is sqlite-backed), never about id VALUES, so
- * the example proves exactly as much as the real file. Preference order is real
- * first, so a developer who has both is checked against what actually deploys.
- *
- * The gap this leaves, stated rather than hidden: on a machine with ONLY the
- * example, a forbidden binding added to the real file would not be seen. That is
- * closed below by asserting the two agree whenever both are present.
+ * Resolve the wrangler config. The real `wrangler.jsonc` is gitignored (live KV ids, public repo), so a fresh
+ * clone has only `wrangler.jsonc.example`, and this gate must work there too. Every assertion is about binding
+ * SHAPE, never id VALUES, so the example proves as much as the real file; the real one is preferred. The gap, on
+ * a machine with only the example (a forbidden binding in the real file goes unseen), is closed below by
+ * asserting the two agree whenever both are present.
  */
 function resolveConfig() {
   const real = join(ROOT, "wrangler.jsonc");

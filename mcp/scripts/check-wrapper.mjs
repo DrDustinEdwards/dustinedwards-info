@@ -422,18 +422,9 @@ console.log(
 );
 
 /*
- * PLANTED VIOLATIONS. See scripts/plant-violations.sh, which is the harness that
- * proves this gate actually fails. Run it with `npm run check:wrapper:plant`.
- *
- * A gate never observed failing has not been verified, and that applies to the
- * HARNESS too. The first attempt at this reverted with `git checkout -- .`, which
- * does not touch untracked files, so each plant's residue survived into the next
- * one and every result after the first was contaminated: they failed, but not
- * necessarily for the reason under test. The harness now snapshots and restores
- * the exact files it edits, so each plant is independent, and it verifies the
- * baseline is green again afterwards.
- *
- * That mistake also destroyed uncommitted work, which is the hazard
- * dustinedwards/workflow-mainline.md records as one of this project's recurring
- * failures. Commit before running a harness that reverts anything.
+ * PLANTED VIOLATIONS. scripts/plant-violations.sh is the harness that proves this gate fails
+ * (`npm run check:wrapper:plant`); a gate never observed failing has not been verified. The harness snapshots and
+ * restores the exact files it edits: `git checkout -- .` leaves untracked files, so residue contaminated later
+ * plants and destroyed uncommitted work. Commit before running a harness that reverts anything
+ * (dustinedwards/workflow-mainline.md).
  */

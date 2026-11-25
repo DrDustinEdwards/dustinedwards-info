@@ -142,12 +142,10 @@ export function roleOf(pathOrKey) {
   if (pathOrKey.startsWith("og/") || pathOrKey.startsWith("derived/")) return "generated";
   if (pathOrKey.startsWith("/diagrams/")) return "generated";
 
-  // The OG image is brand, not icon: `seo.ts` names it as the default social card.
   if (/^\/dustin-edwards-(logo(-[a-z]+)*\.svg|og-image\.png)$/.test(pathOrKey)) {
     return "brand";
   }
 
-  // Prelum's shared icon paths, which browsers request unprompted.
   if (/** @type {string[]} */ (Object.values(ICONS)).includes(pathOrKey)) return "icon";
 
   return "content";

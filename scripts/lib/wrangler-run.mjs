@@ -1,13 +1,10 @@
 import { spawnSyncBounded } from "./retry.mjs";
 
 /**
- * The one way scripts run wrangler. One command string, because an args array alongside
- * `shell: true` concatenates without quoting and npx needs a shell on Windows. Bounded, so a hung
- * wrangler fails its caller instead of hanging it, and buffered for a whole-database export.
- *
- * `stdout` alone is where `--json` writes: stderr appended after it (a deprecation warning, an
- * update notice) made the text from the first `[` unparseable. `output` adds stderr and a spawn
- * failure, which is where an error is.
+ * The one way scripts run wrangler: one command string (an args array with `shell: true` concatenates without
+ * quoting, and npx needs a shell on Windows), bounded so a hung wrangler fails its caller, buffered for a
+ * whole-database export. `stdout` alone is where `--json` writes (stderr after it made the text from the first
+ * `[` unparseable); `output` adds stderr and a spawn failure, which is where an error is.
  *
  * @param {string} args
  * @param {{ timeoutMs?: number, cwd?: string }} [options]

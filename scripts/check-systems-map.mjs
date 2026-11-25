@@ -1,19 +1,11 @@
-// check:systems-map: the award checklist for /systems (capsid/research/design-system-explorer.md,
-// section 6), on a preview build of the working tree, for each pull request that touches the map
-// (.github/workflows/systems-map.yml). check:browser runs the same case against the deployed site.
-//
-//   npm run check:systems-map
-//
-// Two parts. The browser case (scripts/lib/browser/cases/systems.mjs): every card and its page,
-// lighting by keyboard, a flow's steps, the pages with no script, layout shift, the INP proxy under
-// 4x throttling, axe in both themes and the script's gzip budget. Then Lighthouse on
-// /systems, mobile profile, median of three, through a brotli proxy because the preview serves
-// uncompressed and the deployed site does not (scripts/lib/browser/compressing-proxy.mjs): CLS 0.05, TBT 150ms (the lab proxy for INP 100ms) and
-// 3 MB in total, the design's numbers; LCP fails over the site's 2.5s and warns over the design's
-// 1.5s (BUDGETS says why). An unmeasured page is a failure, never a pass.
-//
-// Network tier, like check:browser, and for its reason: a preview boot past the readiness
-// ceiling on a loaded machine must not fail a ship for a reason that is not the site.
+// check:systems-map: the award checklist for /systems (capsid/research/design-system-explorer.md, section 6),
+// on a preview build, for each pull request that touches the map (.github/workflows/systems-map.yml).
+// check:browser runs the same case against the deployed site.
+// Two parts: the browser case (scripts/lib/browser/cases/systems.mjs: cards, keyboard lighting, no-script pages,
+// layout shift, INP proxy, axe in both themes, gzip budget), then Lighthouse on /systems (mobile, median of
+// three, through a brotli proxy because the preview serves uncompressed). LCP fails over 2.5s (BUDGETS says why).
+// An unmeasured page is a failure, never a pass. Network tier, like check:browser: a slow preview boot must not
+// fail a ship for a reason that is not the site.
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import lighthouse from "lighthouse";
 import puppeteer from "puppeteer";

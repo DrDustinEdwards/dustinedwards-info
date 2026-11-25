@@ -142,17 +142,15 @@ const kindTitle = (kind: string) => {
 };
 
 /**
- * Every public URL, the one list sitemap.xml and the site map page are both drawn from. Drafts,
- * unpublished rows and empty libraries are left out here, so neither can list one. Also returns the next
- * scheduled publish, which both use for the edge cache's lifetime, and the files only sitemap.xml lists.
+ * Every public URL, the one list sitemap.xml and the site map page are both drawn from; drafts, unpublished rows
+ * and empty libraries are left out. Also returns the next scheduled publish (for the edge cache's lifetime) and
+ * the files only sitemap.xml lists.
  *
- * `lastmod` is the day the page's content last changed, never a sync or deploy time, which would mark every
- * page changed together and teach crawlers to ignore the field. A post or procedure uses the `updated` date
- * its author wrote; any other page uses its source file's last commit (scripts/lib/source-dates.mjs); an index,
- * tag or series is as new as the newest page it lists. A page with no dated source (a deploy's shallow checkout has no
- * git history for its route file) takes the day its text last changed, from the page-dates job's record
- * (page-dates.server.ts); `tracked: false` skips that, which is how the job finds the pages it dates. With neither,
- * `lastmod` is left out.
+ * `lastmod` is the day the content last changed, never a sync or deploy time, which would mark every page
+ * changed together and teach crawlers to ignore the field. A post or procedure uses its author's `updated`; any
+ * other page its source file's last commit (scripts/lib/source-dates.mjs); an index, tag or series the newest
+ * page it lists; a page with no dated source the day its text last changed (page-dates.server.ts; `tracked:
+ * false` skips that, which is how the job finds the pages it dates). With none, `lastmod` is left out.
  */
 export async function gatherSiteUrls(
   env: Env,

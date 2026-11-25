@@ -65,7 +65,6 @@ export const PAGES_ARTIFACT_PATH = path.join("content", "generated", "pages.json
 /** @type {ReturnType<typeof buildDictionary> | undefined} */
 let compiledDictionary;
 
-/** Compiled once per run: the pages' twins and search records, and the rows, come from the same compile. */
 function dictionary() {
   compiledDictionary ??= buildDictionary();
   return compiledDictionary;
@@ -74,7 +73,6 @@ function dictionary() {
 /** @type {ReturnType<typeof buildPhages> | undefined} */
 let compiledPhages;
 
-/** Compiled once per run: the page that draws the table and the rows come from the same compile. */
 function phages() {
   compiledPhages ??= buildPhages();
   return compiledPhages;
@@ -83,7 +81,6 @@ function phages() {
 /** @type {Promise<BuiltSource[]> | undefined} */
 let builtSources;
 
-/** Compiled once per run: the pages, the rows and the search inputs come from the same compile. */
 function pageSources() {
   builtSources ??= compilePages();
   return builtSources;
@@ -127,9 +124,7 @@ async function compilePages() {
       raw,
       pipeline: { renderBody, findWideDashes },
       sourcePath: file.split(path.sep).join("/"),
-      // The entry that leads the page (docs/DICTIONARY.md), compiled from content/dictionary like the Worker reads it from D1.
       entry: (await dictionary()).entryFor(pagePathForSlug(name.slice(0, -3)) ?? ""),
-      // The rows the phage page draws its table and sections from (docs/PHAGES.md), compiled from content/phages like the Worker reads them from D1.
       phages: (await phages()).phages,
       // A page written from data states other authors' titles, dashes included; the house style is for prose.
       generated,
@@ -151,9 +146,6 @@ async function compilePages() {
 }
 
 /**
- * The listed pages (CONTENT_PAGE_PATHS): what the twins, the search records and the social cards are made
- * from. About has a route of its own and none of those, so it is in renderOwnRoutePages instead.
- *
  * @returns {Promise<BuiltPage[]>}
  */
 export async function renderContentPages() {
@@ -164,8 +156,6 @@ export async function renderContentPages() {
 }
 
 /**
- * The pages with a route of their own (About), compiled by the same door: check:links reads their links.
- *
  * @returns {Promise<BuiltPage[]>}
  */
 export async function renderOwnRoutePages() {
@@ -174,10 +164,6 @@ export async function renderOwnRoutePages() {
     .filter((page) => CONTENT_PAGES_OWN_ROUTE.includes(page.path));
 }
 
-/**
- * The rows sync:content writes into D1's pages table: every file-sourced page, the CV excluded, as
- * the page save would write it.
- */
 export async function buildPages() {
   return (await pageSources())
     .filter(({ page }) => !CONTENT_PAGES_FROM_DATA.includes(page.path))
@@ -198,13 +184,11 @@ export async function buildPages() {
 /** @type {ReturnType<typeof buildCvFrom> | undefined} */
 let compiledCv;
 
-/** Compiled once per run, against the same publication records the papers' rows come from. */
 async function cvBuild() {
   compiledCv ??= publications().then(({ records }) => buildCvFrom(records));
   return compiledCv;
 }
 
-/** The rows sync:content writes into D1's cv table: one per file in content/cv/, as the CV save would write it. */
 export async function buildCvRows() {
   return (await cvBuild()).rows;
 }
@@ -212,7 +196,6 @@ export async function buildCvRows() {
 /** @type {ReturnType<typeof buildPublications> | undefined} */
 let compiledPublications;
 
-/** Compiled once per run: the CV, the search records and the rows all come from the same compile. */
 function publications() {
   compiledPublications ??= buildPublications();
   return compiledPublications;
@@ -221,7 +204,6 @@ function publications() {
 /** @type {ReturnType<typeof buildProcedures> | undefined} */
 let compiledProcedures;
 
-/** Compiled once per run: the search inputs and the rows come from the same compile. */
 function procedures() {
   compiledProcedures ??= buildProcedures();
   return compiledProcedures;
@@ -278,7 +260,6 @@ export async function buildArtifact() {
     withBacklinks(withRelated(posts)),
     [
       ...colophonPages(stack, features),
-      // A draft page is never in the index.
       ...contentPageSearchInputs(
         (await renderContentPages()).filter((page) => !page.draft),
         (await dictionary()).entryFor,
@@ -340,8 +321,6 @@ async function main() {
   await writeFile(fromRoot(ARTIFACT_PATH), artifact, "utf8");
   const { posts } = JSON.parse(artifact);
 
-  // The pages' rows, which sync:content writes to D1; their pages and twins are drawn from there
-  // (docs/PAGES.md). No twin is a file now: the CV's is drawn from the cv table (docs/CV.md).
   const pageRows = await buildPages();
   await writeFile(
     fromRoot(PAGES_ARTIFACT_PATH),
@@ -350,8 +329,6 @@ async function main() {
   );
   await pruneStaleContentTwins();
 
-  // The dictionary entries' rows, which sync:content writes to D1; the page lead and the DefinedTerm are drawn from there
-  // (docs/DICTIONARY.md). They come from the compile the pages' twins and search records above were built with.
   const dictionaryRows = (await dictionary()).rows;
   await writeFile(
     fromRoot(DICTIONARY_ARTIFACT_PATH),
@@ -360,7 +337,6 @@ async function main() {
     "utf8",
   );
 
-  // The procedures' rows, which sync:content writes to D1; their pages and twins are drawn from there.
   const { rows } = await procedures();
   await writeFile(
     fromRoot(PROCEDURES_ARTIFACT_PATH),
@@ -369,7 +345,6 @@ async function main() {
     "utf8",
   );
 
-  // The papers' rows, which sync:content writes to D1, from the compile the search records came from.
   const compiled = await publications();
   await writeFile(
     fromRoot(PUBLICATIONS_ARTIFACT_PATH),
@@ -378,7 +353,6 @@ async function main() {
     "utf8",
   );
 
-  // The CV's rows, which sync:content writes to D1; its page, twin and charts are drawn from there (docs/CV.md).
   const cvRows = await buildCvRows();
   await writeFile(
     fromRoot(CV_ARTIFACT_PATH),
@@ -387,7 +361,6 @@ async function main() {
     "utf8",
   );
 
-  // The cohorts' rows, which sync:content writes to D1; the roster is drawn from there (docs/ROSTER.md).
   const roster = await buildRoster();
   await writeFile(
     fromRoot(ROSTER_ARTIFACT_PATH),
@@ -395,7 +368,6 @@ async function main() {
     "utf8",
   );
 
-  // The phages' rows, which sync:content writes to D1; the phage table is drawn from them into the page above (docs/PHAGES.md).
   const phageRows = (await phages()).rows;
   await writeFile(
     fromRoot(PHAGES_ARTIFACT_PATH),

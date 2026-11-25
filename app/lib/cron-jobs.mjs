@@ -1,19 +1,9 @@
-// The site Worker's scheduled jobs, by name: how often each should succeed and how long one may run. One list, read
-// by the scheduled handler (workers/app.ts, which adds each job's `run`) and by /health's cron check, so a job the
-// check expects is a job the trigger runs. The one cron key is "* * * * *" (wrangler.jsonc.example); the backup
-// and the media backup run on the 05:00 UTC firing of it only.
-//
-// Timeouts (site-runtime runJobs, area 8 C3): carrel-schedules gets two minutes; the dump gets ten, its last runs took
-// seconds and a dump that has not finished in ten minutes is hung, not slow. The media backup gets ten too: each of its
-// two backupFiles passes stops itself at five minutes (d1-dump's timeBudgetMs) and the next night goes on from there.
-// prune-404 is one DELETE, so one minute; ask-index is a count and two or three AI Search calls, so one minute too. A
-// job past its timeout is recorded failed and the next one starts.
-//
-// health-snapshot stores the colophon's health verdict
-// every fifteen minutes (a health run takes about a second, so two minutes is hung); purge-zero-results removes
-// expired zero-result queries at 04:00 UTC (one DELETE, one minute); check-publications reads ORCID and Crossref at
-// 06:00 UTC and mails each new DOI once (two outside APIs, so five minutes); page-dates keeps the day each undated
-// page's text last changed, for the sitemap's lastmod, at 07:00 UTC (a render of each, so five minutes).
+// The site Worker's scheduled jobs, by name: how often each should succeed and how long one may run. One list,
+// read by the scheduled handler (workers/app.ts) and by /health's cron check, so a job the check expects is a
+// job the trigger runs. The one cron key is "* * * * *"; the backup jobs run on its 05:00 UTC firing only.
+// A job past its timeout is recorded failed and the next one starts. Timeouts are sized to the work: the dump
+// gets ten minutes (a dump unfinished by then is hung, not slow); each backupFiles pass stops itself at five
+// (d1-dump's timeBudgetMs) and the next night goes on; one-DELETE and count jobs get one minute.
 
 /** How often the colophon's health verdict is taken; site-runtime ./health-snapshot derives its stale bound from it. */
 export const HEALTH_SNAPSHOT_EVERY_MINUTES = 15;
