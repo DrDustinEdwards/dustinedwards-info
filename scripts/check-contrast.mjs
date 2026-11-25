@@ -1,40 +1,30 @@
-import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
-// Imported from the pipeline so the gate cannot check a theme the renderer does not use.
-import { LANGUAGES, SHIKI_THEMES } from "@drdustinedwards/site-helpers/render/highlight";
-
-import { apca, channels, contrast } from "../app/lib/contrast.mjs";
-
-import {
-  allSourceCss,
-  CSS_PATH,
-  normalizeHex,
-  resolveToken,
-  stripCss,
-  stylesheetPaths,
-  THEME_SELECTORS,
-  tokenBlock,
-  tokenDeclarations,
-} from "./lib/tokens.mjs";
+// check:contrast. The palette passes live here; the prefers-contrast, Shiki, built-CSS and opacity passes are scripts/lib/contrast-*.mjs.
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { apca, channels } from "../app/lib/contrast.mjs";
+import { allSourceCss, resolveToken, THEME_SELECTORS, tokenDeclarations } from "./lib/tokens.mjs";
 import {
   APCA_KEYSTONE,
   DECLARED_ELSEWHERE,
   MATRIX,
   NON_PARTICIPATING,
-  OPACITY_EXEMPT,
-  TEXT,
-  UI,
 } from "./lib/contrast-matrix.mjs";
+import {
+  MODES,
+  assert,
+  assertPair,
+  darkAttr,
+  darkMedia,
+  fail,
+  light,
+  root,
+  tally,
+} from "./lib/contrast-model.mjs";
+import { checkPrefersContrast } from "./lib/contrast-tiers.mjs";
+import { checkShikiThemes } from "./lib/contrast-shiki.mjs";
+import { assetDir, checkBuiltCss } from "./lib/contrast-built-css.mjs";
+import { checkOpacity } from "./lib/contrast-opacity.mjs";
 import { assertFloor } from "@dustinedwards/devkit/node";
-import { createTally } from "@dustinedwards/devkit/node";
-
-const { light: githubLight, dark: githubDark } = SHIKI_THEMES;
-
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-/** Stripped once for the @media tier reader below; the palette blocks come from lib/tokens. */
-const css = stripCss(readFileSync(CSS_PATH, "utf8"));
 
 /** 0 to 255 per channel, from the same parser the ratios use. */
 const bytes = (/** @type {string} */ hex) => channels(hex).map((c) => Math.round(c * 255));
@@ -56,47 +46,6 @@ function compositeMix(expr) {
   const [from, to] = [bytes(a), bytes(b)];
   const out = [0, 1, 2].map((i) => Math.round(from[i] * p + to[i] * (1 - p)));
   return `#${out.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-}
-
-const light = tokenBlock("light", THEME_SELECTORS.light);
-const darkMedia = tokenBlock("dark (prefers-color-scheme)", THEME_SELECTORS.darkSystem);
-const darkAttr = tokenBlock("dark (attribute)", THEME_SELECTORS.dark);
-
-/* Canary: the first selector match wins; `--page-paper` is only in the palette blocks. */
-/** @type {Array<[string, Record<string, string>]>} */
-const PALETTE_BLOCKS = [
-  ["light", light],
-  ["dark (prefers-color-scheme)", darkMedia],
-  ["dark (attribute)", darkAttr],
-];
-for (const [label, block] of PALETTE_BLOCKS) {
-  if (!("--page-paper" in block)) {
-    throw new Error(
-      `${label}: the block parsed for this selector does not declare --page-paper, so it is not the palette ` +
-        `block. A theme block was almost certainly added above the palette; move it below.`,
-    );
-  }
-}
-
-const tally = createTally({ print: false });
-const { ok: assert, fail } = tally;
-
-/**
- * One measured pair, counted once and failed below `min`, in the one shape every pair reports.
- *
- * @param {string} head
- * @param {string} fg
- * @param {string} bg
- * @param {number} min
- * @param {{ fgShown?: string, bgShown?: string }} [shown] the names printed beside the values
- */
-function assertPair(head, fg, bg, min, { fgShown = fg, bgShown = bg } = {}) {
-  const ratio = contrast(fg, bg);
-  assert(
-    `${head}\n    ${fgShown} on ${bgShown}\n    ${ratio.toFixed(2)}:1, needs ${min}:1`,
-    !(ratio < min),
-  );
-  return ratio;
 }
 
 // Name parity: a token missing from dark keeps its light value there.
@@ -129,12 +78,6 @@ function assertPair(head, fg, bg, min, { fgShown = fg, bgShown = bg } = {}) {
     drift.length === 0,
   );
 }
-
-/** @type {Array<[string, Record<string, string>]>} */
-const MODES = [
-  ["light", light],
-  ["dark", darkAttr],
-];
 
 for (const [mode, block] of MODES) {
   for (const name of Object.keys(block)) {
@@ -332,261 +275,9 @@ function walkCss(dir) {
   );
 }
 
-/**
- * The declarations under `selector` inside the `@media ${query}` block, and only inside it: the
- * search is bounded by the block's own closing brace, so a selector missing from the tier throws
- * rather than matching the next rule of that name further down the file.
- *
- * @param {string} label
- * @param {string} query
- * @param {string} selector
- */
-function contrastTierBlock(label, query, selector) {
-  const head = new RegExp(`@media\\s*${query.replace(/[()]/g, "\\$&")}\\s*\\{`).exec(css);
-  if (!head) throw new Error(`${label}: @media ${query} not found in app.css`);
-  let depth = 0;
-  let end = -1;
-  for (let i = head.index + head[0].length - 1; i < css.length; i += 1) {
-    if (css[i] === "{") depth += 1;
-    else if (css[i] === "}" && --depth === 0) {
-      end = i;
-      break;
-    }
-  }
-  if (end === -1) throw new Error(`${label}: @media ${query} is never closed`);
-  const region = css.slice(head.index + head[0].length, end);
-  const sel = region.indexOf(selector);
-  if (sel === -1) throw new Error(`${label}: ${selector} not found inside @media ${query}`);
-  const open = region.indexOf("{", sel + selector.length - 1);
-  if (open === -1) throw new Error(`${label}: ${selector} has no block`);
-  const close = region.indexOf("}", open);
-  if (close === -1) throw new Error(`${label}: ${selector}'s block is never closed`);
-  const body = region.slice(open + 1, close);
-
-  /** @type {Record<string, string>} */
-  const out = {};
-  for (const m of body.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) out[m[1]] = m[2].trim();
-  if (Object.keys(out).length === 0) throw new Error(`${label}: parsed zero tokens`);
-  return out;
-}
-
-{
-  const TIER = "(prefers-contrast: more)";
-  const tierLight = contrastTierBlock("tier light", TIER, '[data-theme="light"]');
-  const tierDark = contrastTierBlock("tier dark", TIER, '[data-theme="dark"]');
-  /* A reader on "system" whose OS is dark gets THIS block, not the attribute one. Held to the
-     attribute tier by parity, as the base palettes are, so the one that is measured below is the
-     one they get. */
-  const tierSystemDark = contrastTierBlock(
-    "tier system dark",
-    `${TIER} and (prefers-color-scheme: dark)`,
-    ":root:not([data-theme])",
-  );
-  assert(
-    `system-dark prefers-contrast declares the same tokens as the dark tier ` +
-      `(${Object.keys(tierSystemDark).sort().join(", ")})`,
-    Object.keys(tierSystemDark).sort().join() === Object.keys(tierDark).sort().join(),
-  );
-  for (const [name, value] of Object.entries(tierDark)) {
-    assert(
-      `system-dark prefers-contrast ${name} ${tierSystemDark[name]} equals the dark tier's ${value}`,
-      String(tierSystemDark[name] ?? "").toLowerCase() === value.toLowerCase(),
-    );
-  }
-
-  for (const [
-    mode,
-    tier,
-    base,
-  ] of /** @type {Array<[string, Record<string,string>, Record<string,string>]>} */ ([
-    ["light", tierLight, light],
-    ["dark", tierDark, darkAttr],
-  ])) {
-    for (const surface of ["--page-paper", "--surface-popover"]) {
-      assertPair(
-        `${mode} prefers-contrast: muted on ${surface}`,
-        tier["--text-secondary"],
-        base[surface],
-        TEXT,
-      );
-    }
-    assertPair(
-      `${mode} prefers-contrast: border on --page-paper`,
-      tier["--border"],
-      base["--page-paper"],
-      UI,
-    );
-
-    // The tier must be strictly better than the default, or it is a different mode, not a high-contrast one.
-    assert(
-      `${mode} prefers-contrast raises muted text` +
-        ` (${contrast(base["--text-secondary"], base["--page-paper"]).toFixed(2)}` +
-        ` -> ${contrast(tier["--text-secondary"], base["--page-paper"]).toFixed(2)})`,
-      contrast(tier["--text-secondary"], base["--page-paper"]) >
-        contrast(base["--text-secondary"], base["--page-paper"]),
-    );
-    assert(
-      `${mode} prefers-contrast raises the default border` +
-        ` (${contrast(base["--border"], base["--page-paper"]).toFixed(2)}` +
-        ` -> ${contrast(tier["--border"], base["--page-paper"]).toFixed(2)})`,
-      contrast(tier["--border"], base["--page-paper"]) >
-        contrast(base["--border"], base["--page-paper"]),
-    );
-    // The strong edge rides the popover step (the header menu cards), so it is measured there.
-    assertPair(
-      `${mode} prefers-contrast: strong border on --surface-popover`,
-      tier["--border-strong"],
-      base["--surface-popover"],
-      UI,
-    );
-    assert(
-      `${mode} prefers-contrast raises the strong border` +
-        ` (${contrast(base["--border-strong"], base["--surface-popover"]).toFixed(2)}` +
-        ` -> ${contrast(tier["--border-strong"], base["--surface-popover"]).toFixed(2)})`,
-      contrast(tier["--border-strong"], base["--surface-popover"]) >
-        contrast(base["--border-strong"], base["--surface-popover"]),
-    );
-    // Which value the tier's border takes is a design default; that it clears 3:1 and rises is asserted above.
-  }
-}
-
-/** @param {any} theme */
-function themeRules(theme) {
-  /** @type {Array<{fg: string, bg: string | null, scope: string}>} */
-  const out = [];
-  /** @param {unknown} v @returns {string | null} */
-  const hex = (v) =>
-    typeof v === "string" && /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(v) ? v.slice(0, 7) : null;
-
-  const editorFg = hex(theme.fg);
-  if (editorFg) out.push({ fg: editorFg, bg: null, scope: "(editor default)" });
-  for (const rule of theme.settings ?? theme.tokenColors ?? []) {
-    const fg = hex(rule?.settings?.foreground);
-    if (!fg) continue;
-    out.push({
-      fg,
-      bg: hex(rule?.settings?.background),
-      scope: Array.isArray(rule.scope) ? rule.scope.join(", ") : String(rule.scope ?? "?"),
-    });
-  }
-  return out;
-}
-
-/** VCS scopes are reported, not counted, only while `diff` is not in LANGUAGES. */
-const VCS_SCOPE =
-  /^(markup\.(deleted|inserted|changed|ignored|untracked)|carriage-return|meta\.diff)/;
-const diffReachable = LANGUAGES.includes("diff");
-
-/** @type {Array<[string, any, Record<string, string>]>} */
-const shikiCases = [
-  ["light", githubLight, light],
-  ["dark", githubDark, darkAttr],
-];
-
-let shikiTokensChecked = 0;
-/** @type {string[]} */
-const shikiUnreachable = [];
-
-for (const [mode, theme, block] of shikiCases) {
-  const rules = themeRules(theme);
-  assert(`${mode}: parsed a non-empty shiki theme`, rules.length > 10);
-
-  for (const rule of rules) {
-    if (rule.bg) {
-      // Paired: measured against its own background, which is what ships.
-      shikiTokensChecked += 1;
-      const ratio = contrast(rule.fg, rule.bg);
-      const detail =
-        `${mode}: shiki ${rule.scope}\n    ${rule.fg} on its own bg ${rule.bg}` +
-        `\n    ${ratio.toFixed(2)}:1, needs ${TEXT}:1`;
-      const unreachable = !(ratio >= TEXT) && !diffReachable && VCS_SCOPE.test(rule.scope);
-      if (unreachable) shikiUnreachable.push(detail);
-      assert(detail, ratio >= TEXT || unreachable);
-      continue;
-    }
-    for (const surfaceName of ["--page-paper", "--surface-popover"]) {
-      const surface = block[surfaceName];
-      shikiTokensChecked += 1;
-      assertPair(`${mode}: shiki ${rule.scope}`, rule.fg, surface, TEXT, {
-        bgShown: `${surfaceName} ${surface}`,
-      });
-    }
-  }
-}
-
-/**
- * Every light and dark palette value, looked for in the built CSS. Counted once per value and
- * failed per value, so a partial build names what it dropped.
- *
- * @param {string} built every built stylesheet, joined
- * @returns {{ missing: number, total: number }}
- */
-function compareBuiltCss(built) {
-  // Compare normalized values: Lightning CSS shortens #ffffff to #fff.
-  /** @type {Map<string, Set<string>>} */
-  const shipped = new Map();
-  for (const m of built.matchAll(/(--[a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{3,8})/g)) {
-    if (!shipped.has(m[1])) shipped.set(m[1], new Set());
-    shipped.get(m[1])?.add(normalizeHex(m[2]));
-  }
-  // Slots ship as `var()`, minified without the space after the colon.
-  for (const m of built.matchAll(/(--[a-z0-9-]+)\s*:\s*(var\(\s*--[a-z0-9-]+\s*\))/g)) {
-    if (!shipped.has(m[1])) shipped.set(m[1], new Set());
-    shipped.get(m[1])?.add(m[2].replace(/\s+/g, ""));
-  }
-
-  let missing = 0;
-  for (const [mode, block] of MODES) {
-    for (const [name, value] of Object.entries(block)) {
-      const wanted = value.trim().startsWith("var(")
-        ? value.replace(/\s+/g, "")
-        : normalizeHex(value);
-      const carried = shipped.get(name)?.has(wanted) ?? false;
-      if (!carried) missing += 1;
-      assert(
-        `built CSS does not carry ${mode} ${name}: ${value}` +
-          `\n    shipped values for that token: ${[...(shipped.get(name) ?? [])].join(", ") || "none"}`,
-        carried,
-      );
-    }
-  }
-  const total = Object.keys(light).length + Object.keys(darkAttr).length;
-  return { missing, total };
-}
-
-/*
- * Confirms the values survived the Vite build, so "shipped" is measured rather than assumed.
- * Absent a build this is skipped and said so, never silently passed.
- */
-const assetDir = join(root, "build", "client", "assets");
-let builtNote = "no build present, skipped";
-/* Newest of every source stylesheet, from `stylesheetPaths()`, not app.css alone. */
-const cssMtime = Math.max(...stylesheetPaths().map((p) => statSync(p).mtimeMs));
-if (existsSync(assetDir)) {
-  const sheets = readdirSync(assetDir).filter((f) => f.endsWith(".css"));
-  const newest = Math.max(0, ...sheets.map((f) => statSync(join(assetDir, f)).mtimeMs));
-  /* Stale fails, absent does not: editing a source is what makes the build stale. An asset
-     directory with no CSS at all is its own failure, said as itself rather than as "stale". */
-  if (sheets.length === 0) {
-    builtNote = "build/client/assets holds no CSS";
-    fail("build/client/assets exists but carries no CSS. Run npm run build.");
-  } else if (newest < cssMtime) {
-    builtNote = "build is OLDER than a source stylesheet";
-    fail(
-      "the built stylesheet is not stale: a build exists but predates a source " +
-        "stylesheet, so the " +
-        "shipped-value comparison would silently examine nothing. Run npm run build.",
-    );
-    sheets.length = 0;
-  }
-  const built = sheets.map((f) => readFileSync(join(assetDir, f), "utf8")).join("\n");
-  if (sheets.length > 0 && !built.trim()) {
-    fail("build/client/assets carries only empty CSS files. Run npm run build.");
-  } else if (sheets.length > 0) {
-    const { missing, total } = compareBuiltCss(built);
-    builtNote = `${sheets.length} stylesheet(s), ${total - missing} of ${total} light+dark values found`;
-  }
-}
+checkPrefersContrast();
+const shiki = checkShikiThemes();
+const builtNote = checkBuiltCss();
 
 console.log("check:contrast");
 console.log(
@@ -596,12 +287,12 @@ console.log(`  matrix        ${MATRIX.length} pairs x 2 modes`);
 console.log(
   `  APCA impl     ${APCA_KEYSTONE.length}/${APCA_KEYSTONE.length} keystone vectors, worst delta ${apcaWorstDelta.toExponential(2)}`,
 );
-console.log(`  shiki         ${shikiTokensChecked} token/surface pairs`);
-if (shikiUnreachable.length > 0) {
+console.log(`  shiki         ${shiki.checked} token/surface pairs`);
+if (shiki.unreachable.length > 0) {
   console.log(
-    `  unreachable   ${shikiUnreachable.length} low-contrast VCS token(s), no diff grammar loaded:`,
+    `  unreachable   ${shiki.unreachable.length} low-contrast VCS token(s), no diff grammar loaded:`,
   );
-  for (const d of shikiUnreachable) {
+  for (const d of shiki.unreachable) {
     console.log(`      ${d.split("\n")[0].trim()}`);
   }
 }
@@ -621,91 +312,7 @@ for (const a of worst) {
   );
 }
 
-/**
- * @param {string} selectorGroup
- * @returns {boolean}
- */
-function opacityExempt(selectorGroup) {
-  const members = selectorGroup
-    .split(",")
-    .map((one) => one.trim())
-    .filter(Boolean);
-  if (members.length === 0) return false;
-  return members.every((/** @type {string} */ one) =>
-    OPACITY_EXEMPT.some((entry) => entry.test.test(one)),
-  );
-}
-
-{
-  /** @type {Array<{ file: string, selector: string, value: string }>} */
-  const partial = [];
-  /** @type {string[]} */
-  const unparsed = [];
-  let declarations = 0;
-
-  for (const file of stylesheetPaths()) {
-    const text = readFileSync(file, "utf8").replace(/\r\n/g, "\n");
-    const stripped = text.replace(/\/\*[\s\S]*?\*\//g, "");
-    const name = file.split(/[\\/]/).slice(-1)[0];
-
-    for (const match of stripped.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      const selector = match[1]
-        .trim()
-        .split("\n")
-        .map((l) => l.trim())
-        .join(" ");
-      const block = match[2];
-      /* Every opacity declaration, whatever its value grammar: one this scan cannot read as a
-         number (var(), calc()) is reported, not skipped, or it would escape classification. */
-      for (const decl of block.matchAll(/(?:^|;)\s*opacity\s*:\s*([^;]+?)\s*(?:;|$)/g)) {
-        declarations += 1;
-        const value0 = decl[1].replace(/\s*!important$/, "");
-        /* var(--enarratio-opacity-dimmed, 0.25): nothing declares the knob, so it is the fallback. */
-        const raw = /^var\(\s*--[A-Za-z0-9_-]+\s*,\s*([^()]+?)\s*\)$/.exec(value0)?.[1] ?? value0;
-        const number = /^(\d*\.?\d+)(%?)$/.exec(raw);
-        if (!number) {
-          unparsed.push(`${name} ${selector}: opacity ${decl[1]}`);
-          continue;
-        }
-        const value = Number(number[1]) / (number[2] === "%" ? 100 : 1);
-        if (value > 0 && value < 1) partial.push({ file: name, selector, value: decl[1] });
-      }
-    }
-  }
-
-  /* Scope floor: a regex that stopped matching reports what a clean sweep reports. */
-  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 5);
-
-  assert(
-    unparsed.length === 0
-      ? "every opacity value is a number this scan can classify"
-      : `UNREADABLE opacity value(s), so they cannot be classified: ${unparsed.join("; ")}`,
-    unparsed.length === 0,
-  );
-
-  const unclassified = partial.filter((d) => !opacityExempt(d.selector));
-  assert(
-    unclassified.length === 0
-      ? "every partial opacity is classified"
-      : `UNCLASSIFIED partial opacity: ${unclassified
-          .map((d) => `${d.file} ${d.selector} at ${d.value}`)
-          .join("; ")}`,
-    unclassified.length === 0,
-  );
-
-  const stale = OPACITY_EXEMPT.filter(
-    (entry) =>
-      !partial.some((d) =>
-        d.selector.split(",").some((/** @type {string} */ one) => entry.test.test(one.trim())),
-      ),
-  ).map((entry) => String(entry.test));
-  assert(
-    stale.length === 0
-      ? "every opacity exemption covers a live declaration"
-      : `STALE opacity exemption(s): ${stale.join(", ")}`,
-    stale.length === 0,
-  );
-}
+checkOpacity();
 
 const buildPresent = existsSync(assetDir);
 
