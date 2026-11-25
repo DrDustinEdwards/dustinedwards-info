@@ -150,6 +150,9 @@
     },
     "rehype-katex": {
       "katex": "$katex"
+    },
+    "satori": {
+      "fflate": "0.7.5"
     }
   },
   "engines": {

@@ -36,11 +36,15 @@ This site sends a Content Security Policy, and browsers report violations of it 
 
 Another site can tell this one that it has linked to a post here. When that happens, this site fetches the page that was named and stores four things: the address of that page, which post it linked to, an author name read from the page if it publishes one, and a short excerpt of the text around the link. It does not store the IP address of whoever sent it. Nothing appears anywhere on the site until it has been approved by hand, and until then it is visible only to the administrator.
 
-## Cookies
+## Cookies and storage on your device
 
-There is one cookie for ordinary readers. It is called `theme`, it holds either `light` or `dark`, and it lasts a year. You only have it if you have used the theme button; until then the site simply follows your device and stores nothing. It exists so the site renders in the colors you chose on the first byte rather than flickering into them. Nothing else is stored on your device.
+If you only read the site, there is one cookie and one stored value. The cookie is called `theme`, holds `light` or `dark`, and lasts a year. The stored value is `cap-theme` in your browser's local storage, with the same choice, so a private page of this site can read it. You have both only if you have used the theme button; until then the site follows your device and stores nothing. Nothing else is stored on your device.
 
-There is a second cookie, a sign-in session, and it exists only for the one administrator of this site. If you have not signed in, you do not have it.
+Signing in is for the administrator and the members of the lab workspace, and only for them. It uses the Cloudflare Access cookie, plus a `__Host-admin-seen` or `__Host-lab-seen` cookie that records when you last made a request, so an hour of idle signs you out. If you have not signed in, you have none of these.
+
+## Lab members
+
+The lab workspace keeps a list of its members: email address, name, title, start and end dates and status. Every change to a member is also kept, with the person who made it and the row before and after. The list is not public.
 
 ## Who else is involved
 
@@ -50,7 +54,11 @@ There is a second cookie, a sign-in session, and it exists only for the one admi
 
 **Sentry** receives a report when the server hits an error: what failed, with the page’s address cut to its path (nothing after a `?`, and a preview link’s code removed). A report never carries an IP address, a cookie, an email address or anything else that identifies a reader, and no Sentry script runs on any page.
 
-**Cloudflare Access** signs in the administrators of this site. It is reached only from the admin address, and only by the people it is set up to let in.
+**Anthropic** receives a picture the site's owner uploads to the media library, when the owner asks for suggested tags and alt text. Nothing a visitor does or sends goes to Anthropic.
+
+**Cloudflare Access** signs in the administrators and lab members. It is reached only from the admin and lab addresses, and only by the people it is set up to let in.
+
+**The administrator's tool address** (`admin-mcp.dustinedwards.info`) is not a page for readers. A test request there keeps its method, the names of its headers, the software name and version a connecting program announces, and the time, for 14 days. It keeps no IP address, no User-Agent and no credential.
 
 ## Checking any of this
 
