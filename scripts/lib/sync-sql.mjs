@@ -115,9 +115,8 @@ export function buildSql(posts) {
 }
 
 /**
- * The procedures table converged to the repository's files: every row whose file is gone
- * is deleted, every other row is written from the build's compile. Scoped to file-sourced rows, and
- * never an unscoped delete. Published, versioned rows are also frozen (freezeSql).
+ * The procedures table converged to the repository's files: every row whose file is gone is deleted and every other row is written from the build's compile; never an unscoped delete.
+ * Published, versioned rows are also frozen (freezeSql).
  *
  * @param {any[]} rows content/generated/procedures.json's rows
  */
@@ -143,10 +142,9 @@ export function buildProceduresSql(rows) {
 }
 
 /**
- * The publications table converged to the repository's files: every row whose file is gone
- * is deleted, every other row is written from the build's compile. Scoped to file-sourced rows, and never
- * an unscoped delete. The citation counts are upserted from the committed snapshot and only ever forward:
- * a row a refresh has read since is never overwritten by the older snapshot, and none is ever deleted.
+ * The publications table converged to the repository's files, on the procedures' terms. Citation counts
+ * are upserted from the committed snapshot and only forward: a row a refresh has read since is never
+ * overwritten, and none is deleted.
  *
  * @param {any[]} rows content/generated/publications.json's rows
  * @param {Array<{ doi: string, count: number, url: string | null, fetchedAt: string }>} seeds
@@ -193,9 +191,7 @@ export function buildPublicationsSql(rows, seeds) {
 }
 
 /**
- * The pages table converged to the repository's files, on the procedures' terms: every row
- * whose file is gone is deleted, every other row is written from the build's compile, which is the compile
- * the page save runs. Scoped to file-sourced rows, and never an unscoped delete.
+ * The pages table converged to the repository's files, on the procedures' terms.
  *
  * @param {any[]} rows content/generated/pages.json's rows
  */
@@ -227,9 +223,7 @@ export function buildPagesSql(rows) {
 }
 
 /**
- * The cv table converged to the repository's files, on the pages' terms: every row whose file is
- * gone is deleted, every other row is written from the build's compile, which is the compile the CV save runs.
- * Scoped to file-sourced rows, and never an unscoped delete.
+ * The cv table converged to the repository's files, on the procedures' terms.
  *
  * @param {any[]} rows content/generated/cv.json's rows
  */
@@ -250,9 +244,7 @@ export function buildCvSql(rows) {
 }
 
 /**
- * The dictionary_entries table converged to the repository's files, on the pages' terms: every
- * row whose file is gone is deleted, every other row is written from the build's compile, which is the compile
- * the dictionary save runs. Scoped to file-sourced rows, and never an unscoped delete.
+ * The dictionary_entries table converged to the repository's files, on the procedures' terms.
  *
  * @param {any[]} rows content/generated/dictionary.json's rows
  */
@@ -275,9 +267,7 @@ export function buildDictionarySql(rows) {
 }
 
 /**
- * The roster table converged to the repository's files, on the pages' terms: every row whose
- * file is gone is deleted, every other row is written from the build's compile, which is the compile the roster
- * save runs. Scoped to the file-sourced rows, and never an unscoped delete.
+ * The roster table converged to the repository's files, on the procedures' terms.
  *
  * @param {any[]} rows content/generated/roster.json's rows
  */
@@ -298,9 +288,7 @@ export function buildRosterSql(rows) {
 }
 
 /**
- * The phages table converged to the repository's files, on the pages' terms: every row whose file
- * is gone is deleted, every other row is written from the build's compile, which is the compile the phage save
- * runs. Scoped to the file-sourced rows, and never an unscoped delete.
+ * The phages table converged to the repository's files, on the procedures' terms.
  *
  * @param {any[]} rows content/generated/phages.json's rows
  */
@@ -321,10 +309,8 @@ export function buildPhagesSql(rows) {
 }
 
 /**
- * The registry table converged to the repository's files, on the phages' terms: every row whose file is
- * gone is deleted, every other row is written from the build's compile, which is the compile the registry save runs.
- * Scoped to the file-sourced rows, and never an unscoped delete. Unlike the phages, an empty set is valid (the registry
- * has no records until a kind brings its own), and it deletes only the rows a file under content/registry/ once made.
+ * The registry table converged to the repository's files, on the procedures' terms. An empty set is valid
+ * (no kind may have records yet); it deletes only the rows a file under content/registry/ once made.
  *
  * @param {any[]} rows content/generated/registry.json's rows
  */

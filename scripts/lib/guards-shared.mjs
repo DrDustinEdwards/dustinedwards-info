@@ -8,7 +8,8 @@ import { PolicyError } from "../../app/lib/editor/publish-policy.mjs";
 export const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 export const tally = createTally({ print: false });
-export const { ok, eq } = tally;
+const { ok } = tally;
+export const { eq } = tally;
 
 /** @param {string} label @param {() => void} fn @param {string} policy */
 export function refuses(label, fn, policy) {

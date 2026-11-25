@@ -3,7 +3,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { RELATED, changedFiles, gatesFor, reachedModules } from "../scripts/check-changed.mjs";
+import { changedFiles, reachedModules } from "../scripts/check-changed.mjs";
+import { RELATED, gatesFor } from "../scripts/lib/changed-map.mjs";
 
 /**
  * A fake git answering by the joined argument list.

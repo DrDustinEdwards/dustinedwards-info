@@ -60,8 +60,6 @@
       "app/styles/katex.generated.css": 1124,
       "mcp/scripts/check-wrapper.mjs": 722,
       "scripts/build-og.mjs": 541,
-      "scripts/check-all.mjs": 594,
-      "scripts/check-changed.mjs": 520,
       "scripts/machine-readable/microformats.mjs": 573
     },
     "tests": {
