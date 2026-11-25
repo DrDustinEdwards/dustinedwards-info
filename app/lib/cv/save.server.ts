@@ -12,14 +12,14 @@ import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { listCvRows, readCv } from "~/db/cv";
 import { listPublishedPublications } from "~/db/publications";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
-import { purgeCv, type PurgeOutcome } from "~/lib/cache-purge.server";
+import { purgeCv } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { contentPageSearchUid } from "~/lib/content-pages.mjs";
 import { compileCv, compileCvFile, compileCvPage } from "~/lib/cv/compile.mjs";
 import { CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { regenerateCvPdfAfterSave, type CvPdfOutcome } from "~/lib/cv/pdf.server";
 import { readFile } from "~/lib/source/store.server";
-import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
@@ -192,18 +192,7 @@ export async function saveCvFile(
     slug,
     mismatch: { subject: `The CV file "${slug}"`, target: "its row" },
   });
-  if (written.action === "noop") {
-    return {
-      slug,
-      commitSha: written.commitSha,
-      sourceBlobSha: compiled.sourceBlobSha,
-      unchanged: true,
-      note: UNCHANGED_NOTE,
-      purged: null as PurgeOutcome,
-      pdf: "not-needed" as CvPdfReport,
-    };
-  }
-  const { commitSha, purged } = written;
+  if (written.note) return { slug, ...written, pdf: "not-needed" as CvPdfReport };
 
   // After the row, so the render reads the data the save just wrote. Never inside convergeWithRetry: a render
   // failure must not retry or fail the D1 write, and the commit is not undone by it.
@@ -219,12 +208,5 @@ export async function saveCvFile(
     );
   }
 
-  return {
-    slug,
-    commitSha,
-    sourceBlobSha: compiled.sourceBlobSha,
-    unchanged: written.action !== "commit",
-    purged,
-    pdf,
-  };
+  return { slug, ...written, pdf };
 }

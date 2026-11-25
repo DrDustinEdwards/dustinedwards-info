@@ -15,7 +15,7 @@ import { listPublishedPageHtml } from "~/db/pages";
 import { listPhages } from "~/db/phages";
 import { listPublishedProcedures } from "~/db/procedures";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
-import { purgePages, type PurgeOutcome } from "~/lib/cache-purge.server";
+import { purgePages } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import {
   CONTENT_PAGES_FROM_DATA,
@@ -24,7 +24,7 @@ import {
   contentPageSearchUid,
 } from "~/lib/content-pages.mjs";
 import { readFile } from "~/lib/source/store.server";
-import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge } from "~/lib/editor/write-path.server";
 import { PolicyError, decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
 import { PHAGES_PAGE_PATH, type Phage } from "~/lib/phages/compile.mjs";
@@ -232,6 +232,7 @@ export async function savePage(
     existing,
     raw,
     sourceBlobSha: compiled.sourceBlobSha,
+    isNew: options.isNew,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
     message: `${options.isNew ? "Add" : "Update"} page: ${compiled.record.title}`,
@@ -243,30 +244,5 @@ export async function savePage(
     slug,
     mismatch: { subject: `The page "${path}"`, target: "its page" },
   });
-  const unchanged = written.action !== "commit";
-  if (written.action === "noop") {
-    return {
-      slug,
-      path,
-      commitSha: written.commitSha,
-      sourceBlobSha: compiled.sourceBlobSha,
-      unchanged: true,
-      note: UNCHANGED_NOTE,
-      created: false,
-      draft: compiled.draft,
-      purged: null as PurgeOutcome,
-    };
-  }
-  const { commitSha, purged } = written;
-
-  return {
-    slug,
-    path,
-    commitSha,
-    sourceBlobSha: compiled.sourceBlobSha,
-    unchanged,
-    created: options.isNew,
-    draft: compiled.draft,
-    purged,
-  };
+  return { slug, path, ...written, draft: compiled.draft };
 }

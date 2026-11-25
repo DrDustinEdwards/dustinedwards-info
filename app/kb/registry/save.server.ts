@@ -15,7 +15,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRegistry, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { fileHistory, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge } from "~/lib/editor/write-path.server";
 import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
@@ -211,6 +211,7 @@ export async function saveRegistryItem(
     existing,
     raw,
     sourceBlobSha: compiled.sourceBlobSha,
+    isNew: options.isNew,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
     message: `${options.isNew ? "Add" : "Update"} ${kinds[kind]?.singular ?? "registry item"}: ${compiled.item.name}`,
@@ -229,25 +230,5 @@ export async function saveRegistryItem(
       repair: "Run sync_registry to rebuild the row from the stored source.",
     },
   });
-  if (written.action === "noop") {
-    return {
-      slug,
-      commitSha: written.commitSha,
-      sourceBlobSha: compiled.sourceBlobSha,
-      unchanged: true,
-      created: false,
-      purged: null,
-      note: UNCHANGED_NOTE,
-    };
-  }
-  const { commitSha, purged } = written;
-
-  return {
-    slug,
-    commitSha,
-    sourceBlobSha: compiled.sourceBlobSha,
-    unchanged: written.action === "repair",
-    created: options.isNew,
-    purged,
-  };
+  return { slug, ...written };
 }

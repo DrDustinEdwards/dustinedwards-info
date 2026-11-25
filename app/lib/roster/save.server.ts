@@ -11,7 +11,7 @@ import { purgeRoster, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge } from "~/lib/editor/write-path.server";
 
 import { compileCohort, rosterPath, type Cohort, type RosterHost } from "./compile.mjs";
 
@@ -138,6 +138,7 @@ export async function saveRoster(
     existing,
     raw,
     sourceBlobSha: compiled.sourceBlobSha,
+    isNew: options.isNew,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
     message: `${options.isNew ? "Add" : "Update"} roster: ${slug} cohort`,
@@ -149,25 +150,5 @@ export async function saveRoster(
     slug,
     mismatch: { subject: `The ${slug} cohort`, target: "its row" },
   });
-  if (written.action === "noop") {
-    return {
-      slug,
-      commitSha: written.commitSha,
-      sourceBlobSha: compiled.sourceBlobSha,
-      unchanged: true,
-      created: false,
-      purged: null,
-      note: UNCHANGED_NOTE,
-    };
-  }
-  const { commitSha, purged } = written;
-
-  return {
-    slug,
-    commitSha,
-    sourceBlobSha: compiled.sourceBlobSha,
-    unchanged: written.action === "repair",
-    created: options.isNew,
-    purged,
-  };
+  return { slug, ...written };
 }

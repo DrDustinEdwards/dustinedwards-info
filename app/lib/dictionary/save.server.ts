@@ -17,7 +17,7 @@ import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
 import { publicFileEntry, fileHistory, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge } from "~/lib/editor/write-path.server";
 import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
 import { compile as compilePageFile, writeRow as writePageRow } from "~/lib/pages/save.server";
 
@@ -183,6 +183,7 @@ export async function saveDictionaryEntry(
     existing,
     raw,
     sourceBlobSha: compiled.sourceBlobSha,
+    isNew: options.isNew,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
     message: `${options.isNew ? "Add" : "Update"} dictionary entry: ${compiled.entry.term}`,
@@ -195,27 +196,5 @@ export async function saveDictionaryEntry(
     slug: key,
     mismatch: { subject: `The dictionary entry "${key}"`, target: "its page" },
   });
-  if (written.action === "noop") {
-    return {
-      key,
-      commitSha: written.commitSha,
-      sourceBlobSha: compiled.sourceBlobSha,
-      unchanged: true,
-      created: false,
-      draft: compiled.draft,
-      purged: null,
-      note: UNCHANGED_NOTE,
-    };
-  }
-  const { commitSha, purged } = written;
-
-  return {
-    key,
-    commitSha,
-    sourceBlobSha: compiled.sourceBlobSha,
-    unchanged: written.action === "repair",
-    created: options.isNew,
-    draft: compiled.draft,
-    purged,
-  };
+  return { key, ...written, draft: compiled.draft };
 }

@@ -5,12 +5,12 @@
 // D1 write fails; the error says the commit landed and how to repair the row.
 
 import { ContentInvalid } from "~/lib/carrel/errors.server";
-import { purgeProcedures, type PurgeOutcome } from "~/lib/cache-purge.server";
+import { purgeProcedures } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { fileHistory, readFile } from "~/lib/source/store.server";
 import { makeResolveImage } from "~/lib/editor/publish.server";
 import { readEquipment, readPrimers, readReagents, readStrains } from "~/kb/registry/host.server";
-import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge } from "~/lib/editor/write-path.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
@@ -251,6 +251,7 @@ export async function saveProcedure(
     existing,
     raw,
     sourceBlobSha: compiled.sourceBlobSha,
+    isNew: options.isNew,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
     message: `${options.isNew ? "Add" : "Update"} procedure: ${compiled.record.title}`,
@@ -262,32 +263,11 @@ export async function saveProcedure(
     slug,
     mismatch: { subject: `The procedure "${slug}"`, target: "its page" },
   });
-  const unchanged = written.action !== "commit";
-  if (written.action === "noop") {
-    return {
-      slug,
-      path: compiled.record.path,
-      commitSha: written.commitSha,
-      sourceBlobSha: compiled.sourceBlobSha,
-      unchanged: true,
-      note: UNCHANGED_NOTE,
-      created: false,
-      draft: compiled.record.draft,
-      gaps: compiled.gaps,
-      purged: null as PurgeOutcome,
-    };
-  }
-  const { commitSha, purged } = written;
-
   return {
     slug,
     path: compiled.record.path,
-    commitSha,
-    sourceBlobSha: compiled.sourceBlobSha,
-    unchanged,
-    created: options.isNew,
+    ...written,
     draft: compiled.record.draft,
     gaps: compiled.gaps,
-    purged,
   };
 }

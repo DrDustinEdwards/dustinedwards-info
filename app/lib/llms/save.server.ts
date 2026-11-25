@@ -12,13 +12,13 @@ import { listPublishedPublicationTwins } from "~/db/publications";
 import { listPublishedProcedures } from "~/db/procedures";
 import { getSetting, setSetting } from "~/db/settings";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
-import { purgeLlms, type PurgeOutcome } from "~/lib/cache-purge.server";
+import { purgeLlms } from "~/lib/cache-purge.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { draftContentPagePaths, publishedContentPagePaths } from "~/lib/content-pages.mjs";
 import { readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge } from "~/lib/editor/write-path.server";
 import { paperMarkdownPath } from "~/lib/publications/paths.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 
@@ -136,21 +136,5 @@ export async function saveLlms(
       repair: "Run sync_llms to rebuild it from the repository.",
     },
   });
-  if (written.action === "noop") {
-    return {
-      commitSha: written.commitSha,
-      sourceBlobSha: compiled.sourceBlobSha,
-      unchanged: true,
-      note: UNCHANGED_NOTE,
-      purged: null as PurgeOutcome,
-    };
-  }
-  const { commitSha, purged } = written;
-
-  return {
-    commitSha,
-    sourceBlobSha: compiled.sourceBlobSha,
-    unchanged: written.action !== "commit",
-    purged,
-  };
+  return written;
 }
