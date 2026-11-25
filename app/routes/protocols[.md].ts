@@ -4,14 +4,13 @@ import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import {
-  LIBRARY_PATH,
   citeMarkdown,
   libraryCitation,
   libraryItems,
   libraryMarkdown,
-  libraryOverview,
-  overviewMarkdown,
 } from "~/kb/procedures/library.mjs";
+import { LIBRARY_PATH } from "~/kb/procedures/taxonomy.mjs";
+import { libraryOverview, overviewMarkdown } from "~/kb/procedures/library-overview.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 

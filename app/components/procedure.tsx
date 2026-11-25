@@ -5,7 +5,7 @@ import { ProcedurePrimers } from "~/components/procedure-primers";
 import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";
 import type { resolveProof } from "~/kb/procedures/proof.mjs";
-import type { workflowContext } from "~/kb/procedures/library.mjs";
+import type { workflowContext } from "~/kb/procedures/library-workflow.mjs";
 import { bibtex, citationText, citeFacts, versionPath } from "~/kb/procedures/cite.mjs";
 import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { fixedSectionIds } from "~/kb/procedures/render-sections.mjs";

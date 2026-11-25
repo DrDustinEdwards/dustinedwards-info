@@ -44,7 +44,6 @@
       "app/components/procedure.tsx": 622,
       "app/db/posts.ts": 676,
       "app/db/schema.ts": 792,
-      "app/kb/procedures/library.mjs": 568,
       "app/lab/members.server.ts": 505,
       "app/lib/cv/view.mjs": 502,
       "app/lib/editor/publish.server.ts": 508,

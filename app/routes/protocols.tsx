@@ -25,13 +25,12 @@ import { itemList, thing } from "@drdustinedwards/site-helpers/schema";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import {
   LIBRARY,
-  LIBRARY_PATH,
   libraryCitation,
   libraryItems,
-  libraryOverview,
-  libraryTabs,
   type LibraryItem,
 } from "~/kb/procedures/library.mjs";
+import { LIBRARY_PATH } from "~/kb/procedures/taxonomy.mjs";
+import { libraryOverview, libraryTabs } from "~/kb/procedures/library-overview.mjs";
 import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
 import { registryTabs } from "~/kb/registry/address.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
