@@ -50,7 +50,6 @@
       "app/lab/members.server.ts": 505,
       "app/lib/cv/view.mjs": 502,
       "app/lib/editor/publish.server.ts": 508,
-      "app/lib/features.mjs": 571,
       "app/lib/operator/sync-tools.server.ts": 610,
       "app/lib/search/search.server.ts": 541,
       "app/routes/colophon.tsx": 605,
