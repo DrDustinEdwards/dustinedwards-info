@@ -18,7 +18,7 @@ import { purgePhages, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge } from "~/lib/editor/write-path.server";
 import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { compile as compilePageFile, writeRow as writePageRow } from "~/lib/pages/save.server";
@@ -210,6 +210,7 @@ export async function savePhage(
     existing,
     raw,
     sourceBlobSha: compiled.sourceBlobSha,
+    isNew: options.isNew,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
     message: `${options.isNew ? "Add" : "Update"} phage: ${compiled.phage.name}`,
@@ -222,25 +223,5 @@ export async function savePhage(
     slug,
     mismatch: { subject: `The phage "${slug}"`, target: "its page" },
   });
-  if (written.action === "noop") {
-    return {
-      slug,
-      commitSha: written.commitSha,
-      sourceBlobSha: compiled.sourceBlobSha,
-      unchanged: true,
-      created: false,
-      purged: null,
-      note: UNCHANGED_NOTE,
-    };
-  }
-  const { commitSha, purged } = written;
-
-  return {
-    slug,
-    commitSha,
-    sourceBlobSha: compiled.sourceBlobSha,
-    unchanged: written.action === "repair",
-    created: options.isNew,
-    purged,
-  };
+  return { slug, ...written };
 }

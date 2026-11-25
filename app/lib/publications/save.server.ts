@@ -19,7 +19,7 @@ import {
 import { refreshCvSearch } from "~/lib/cv/save.server";
 import { publicFileEntry, fileHistory, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge } from "~/lib/editor/write-path.server";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
 import { askSyncAfterWrite } from "~/lib/search/ask.server";
@@ -261,6 +261,7 @@ export async function savePublication(
     existing,
     raw,
     sourceBlobSha: compiled.sourceBlobSha,
+    isNew: options.isNew,
     expectedHeadSha: options.expectedHeadSha,
     expectedBlobSha: options.expectedBlobSha,
     message: `${options.isNew ? "Add" : "Update"} publication: ${compiled.record.title}`,
@@ -277,29 +278,10 @@ export async function savePublication(
     slug,
     mismatch: { subject: `The publication "${slug}"`, target: "its page" },
   });
-  if (written.action === "noop") {
-    return {
-      slug,
-      commitSha: written.commitSha,
-      sourceBlobSha: compiled.sourceBlobSha,
-      unchanged: true,
-      created: false,
-      draft: compiled.draft,
-      purged: null,
-      askSync: null,
-      note: UNCHANGED_NOTE,
-    };
-  }
-  const { commitSha, purged } = written;
-
   return {
     slug,
-    commitSha,
-    sourceBlobSha: compiled.sourceBlobSha,
-    unchanged: written.action === "repair",
-    created: options.isNew,
+    ...written,
     draft: compiled.draft,
-    purged,
-    askSync: await askSyncAfterWrite(env, `paper saved: ${compiled.record.slug}`),
+    askSync: written.note ? null : await askSyncAfterWrite(env, `paper saved: ${compiled.record.slug}`),
   };
 }

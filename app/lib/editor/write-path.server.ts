@@ -7,8 +7,7 @@ import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
 import { blobGuard, commitFiles, getHead } from "~/lib/source/store.server";
 
-/** What a save answers when its file is byte-identical to the committed one. */
-export const UNCHANGED_NOTE =
+const UNCHANGED_NOTE =
   "The file is identical to the stored one, so nothing was written. commitSha is the current head.";
 
 type Committed = Awaited<ReturnType<typeof commitFiles>>;
@@ -63,7 +62,8 @@ export function taggedMessage(actor: Actor, message: string) {
 /**
  * The write half of every one-file content save, after it has validated and passed the policy: commit unless
  * unchanged, check the stored bytes are the bytes compiled, then write the derived rows and purge
- * (convergeWithRetry). A "noop" returns before any write; otherwise the answer carries the purge outcome.
+ * (convergeWithRetry). The answer is the part of a save's result every kind shares; an identical file that D1
+ * already holds answers unchanged with a note and no purge. `created` is whether this save made the file.
  * The commit is never reverted when a derived write fails: the error names the commit and the repair.
  */
 export async function commitAndConverge(
@@ -77,6 +77,8 @@ export async function commitAndConverge(
     /** The git blob sha of the bytes compiled. */
     sourceBlobSha: string;
     expectedHeadSha?: string | null;
+    /** Whether this save creates the file. */
+    isNew?: boolean;
     /** The blob sha of this file as the caller loaded it; undefined means no check. */
     expectedBlobSha?: string | null;
     /** The commit message, before the actor's tag. */
@@ -89,10 +91,14 @@ export async function commitAndConverge(
     /** How the stored-bytes error names the file ("The page \"about\""), what was not updated, and its repair. */
     mismatch: { subject: string; target: string; repair?: string; checked?: string };
   },
-): Promise<
-  | { action: "noop"; commitSha: string }
-  | { action: "commit" | "repair"; commitSha: string; purged: PurgeOutcome }
-> {
+): Promise<{
+  commitSha: string;
+  sourceBlobSha: string;
+  unchanged: boolean;
+  purged: PurgeOutcome;
+  created: boolean;
+  note?: string;
+}> {
   const { file, sourceBlobSha } = options;
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
@@ -107,7 +113,16 @@ export async function commitAndConverge(
         changes: [{ path: file, content: options.raw }],
       }),
   });
-  if (written.action === "noop") return written;
+  if (written.action === "noop") {
+    return {
+      commitSha: written.commitSha,
+      sourceBlobSha,
+      unchanged: true,
+      purged: null,
+      note: UNCHANGED_NOTE,
+      created: false,
+    };
+  }
   const { commitSha } = written;
   const stored = written.blobShas[file];
   if (stored && stored !== sourceBlobSha) {
@@ -134,5 +149,11 @@ export async function commitAndConverge(
     slug: options.slug,
     commitSha,
   });
-  return { action: written.action, commitSha, purged };
+  return {
+    commitSha,
+    sourceBlobSha,
+    unchanged: written.action === "repair",
+    purged,
+    created: options.isNew ?? false,
+  };
 }
