@@ -54,20 +54,7 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 await page.setViewport({ width: 1280, height: 900 });
-const errors = [];
-page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
-page.on("pageerror", (e) => errors.push(String(e)));
-const log = [];
-async function step(name, fn) {
-  try {
-    await fn();
-    log.push(`ok   ${name}`);
-  } catch (e) {
-    log.push(`FAIL ${name}: ${e.message.split("\n")[0]}`);
-    await page.screenshot({ path: "fail.png", fullPage: true });
-    throw e;
-  }
-}
+// errors, log and step(): the helpers in devkit docs/verify.md
 try {
   await step("open the home page", async () => {
     const r = await page.goto(base, { waitUntil: "networkidle0" });
@@ -169,19 +156,11 @@ minted for localhost (docs/RUNBOOK.md), so no signed-in screen can be driven. Sa
 "not verified locally" and name them; the proof is `npm run verify-live` after the
 merge deploys (ship step 6).
 
-## Rules
+## Rules and report
 
-A failed step is a finding about the change: fix the code and rerun the same script;
-no sleeps, no looser selectors. Stop the preview by the PID you noted and confirm
-port 4173 no longer answers.
+Follow the Rules and the report in [devkit's docs/verify.md](https://github.com/DrDustinEdwards/devkit/blob/main/docs/verify.md). For this repo:
 
-## The report
-
-Put this in the reply and the pull request body:
-
-- First line: verified, partly verified (and what was not), or failed.
-- Each step's ok or FAIL line, the console errors line, and the end-state screenshot
-  attached.
-- The case group's last line (`N checks, 0 failures`), and which groups ran.
-- Not verified: Ask, resized images, admin, live data; `verify-live` after the merge
-  is their check.
+- Stop the preview and confirm port 4173 no longer answers.
+- The report names the case group's last line (`N checks, 0 failures`) and which groups ran.
+- Anything local cannot show (Ask, resized images, admin, live data), named as not
+  verified, with `verify-live` after the merge as its check.

@@ -16,9 +16,10 @@ to deploy. Every change lands by pull request; nothing is pushed to main.
    then `npm run lint`. Reach for a local
    `check:all` only when the change touches a network gate's subject.
 2. Scoped commits. Push the branch.
-3. Open the PR. Its body names the Capsid job it does (`Job: <id>`). If it changes
-   anything a visitor would see (copy, layout, a page, a color, a menu), label it
-   `visual` (`gh pr edit <n> --add-label visual`) and put after screenshots in the PR.
+3. Open the PR. If it changes anything a visitor would see (copy, layout, a page, a
+   color, a menu), label it `visual` (`gh pr edit <n> --add-label visual`) and put after
+   screenshots in the PR. It does not wait for Dustin's yes (Dustin, 2026-11-21: every
+   repo merges on green).
 4. Merge it once CI is green on its exact head. Capsid's signed auto-merge or the seat may merge it first.
 5. The merge deploys itself: after CI passes on main, `.github/workflows/deploy.yml`
    deploys that exact sha (jobs `site / deploy`, `site / live gate`, `Converge`, then
