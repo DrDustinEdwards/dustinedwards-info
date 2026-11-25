@@ -6,7 +6,8 @@ import type { Actor, MemberRow } from "@dustinedwards/site-runtime/members";
 
 import { SYNC_NOT_SET_UP, SYNC_NOT_SET_UP_REASON } from "~/lab/access-sync.server";
 import { labActorContext, loadLabActor } from "~/lab/actor.server";
-import { membersAction, membersPage } from "~/lab/members.server";
+import { membersAction } from "~/lab/members.server";
+import { membersPage } from "~/lab/members-page.server";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { middleware as adminMiddleware } from "~/routes/admin";
 import { middleware as labMiddleware, noAccessText } from "~/routes/workspace";
