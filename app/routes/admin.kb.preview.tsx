@@ -14,12 +14,13 @@ import type { Route } from "./+types/admin.kb.preview";
 // The public page's stylesheets, in the order its layout and route link them (legacy-public.tsx, procedure.tsx), which
 // the preview frame links: the admin links none of them.
 import appCss from "~/app.css?url";
+import siteBaseCss from "~/styles/site-base.css?url";
 import pageShellCss from "~/styles/page-shell.css?url";
 import shellCss from "~/styles/shell.css?url";
 import proseCss from "~/styles/prose.css?url";
 import procedureCss from "~/styles/procedure.css?url";
 
-const STYLES = [appCss, pageShellCss, shellCss, proseCss, procedureCss];
+const STYLES = [appCss, siteBaseCss, pageShellCss, shellCss, proseCss, procedureCss];
 
 /**
  * The Knowledge Base editor's live preview (docs/KNOWLEDGE-BASE.md): the entry the form describes, compiled by the save's

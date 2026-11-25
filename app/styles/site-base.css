@@ -1,0 +1,105 @@
+/* A transparent outline keeps each control's edge once its fill is gone. */
+@media (forced-colors: active) {
+  .cap-skip {
+    outline: var(--line-w) solid transparent;
+  }
+}
+
+html,
+body {
+  /* On body, not the token block (check:contrast parses those as colors), and not .admin, because the
+     public chrome reads it. */
+  --site-inset: var(--space-6);
+  background: var(--page-paper);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--text);
+}
+
+/* Capsomer's link system (capsomer/base.css, link.css) on the site's colors: no underline, and a link in
+   running text is told by weight (--link-weight), because brand and visited purples fail CVD simulation on
+   hue alone (WCAG 1.4.1). Element-level and :where(), so any component rule outranks them. Capsomer's
+   letterhead and family footer, the dark signs (direction strip, a.cap-sign) and a.cap-btn keep their own
+   links; this unlayered color would otherwise paint them purple on purple. */
+a:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a, .cap-sign, .cap-btn)) {
+  color: var(--brand);
+  text-decoration: var(--link-decoration);
+}
+
+/* Weight only where a link sits among words of the body's weight: not in a menu, which is told by its place, and
+   not in a heading or other bold run, which it would make lighter. */
+a:where(
+  :not(
+    [class*="cap-"],
+    nav a,
+    :is(h1, h2, h3, h4, h5, h6, b, strong, th, dt, .cap-form-boxes, .cap-checklist-line) a,
+    .cap-site-header a,
+    .cap-family-footer a
+  )
+) {
+  font-weight: var(--link-weight);
+}
+
+a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)) {
+  border-radius: var(--radius-s);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)):hover {
+  background: var(--link-hover-bg);
+  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
+}
+
+a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)):active {
+  background: var(--link-pressed-bg);
+  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-pressed-bg);
+}
+
+/* Forced colors paint no tint, so the pointer gets the system's own cue. */
+@media (forced-colors: active) {
+  a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)):hover {
+    text-decoration: underline;
+  }
+}
+
+/* The direction strip keeps its own link states (capsomer manual.css): a visited, hovered or pressed crumb
+   painted in these purples vanishes on the dark band. */
+a:visited:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) {
+  color: var(--visited);
+}
+
+a:hover:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) {
+  color: var(--brand-hover);
+}
+
+a:active:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) {
+  color: var(--brand-pressed);
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+/* A dependency pinned to a git commit has a range with no break in it (the colophon lists them). */
+.dep-range {
+  overflow-wrap: anywhere;
+}
+
+/* The site's focus ring, in Capsomer's base layer as capsomer/base.css draws it, so a component that
+   draws its own indicator wins: the header search draws one ring on its box and none on its input, and
+   unlayered, this rule put a second ring inside the first. */
+@layer cap.base {
+  :focus-visible {
+    outline: var(--focus-width) solid var(--brand);
+    outline-offset: var(--focus-offset);
+  }
+}
+
+.site-logo-brand {
+  fill: var(--brand);
+}

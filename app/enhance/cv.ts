@@ -394,7 +394,7 @@ export default function start(): void {
   /*
    * On a phone the filters fold behind their summary, open only when a filter is on; wider, they are
    * always open and the summary is not shown. Script off, they stay open everywhere. The server sends the
-   * phone's state and cv.css draws the rest, so this changes nothing on the first paint; it keeps the fold
+   * phone's state and cv-phone-print.css draws the rest, so this changes nothing on the first paint; it keeps the fold
    * right when the width changes.
    */
   const more = root.querySelector("details[data-cv-more]");

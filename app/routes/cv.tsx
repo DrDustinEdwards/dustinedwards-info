@@ -49,6 +49,8 @@ import "capsomer/select.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/cv.css";
+import "~/styles/cv-entries.css";
+import "~/styles/cv-phone-print.css";
 import { markup } from "capsomer/behavior/trusted-html";
 
 /*
@@ -266,7 +268,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
               <CvSearch defaultValue={state.q} />
             </div>
           </div>
-          {/* Sent as app/enhance/cv.ts leaves it on a phone, so the fold never moves the page; cv.css shows it
+          {/* Sent as app/enhance/cv.ts leaves it on a phone, so the fold never moves the page; cv-phone-print.css shows it
               open wider than that and with script off. */}
           <details className="cv-more" open={activeCount(state) > 0} data-cv-more="">
             <summary className="cv-more-summary">

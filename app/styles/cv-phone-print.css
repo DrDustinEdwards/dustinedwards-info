@@ -1,0 +1,187 @@
+/* Phone */
+
+@media (max-width: 40rem) {
+  .cv-stats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .cv-stat {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .cv-stat dd {
+    margin: 0;
+  }
+
+  .cv-stat-sub {
+    grid-column: 1 / -1;
+    text-align: right;
+  }
+
+  .cv-stat-value {
+    font-size: var(--title-2-5);
+  }
+
+  .cv-spark .cap-spark {
+    max-width: 6rem;
+  }
+
+  .cv-entry {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-1);
+  }
+
+  .cv-when {
+    padding: 0;
+    text-align: left;
+  }
+
+  .cv-filter-row {
+    gap: var(--space-5);
+  }
+
+  .cv-filter-row > .cap-field {
+    flex: 1 1 100%;
+  }
+}
+
+/* Print: the CV itself, as a committee reads it. The PDF (/dustin-edwards-cv.pdf) is the
+   traditional version; this keeps whatever the reader filtered. */
+
+@media print {
+  .page-inner:has(> .cv) {
+    max-width: none;
+  }
+
+  .cv-actions,
+  .cv-filters,
+  .cv-timeline,
+  .cv-spark,
+  .cv-summary,
+  .cv-paper-more,
+  .cv-duties,
+  .cv-tags {
+    display: none !important;
+  }
+
+  .cv-overview {
+    padding-block: 0.5rem;
+  }
+
+  .cv-stats {
+    margin: 0;
+  }
+
+  .cv-group {
+    margin-block-start: 1rem;
+    break-inside: auto;
+  }
+
+  .cv-group-title {
+    font-size: 14pt;
+    break-after: avoid;
+  }
+
+  .cv-entry {
+    padding-block: 0.25rem;
+    border: 0;
+    break-inside: avoid;
+    font-size: 10pt;
+  }
+
+  .cv-title a {
+    color: inherit;
+  }
+}
+
+/* The filter panel's disclosure: only a phone shows its summary (app/enhance/cv.ts folds it there). */
+
+.cv-more-summary {
+  display: none;
+}
+
+.cv-more-body {
+  display: grid;
+  gap: var(--space-5);
+}
+
+@media (max-width: 40rem) {
+  .cv-more-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--control-min);
+    color: var(--brand);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+  }
+
+  .cv-more-summary:focus-visible {
+    outline: var(--focus-width) solid var(--brand);
+    outline-offset: var(--focus-offset);
+  }
+
+  .cv-more[open] > .cv-more-summary {
+    margin-block-end: var(--space-4);
+  }
+}
+
+/*
+ * The server sends the panel closed unless a filter is on, the state app/enhance/cv.ts leaves on a phone,
+ * so the fold never moves the page. Wider than a phone, and everywhere with script off, the closed panel
+ * still shows its body; a browser without ::details-content shows its summary to open it instead.
+ */
+@media (width > 40rem), (scripting: none) {
+  .cv-more::details-content {
+    content-visibility: visible;
+  }
+
+  .cv-more-summary {
+    display: none;
+  }
+}
+
+@supports not selector(::details-content) {
+  @media (width > 40rem), (scripting: none) {
+    .cv-more-summary {
+      display: list-item;
+    }
+  }
+}
+
+/* Compact entries: the long lists (grants, awards, courses, service, development) read as a list. */
+
+.cv-entry.cv-compact {
+  padding-block: 0.5625rem;
+}
+
+.cv-compact .cv-when {
+  padding-block-start: var(--space-1);
+}
+
+.cv-compact .cv-body > p {
+  display: inline;
+}
+
+.cv-compact .cv-title {
+  font-family: var(--font-sans);
+  font-size: var(--fs-lead);
+  font-weight: 580;
+  line-height: var(--leading-normal);
+}
+
+.cv-compact .cv-meta {
+  margin: 0;
+  font-size: var(--fs-lead);
+}
+
+.cv-compact .cv-meta::before {
+  content: ", ";
+}
+
+.cv-compact .cv-tags {
+  margin-inline-start: var(--space-3-5);
+}
