@@ -6,7 +6,7 @@ import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import { itemFromRow, sortRegistry, type RegistryItem } from "~/kb/registry/compile.mjs";
 
 import { getDb } from "./client";
-import { registry } from "./schema";
+import { registry } from "./schema-source";
 
 /**
  * Every item, or one kind's, in the site's order. Drafts are the signed-in admin's alone, so a public read passes

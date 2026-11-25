@@ -72,15 +72,19 @@ function normalizeType(/** @type {string} */ type) {
  * tests. A rejection is shared too, so each test reports it rather than one passing over nothing.
  */
 async function loadSources() {
-  const [schemaModule, drizzleCore, drizzleOrm] = await Promise.all([
-    bundle(join(root, "app", "db", "schema.ts"), "schema.mjs", /^~\/(lib)/),
+  const [schemaModules, drizzleCore, drizzleOrm] = await Promise.all([
+    Promise.all(
+      ["schema", "schema-source", "schema-lab"].map((name) =>
+        bundle(join(root, "app", "db", `${name}.ts`), `${name}.mjs`, /^~\/(lib)/),
+      ),
+    ),
     import("drizzle-orm/sqlite-core"),
     import("drizzle-orm"),
   ]);
 
-  /** @type {any[]} drizzle's table configs across both schema files */
+  /** @type {any[]} drizzle's table configs across the schema files */
   const tableConfigs = [];
-  for (const mod of [schemaModule]) {
+  for (const mod of schemaModules) {
     for (const value of Object.values(mod)) {
       if (!drizzleOrm.is(value, drizzleCore.SQLiteTable)) continue;
       tableConfigs.push(drizzleCore.getTableConfig(/** @type {any} */ (value)));

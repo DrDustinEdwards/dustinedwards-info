@@ -2,6 +2,8 @@
 export { getDb, publiclyVisible } from "./client";
 export * from "./media";
 export * from "./posts";
+export * from "./posts-admin";
+export * from "./posts-series";
 export * from "./settings";
 export * from "./site-assets";
 export * from "./webmentions";

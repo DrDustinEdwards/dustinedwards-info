@@ -6,7 +6,7 @@ import { desc, sql } from "drizzle-orm";
 import { sortCohorts, type Cohort } from "~/lib/roster/compile.mjs";
 
 import { getDb } from "./client";
-import { roster } from "./schema";
+import { roster } from "./schema-source";
 
 /**
  * Every cohort, newest first: the order the page lists them. An empty table is a fault, never an empty

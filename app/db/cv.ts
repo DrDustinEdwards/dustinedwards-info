@@ -7,7 +7,7 @@ import type { CvFileRecord } from "~/lib/cv/types";
 
 import { listPublishedPublications } from "./publications";
 import { getDb } from "./client";
-import { cv } from "./schema";
+import { cv } from "./schema-source";
 
 /** Every file's row, in slug order, with its record parsed. */
 export async function listCvRows(env: Env) {

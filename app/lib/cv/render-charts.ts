@@ -2,15 +2,8 @@ import { countsByYearHtml, sparkHtml } from "capsomer/behavior/chart-presets";
 import { describeSeries } from "capsomer/behavior/chart-frame";
 import { listText } from "capsomer/behavior/hooks";
 
-import {
-  sparkData,
-  timelineData,
-  timelineEmptyText,
-  TIMELINE_ID,
-  yearHref,
-  type CvState,
-  type Facts,
-} from "./view.mjs";
+import { sparkData, timelineData, timelineEmptyText } from "./chart-data.mjs";
+import { TIMELINE_ID, yearHref, type CvState, type Facts } from "./view.mjs";
 
 export type CvCharts = { timeline: string; papers: string; grants: string; students: string };
 
