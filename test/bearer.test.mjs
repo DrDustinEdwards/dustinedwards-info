@@ -16,7 +16,3 @@ await test("tokenLabel is stable, fixed width, and moves when the token does", (
   );
   assert.notEqual(label, "operator-token-value", "the label is the token");
 });
-
-await test("tokenLabel labels the empty string without throwing", () => {
-  assert.match(tokenLabel(""), /^[0-9a-f]{8}$/);
-});

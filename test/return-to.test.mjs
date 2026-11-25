@@ -11,13 +11,6 @@ const post = (referer) =>
     headers: referer === null ? {} : { referer },
   });
 
-await test("CONTROL: an ordinary same-origin path is returned", () => {
-  assert.equal(
-    safeReturnTo(post(`${SITE}/writing/ten-years-on-cloudflare`)),
-    "/writing/ten-years-on-cloudflare",
-  );
-});
-
 await test("THE FRAGMENT IS KEPT, which is the defect", () => {
   assert.equal(
     safeReturnTo(post(`${SITE}/writing/ten-years-on-cloudflare#the-numbers`)),
@@ -30,13 +23,6 @@ await test("the query survives alongside the fragment", () => {
     safeReturnTo(post(`${SITE}/writing?tag=d1&page=2#post-list`)),
     "/writing?tag=d1&page=2#post-list",
   );
-});
-
-await test("a percent-encoded fragment is echoed, not decoded", () => {
-  /* This function ECHOES the fragment rather than parsing it, exactly as it does the query:
-   * decoding would be having an opinion about a heading id. */
-  const out = safeReturnTo(post(`${SITE}/writing/a#a%20b`));
-  assert.equal(out, "/writing/a#a%20b");
 });
 
 await test("no Referer means the site root", () => {

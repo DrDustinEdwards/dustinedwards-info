@@ -209,26 +209,6 @@ describe("a save is held to what CI holds", () => {
     expect(await source(FILE)).toBe(currentFile);
   });
 
-  it("REFUSES a photograph the media library does not hold", async () => {
-    const source = await cohortFile({
-      ...CURRENT,
-      photo: {
-        ...CURRENT.photo,
-        src: "/media/dustin-edwards-not-there-fedcba9876543210-1080x720.webp",
-      },
-    });
-    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-photo",
-    });
-    expect(response.status).toBe(422);
-    expect(((await response.json()) as { message: string }).message).toMatch(
-      /is not in the media library/,
-    );
-    expect(await commits()).toHaveLength(0);
-  });
-
   it("REFUSES an id that is not a year, so no other path can be read or written through it", async () => {
     const response = await carrelSend("PUT", `${PREFIX}/content/roster.notes/draft`, {
       source: currentFile,

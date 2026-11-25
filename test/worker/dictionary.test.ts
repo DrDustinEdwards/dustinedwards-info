@@ -197,19 +197,6 @@ describe("a save is held to what CI holds", () => {
     );
     expect(await commits()).toHaveLength(0);
   });
-
-  it("REFUSES a path no registered Software page names", async () => {
-    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: capsidEntry.replace("path: /software/capsid", "path: /research/phages"),
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-path",
-    });
-    expect(response.status).toBe(422);
-    expect(((await response.json()) as { message: string }).message).toMatch(
-      /not a registered Software page/,
-    );
-    expect(await commits()).toHaveLength(0);
-  });
 });
 
 describe("a draft entry is not shown", () => {

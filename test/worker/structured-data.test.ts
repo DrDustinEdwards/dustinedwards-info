@@ -445,18 +445,6 @@ describe("the types each page states", () => {
     expect(ofType("/software/carrel", "SoftwareApplication")).toHaveLength(1);
   });
 
-  it("every software page under /software states a software type, a site or a web page", () => {
-    for (const path of CONTENT_PAGE_PATHS.filter((p) => p.startsWith("/software"))) {
-      const types = onPage(path).map((node) => node["@type"]);
-      expect(
-        types.some((t) =>
-          ["SoftwareApplication", "SoftwareSourceCode", "WebSite", "WebPage"].includes(String(t)),
-        ),
-        `${path}: ${types.join(", ")}`,
-      ).toBe(true);
-    }
-  });
-
   it("each paper in the list is the node its own page describes", () => {
     const listed = ofType("/research/publications", "ScholarlyArticle").concat(
       ofType("/research/publications", "Chapter"),

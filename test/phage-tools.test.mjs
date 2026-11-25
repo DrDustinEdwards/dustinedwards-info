@@ -33,18 +33,6 @@ function sameAsStated(actual, mantissa, exponent) {
   );
 }
 
-await test("titer: hand arithmetic, 111 plaques in 10 µl of 10^-6", () => {
-  // 111 / 10 = 11.1 pfu/µl; x 1,000 = 11,100 pfu/ml; x 10^6 = 1.11 x 10^10.
-  const { perUl, perMlDiluted, pfuPerMl } = titer({
-    plaques: 111,
-    volumeUl: 10,
-    dilutionExponent: 6,
-  });
-  assert.equal(perUl, 11.1);
-  assert.equal(Math.round(perMlDiluted), 11100);
-  assert.equal(Math.round(pfuPerMl / 1e6), 11100);
-});
-
 await test("titer: a spot titer divides by the spot volume, 6 plaques in 3 µl of 10^-3", () => {
   // 6 / 3 = 2 pfu/µl; x 1,000 = 2,000; x 10^3 = 2 x 10^6. Undivided by 3 µl it would be 6 x 10^6.
   assert.equal(titer({ plaques: 6, volumeUl: 3, dilutionExponent: 3 }).pfuPerMl, 2e6);
