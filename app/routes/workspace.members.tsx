@@ -12,7 +12,8 @@ import { PeopleRoles } from "capsomer/react/people-roles";
 
 import { PageHead } from "capsomer/react/page-head";
 import { labActorContext } from "~/lab/actor.server";
-import { membersAction, membersPage } from "~/lab/members.server";
+import { membersAction } from "~/lab/members.server";
+import { membersPage } from "~/lab/members-page.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/workspace.members";
 import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";

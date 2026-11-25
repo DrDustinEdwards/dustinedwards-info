@@ -4,8 +4,6 @@
 import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 
 /**
- * JSON.stringify is correct here: YAML's double-quoted style is a superset of JSON strings.
- *
  * @param {unknown} value
  * @returns {string}
  */

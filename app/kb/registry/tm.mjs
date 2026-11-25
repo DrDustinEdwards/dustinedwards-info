@@ -1,25 +1,11 @@
-// A primer's melting temperature, computed from its sequence and never typed (a computable value is computed). The
-// method and the conditions are stated on every page that shows a Tm, from the constants below, so a reader knows what
-// the number means and a change of condition changes every page at once.
-//
-// METHOD. The unified nearest-neighbor model of SantaLucia (1998), Proc. Natl. Acad. Sci. USA 95:1460-1465, doi
-// 10.1073/pnas.95.4.1460: the duplex's enthalpy and entropy are the sums of its dinucleotide steps plus an initiation
-// term for each end, the entropy is corrected for the monovalent salt, and
-//
-//   Tm = 1000 x dH / (dS + R x ln(C)) - 273.15
-//
-// with dH in kcal/mol, dS in cal/(K x mol), R = 1.987 cal/(K x mol) and C the primer concentration. C is the primer
-// concentration itself, not the total strand concentration over four, because in a PCR the primer is in large excess
-// over the template (for strands at unequal concentration the term is C(excess) minus half of C(limiting), which is C when
-// the template is far below the primer). A self-complementary primer also takes the symmetry term.
-//
-// CONDITIONS. 50 mM monovalent cation and 0.5 uM primer, with the template taken as far below the primer. They are the
-// usual reporting defaults, not the conditions of any one reaction buffer (a master mix's own salt and Mg2+ shift the
-// working Tm), so the figure is for comparing primers with each other. The page says so.
-//
-// A sequence with an ambiguity code or any base but A, C, G and T has no single Tm, so it has none here: null, never a
-// guess. test/registry-tm.test.mjs holds this to Biopython's Bio.SeqUtils.MeltingTemp.Tm_NN (DNA_NN3, which carries the
-// SantaLucia 1998 table, saltcorr 5, the template taken as zero).
+// A primer's melting temperature, computed from its sequence and never typed. The method and conditions are
+// stated on every page that shows a Tm, from the constants below, so a change of condition changes every page.
+// METHOD: SantaLucia (1998) unified nearest-neighbor, PNAS 95:1460, doi 10.1073/pnas.95.4.1460:
+// Tm = 1000 x dH / (dS + R x ln(C)) - 273.15, entropy salt-corrected, C the primer concentration itself (the
+// primer is in large excess over the template in a PCR); a self-complementary primer takes the symmetry term.
+// CONDITIONS: 50 mM monovalent cation, 0.5 uM primer. Reporting defaults, not any one buffer's, so the figure
+// is for comparing primers. A sequence with an ambiguity code has no single Tm: null, never a guess.
+// test/registry-tm.test.mjs holds this to Biopython's Tm_NN (DNA_NN3, saltcorr 5).
 
 /** The conditions every Tm on the site is computed under, stored once. */
 export const TM_CONDITIONS = Object.freeze({

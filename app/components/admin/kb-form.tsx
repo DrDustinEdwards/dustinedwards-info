@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { trustedHtml } from "capsomer/behavior/trusted-html";
+import { useEffect, useMemo, useState } from "react";
 import { Form, useNavigation } from "react-router";
 
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
 import { ButtonLink } from "capsomer/react/link";
 import { Panel } from "capsomer/react/panel";
-import { useDebouncedPreview } from "capsomer/react/form-hooks";
 import { Tabs, TabsList, TabsTrigger } from "capsomer/react/tabs";
 
 import { PageHead } from "capsomer/react/page-head";
@@ -21,108 +19,20 @@ import {
   type Material,
   type Values,
 } from "~/components/admin/kb-form-fields";
-import { BodyEditor, type Inserts, goTo } from "~/components/admin/kb-form-steps";
+import { PreviewPane, useEntryPreview } from "~/components/admin/kb-form-preview";
+import { BodyEditor, goTo } from "~/components/admin/kb-form-steps";
+import type { Inserts } from "~/components/admin/kb-step-card";
 import { SLUG_ATTRIBUTE_PATTERN } from "@drdustinedwards/site-helpers/slug";
 import { safeDecode } from "~/lib/safe-decode.mjs";
 
 /*
- * The Knowledge Base's form editor (docs/KNOWLEDGE-BASE.md): every field its own input, the values nobody has yet at the
- * top as Needs info, and the method as step cards in their sections, reordered by dragging or with Move up and Move down
- * (Alt+Up and Alt+Down on a focused card), as WCAG 2.2's 2.5.7 asks of any drag. What it sends is the form's model; the
- * server writes the file from it (form.mjs) and runs the same Check and Save the raw editor does. The raw file stays one
- * link away, behind Advanced, which also works with no script.
+ * The Knowledge Base's form editor (docs/KNOWLEDGE-BASE.md): every field its own input, the method as step cards
+ * reordered by dragging or with Move up and Move down (Alt+Up and Alt+Down), as WCAG 2.2's 2.5.7 asks of any drag.
+ * It sends the form's model; the server writes the file (form.mjs) and runs the same Check and Save as the raw editor.
  */
-
-type PreviewResult = { html: string; styles: string[] } | { errors: string[] } | { error: string };
 
 /** The width at which the preview sits beside the form; below it, the preview is a tab. Matches app/admin.css. */
 const SIDE_BY_SIDE = "(min-width: 72rem)";
-
-/**
- * The entry the form describes, rendered as its public page by the server a beat after the form stops changing
- * (Capsomer's useDebouncedPreview, at its 900 ms default). A failed request shows as the answer. The frame's document
- * is built when a drawable answer lands, so a failed one keeps the last good page in view.
- */
-function useEntryPreview(slug: string | null, original: string, model: string, active: boolean) {
-  const [doc, setDoc] = useState("");
-  const request = slug && active ? JSON.stringify([slug, original, model]) : null;
-  const { result, error, busy } = useDebouncedPreview(
-    request,
-    async (_, signal): Promise<PreviewResult> => {
-      const body = new FormData();
-      body.set("original", original);
-      body.set("model", model);
-      const response = await fetch(`/admin/kb/preview/${slug}`, { method: "POST", body, signal });
-      const json = (await response.json().catch(() => null)) as PreviewResult | null;
-      if (json && "html" in json && !signal.aborted) {
-        const styles = json.styles
-          .map(
-            (href) => `<link rel="stylesheet" href="${new URL(href, window.location.href).href}">`,
-          )
-          .join("");
-        const theme = document.documentElement.getAttribute("data-theme");
-        setDoc(
-          `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}><head><meta charset="utf-8"><base target="_blank">${styles}</head><body>${json.html}</body></html>`,
-        );
-      }
-      return json ?? { error: `The preview request failed with HTTP ${response.status}.` };
-    },
-  );
-  return { result: error === null ? result : { error }, doc, busy };
-}
-
-/**
- * The public page in a sandboxed frame: no script runs in it, and it links the public page's own stylesheets, so it
- * looks as the page will. A frame, because the page's styles are the public site's and the admin's are its own.
- */
-function PreviewPane({
-  result,
-  doc,
-  busy,
-  publicHref,
-}: {
-  result: PreviewResult | null;
-  doc: string;
-  busy: boolean;
-  publicHref: string | null;
-}) {
-  const failed =
-    result && "errors" in result
-      ? result.errors
-      : result && "error" in result
-        ? [result.error]
-        : null;
-  // Set through the policy: React would turn a TrustedHTML prop back into a string.
-  const frame = useRef<HTMLIFrameElement>(null);
-  useEffect(() => {
-    if (frame.current && doc) frame.current.srcdoc = trustedHtml(doc);
-  }, [doc]);
-  return (
-    <Panel title="Preview" src={busy ? "Updating" : failed ? "Not drawn" : undefined} flush>
-      {failed ? (
-        <div className="kb-preview-note">
-          <Alert tone="warn" title="The page cannot be drawn until these are fixed">
-            <ul>
-              {failed.map((e) => (
-                <li key={e}>{e}</li>
-              ))}
-            </ul>
-          </Alert>
-        </div>
-      ) : null}
-      {doc ? (
-        <iframe
-          className="kb-preview-frame"
-          title={`Preview of the page${publicHref ? ` at ${publicHref}` : ""}`}
-          sandbox=""
-          ref={frame}
-        />
-      ) : (
-        <p className="kb-preview-note">{busy || !result ? "Drawing the page…" : null}</p>
-      )}
-    </Panel>
-  );
-}
 
 /**
  * What the form posts: the model, with each YAML field sent as its text for the server to read, and each list of lines

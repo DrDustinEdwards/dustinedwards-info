@@ -1,17 +1,9 @@
-// The reagent kind of the lab registry (docs/REGISTRY.md): the substances the lab's protocols use up, as distinct from the
-// samples they work on (a lysate, soil, an eluate), the primers (their own kind) and the cultures (strains). The reagents are one
-// table (the library's Reagents tab) and each has a page of its own, listing the protocols that use it (docs/KNOWLEDGE-BASE.md,
-// A1); each protocol's own Reagents table is drawn from these records with that protocol's amount, stock and final.
-//
-// A record states what the lab's own pages state about one substance: its name, an abbreviation or what it is made of where a
-// protocol says so, and where it comes from. A BOUGHT reagent has a supplier and a catalog number (each stated, or
-// `MISSING: <why>` where no record in the repository says, listed for Dustin) and a product link where a protocol linked it. A
-// reagent PREPARED IN THE LAB says so (`prepared_in_lab: true`) and carries a link to its recipe in place of a supplier and a
-// catalog number; the recipe is a procedure with the recipe profile, and where none exists yet the link is MISSING and listed for
-// Dustin, because recipes are written by the lab and never invented here.
-//
-// What the protocols use of it is COMPUTED: a protocol names a reagent on one of its materials by id (`reagent: <id>`), keeps its
-// own amount, stock and final, and the table lists the protocols that name it.
+// The reagent kind of the lab registry (docs/REGISTRY.md): the substances protocols use up, as distinct from
+// samples, primers and strains. One table, a page each, listing the protocols that use it.
+// A BOUGHT reagent has a supplier and catalog number (stated, or `MISSING: <why>`); a reagent PREPARED IN
+// THE LAB (`prepared_in_lab: true`) links its recipe procedure instead, MISSING where none exists, because
+// recipes are written by the lab and never invented here. What protocols use of it is COMPUTED: they name
+// it by id on a material and keep their own amount, stock and final.
 
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
@@ -76,11 +68,8 @@ export const REAGENT = {
 };
 
 /**
- * A reagent as a protocol carries it (`StoredReagent` in app/kb/procedures/render.mjs): the registry's stated facts, none computed,
- * so the protocol's Reagents table, twin and frozen versions say where each came from as it was when the protocol was published.
- *
  * @param {import("./kinds.mjs").RegistryItem} item
- * @returns {import("../procedures/render.mjs").StoredReagent}
+ * @returns {import("../procedures/render-stored.mjs").StoredReagent}
  */
 export function storedReagent(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);

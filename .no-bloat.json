@@ -24,12 +24,12 @@
     ]
   },
   "baseline": {
-    "measured_at": "827ea05",
+    "measured_at": "a640a17",
     "knip": {},
     "jscpd": {
-      "clones": 22,
-      "lines": 319,
-      "percentage": 0.25,
+      "clones": 6,
+      "lines": 117,
+      "percentage": 0.09,
       "unread": 0
     },
     "shared copies": {
@@ -38,46 +38,16 @@
     },
     "legacy": {},
     "size": {
-      "app/app.css": 515,
-      "app/components/admin/kb-form-steps.tsx": 524,
-      "app/components/admin/kb-form.tsx": 501,
-      "app/components/procedure.tsx": 622,
-      "app/db/posts.ts": 676,
-      "app/db/schema.ts": 792,
-      "app/kb/procedures/library.mjs": 568,
-      "app/kb/procedures/render.mjs": 919,
-      "app/kb/procedures/validate.mjs": 1011,
-      "app/kb/registry/catalog.mjs": 1027,
-      "app/lab/members.server.ts": 505,
-      "app/lib/cv/view.mjs": 502,
-      "app/lib/editor/publish.server.ts": 508,
-      "app/lib/features.mjs": 571,
-      "app/lib/nav.ts": 514,
-      "app/lib/operator/sync-tools.server.ts": 610,
-      "app/lib/phage-tools.mjs": 1020,
-      "app/lib/search/search.server.ts": 541,
-      "app/routes/colophon.tsx": 605,
-      "app/routes/cv.tsx": 629,
-      "app/styles/cv.css": 613,
-      "app/styles/katex.generated.css": 1124,
-      "mcp/scripts/check-wrapper.mjs": 722,
-      "scripts/build-og.mjs": 541,
-      "scripts/check-all.mjs": 594,
-      "scripts/check-ask-guards.mjs": 698,
-      "scripts/check-changed.mjs": 520,
-      "scripts/check-contrast.mjs": 737,
-      "scripts/check-links.mjs": 755,
-      "scripts/machine-readable/microformats.mjs": 573,
-      "scripts/sync-content.mjs": 910
+      "app/styles/katex.generated.css": 1124
     },
     "tests": {
-      "files": 172,
-      "cases": 1079
+      "files": 171,
+      "cases": 1063
     },
     "comments": {
-      "lines": 16836,
-      "code": 95034,
-      "percentage": 15.05
+      "lines": 16185,
+      "code": 95104,
+      "percentage": 14.54
     }
   }
 }

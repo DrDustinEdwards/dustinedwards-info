@@ -1,23 +1,11 @@
 /**
- * The client measurement probe. THE INSTRUMENT, not a feature.
+ * The client measurement probe, an instrument and not a feature. Its one job is the removal condition in
+ * src/mcp-handler.ts: do the target clients still open with `initialize`, or `server/discover`? (Claude Code and
+ * claude.ai open with `initialize` and no Mcp-Method or Mcp-Name headers; Grok Build takes the 401 and stops.)
  *
- * Its one remaining job is to answer the removal condition in src/mcp-handler.ts:
- * do the target clients still open with `initialize`, or have they moved to
- * `server/discover`? The shim is deleted on a capture from this endpoint, never on
- * a release note.
- *
- * Mounted at /probe/mcp, OUTSIDE the OAuth provider. That is deliberate: it exists
- * to observe how an unauthenticated client behaves, so putting it behind
- * authentication would defeat it. It answers one no-op tool and has no route to
- * the operator API, so there is nothing here to protect.
- *
- * Claude Code and claude.ai open with `initialize` (2025-11-25) and no Mcp-Method or
- * Mcp-Name headers. Grok Build sends an unauthenticated POST, takes the 401 and stops.
- *
- * Read captures with `node scripts/probe-report.mjs`, which goes through the
- * Cloudflare API. There is no HTTP control plane on purpose: a log describing a
- * client's behavior should not be internet reachable, and this way there is no
- * probe credential to exist or leak.
+ * Mounted at /probe/mcp OUTSIDE the OAuth provider, deliberately: it observes unauthenticated clients. One no-op
+ * tool and no route to the operator API, so there is nothing to protect. Read captures with
+ * `node scripts/probe-report.mjs` (Cloudflare API); no HTTP control plane, so no probe credential exists to leak.
  */
 
 import { readCapped } from "@dustinedwards/site-runtime/body";

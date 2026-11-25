@@ -9,7 +9,7 @@ import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavi
 import { BASES } from "./bases.mjs";
 import { libraryTable, stepCount } from "./procedures/library.mjs";
 import { courseLabel, methodLabel } from "./procedures/taxonomy.mjs";
-import { HOWTO_TYPES } from "./procedures/validate.mjs";
+import { HOWTO_TYPES } from "./procedures/validate-profiles.mjs";
 
 /** A how-to's type in words: "how-to" is "How-to". @param {string} id */
 export const howtoTypeLabel = (id) =>
@@ -209,9 +209,6 @@ export function baseCatalog(base) {
 }
 
 /**
- * The library as rows for a download, for the filter state in the address: every fact the page shows, ids with their
- * words. The CSV and the JSON are both this.
- *
  * @param {KnowledgeBase} base
  * @param {BaseItem[]} items
  * @param {URLSearchParams | string} params
@@ -246,8 +243,6 @@ export function baseRecords(base, items, params, origin) {
 }
 
 /**
- * The twin's table: every entry with the facts the page shows, linked to its own page. An empty library says so.
- *
  * @param {KnowledgeBase} base
  * @param {BaseItem[]} items
  * @param {string} origin

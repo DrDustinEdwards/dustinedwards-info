@@ -12,6 +12,7 @@ import type { Route } from "./+types/legacy-public";
  * imports; nothing in the admin reads any of them.
  */
 import "~/app.css";
+import "~/styles/site-base.css";
 
 // Capsomer's site header (site-header.tsx) and what it is built on, on every public page: its tokens, the
 // shared popover (the panels' placing and the tips) and dialog (the phone's sheet). Layered, so the site's
@@ -26,7 +27,7 @@ import "capsomer/site-header.css";
 import "capsomer/utilities.css";
 // Capsomer's picture (capsomer/react/picture): the <picture> leaves the box to its <img>, and the stored placeholder.
 import "capsomer/picture.css";
-// Capsomer's link system: the mark for a link that leaves the site, opens a file or sends mail (app.css draws
+// Capsomer's link system: the mark for a link that leaves the site, opens a file or sends mail (site-base.css draws
 // the rest of each link from Capsomer's link tokens).
 import "capsomer/link.css";
 import "capsomer/theme-switch.css";

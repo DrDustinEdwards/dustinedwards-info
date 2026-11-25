@@ -4,8 +4,6 @@
 const WORDS_PER_MINUTE = 200;
 
 /**
- * Counts markdown syntax as words on purpose: it is the count published reading times were built with.
- *
  * @param {string} markdownText
  * @returns {number}
  */

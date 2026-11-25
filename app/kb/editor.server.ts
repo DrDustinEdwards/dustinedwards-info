@@ -15,14 +15,13 @@ import { BASES } from "./bases.mjs";
 import { labelGaps } from "./gap-labels.mjs";
 import { procedurePath } from "./procedures/parse.mjs";
 import { compile as compileProcedure, saveProcedure } from "./procedures/save.server";
-import { hasItemPage, itemPath, kindPath } from "./registry/catalog.mjs";
+import { hasItemPage, itemPath, kindPath } from "./registry/address.mjs";
 import { registryPath } from "./registry/compile.mjs";
 import { KINDS } from "./registry/kinds.mjs";
 import { checkRegistryItem, saveRegistryItem } from "./registry/save.server";
 
 type EditorEnv = Env;
 
-/** What is being edited: an entry by its slug, or a registry item by its kind and id. */
 export type KbTarget = { type: "entry"; slug: string } | { type: "item"; kind: string; id: string };
 
 /** A recorded gap: its path in the file, its reason, and the same place in words with the id of the input it is filled in at. */

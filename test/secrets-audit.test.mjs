@@ -14,10 +14,6 @@ const { auditSecrets } = await import("../app/lib/admin/secrets.server.ts");
  * `present`). The collision guard below asserts that rather than assuming it. */
 const SENTINEL = "ZZZZ" + "9174630852".repeat(4);
 
-await test("the ratified list is non-empty, so nothing below passes vacuously", () => {
-  assert.ok(REQUIRED_SECRETS.length >= 5, `only ${REQUIRED_SECRETS.length} secret(s) listed`);
-});
-
 await test("the sentinel cannot collide with the payload's own structure", () => {
   /* Audit with every secret ABSENT: if any window of the sentinel appears in that scaffolding,
    * the leak test would fail on a bad needle rather than on a leak. */

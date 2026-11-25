@@ -54,7 +54,7 @@
 }
 
 /* The trail as airport direction signs (capsomer/manual.css .cap-direction): Overpass, FAA arrows and the page
-   you are on as a location sign. app.css leaves the strip's links out of the site's link color. */
+   you are on as a location sign. site-base.css leaves the strip's links out of the site's link color. */
 .page-breadcrumb {
   margin: 0 0 var(--space-5);
 }

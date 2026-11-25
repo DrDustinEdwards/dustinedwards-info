@@ -7,7 +7,7 @@ import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
 import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 
 import { getDb } from "./client";
-import { dictionaryEntries } from "./schema";
+import { dictionaryEntries } from "./schema-source";
 
 /** The published entry that opens a page, or null: a page with none shows no lead, and a draft shows none either. */
 export async function getPublishedEntryByPath(

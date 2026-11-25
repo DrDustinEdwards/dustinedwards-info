@@ -15,9 +15,6 @@ const NONE = "N/A";
  */
 
 /**
- * The table's groups, in STAR's order, each holding at least one row; empty for a record that is not a protocol or names
- * nothing from the registry.
- *
  * @param {import("./render.mjs").ProcedureRecord} record
  * @returns {KeyResourceGroup[]}
  */

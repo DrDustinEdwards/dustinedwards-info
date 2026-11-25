@@ -34,7 +34,6 @@ import { readingTimeMinutes } from "./reading-time.mjs";
 import { withBacklinks, withRelated } from "./corpus.mjs";
 import { internalLinkSlug, isFurtherReadingUrl } from "./url-policy.mjs";
 
-// Re-exported: build scripts, gates and tests import these from here, the renderer's one door.
 export { ContentError, internalLinkSlug, isAllowedUrl, withBacklinks, withRelated };
 
 // YAML turns an unquoted 2026-07-27 into a Date, so both spellings arrive here.
@@ -91,7 +90,6 @@ export const frontmatterSchema = z.object({
   writing_status: z.enum(["notes", "draft", "in progress", "finished", "obsolete"]).optional(),
   assumed_audience: z.string().min(1).max(200).optional(),
   key_takeaways: z.array(z.string().min(1).max(300)).min(2).max(4).optional(),
-  // isoDate because YAML parses a bare 2026-08-15 into a Date object.
   changelog: z
     .array(
       z.object({
@@ -149,7 +147,6 @@ export { findWideDashes } from "@drdustinedwards/site-helpers/text";
 
 export { readingTimeMinutes };
 
-// Isolate-wide: one highlighter, the same for every request.
 /** @type {ReturnType<typeof createHighlight> | null} */
 let highlight = null;
 
@@ -172,7 +169,6 @@ function getHighlight() {
   return highlight;
 }
 
-// The card key lives beside the card text it hashes, so a route can name a card without this renderer.
 export { ogImageKey } from "./og-card-text.mjs";
 
 /**
@@ -191,7 +187,6 @@ function mediaKeyOf(raw) {
   let path = raw;
   const origin = path.match(/^(?:[a-z][a-z0-9+.-]*:)?\/\/[^/]+(\/.*)$/i);
   if (origin) path = origin[1] ?? path;
-  // Query and fragment are not part of the key: ?w=320 is a transform request.
   path = path.split(/[?#]/)[0] ?? "";
   if (!path.startsWith("/") || path.startsWith("/media/")) return null;
 
@@ -216,7 +211,6 @@ function imageProps(src) {
   if (!src.startsWith("/media/")) return null;
   const key = src.slice("/media/".length);
   const { srcset, sizes, sources } = contentImage(src, dimensionsFromKey(key));
-  // The original, versioned like its sizes (mediaContentVersion), so a link to it is never a stale copy either.
   const href = images.url(`/media/${key}`, { version: mediaContentVersion(key) });
   if (!srcset) return { href };
   return { srcSet: srcset, sizes, sources: sources.filter((s) => !s.media).map((s) => ({ type: s.type, srcSet: s.srcset })), href };
@@ -322,7 +316,6 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage, readCh
   if (fm.cover) {
     const { width, height } = await resolveImage(fm.cover.src);
     cover = { src: fm.cover.src, alt: fm.cover.alt, width, height };
-    // The body renderer never sees a frontmatter cover; without this it would be listed as unused.
     const coverKey = mediaKeyOf(fm.cover.src);
     if (coverKey) {
       mediaRefs.push({ key: coverKey, form: "frontmatter-cover", detail: "cover image" });
@@ -357,11 +350,9 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage, readCh
     furtherReading: fm.further_reading,
     ogTitle: fm.og_title ?? null,
     ogDescription: fm.og_description ?? null,
-    /** The search fields beside description, or null when the post sets none (the posts.search_fields column). */
     searchFields: Object.keys(searchFields).length > 0 ? searchFields : null,
     updated: fm.updated ?? null,
     readingTimeMinutes: readingTimeMinutes(parsed.content),
-    // Never stored: it rides only so check:content can compare it with htmlHasMath.
     hasMath,
     toc,
     diagrams,
@@ -369,7 +360,6 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage, readCh
     markdown: parsed.content,
     html,
     sourcePath: postPath(fm.slug),
-    // Over the whole raw file, frontmatter included, because that is the blob git stores.
     sourceBlobSha: await gitBlobSha(raw),
     renderHash: await sha256Hex(html),
   };

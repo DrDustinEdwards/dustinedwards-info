@@ -1,132 +1,36 @@
-// Turns a parsed, validated procedure into the record D1 stores and the page draws: every markdown
-// fragment rendered to HTML through the site's own pipeline (so links pass the same URL allowlist as a
-// post), every gap left out, and the quantities a reader can scale left as numbered slots in the HTML.
-// The markdown twin and the search inputs are derived here too, from the same parse, so a machine and a
-// person read the same facts.
-//
-// `renderBody` is passed in, not imported: the pipeline is 4 MB, so the Worker loads it lazily
-// (load-pipeline.server.ts) and a Node script imports it directly.
+// Turns a parsed, validated procedure into the record D1 stores and the page draws: markdown fragments rendered
+// through the site's own pipeline (links pass the post URL allowlist), gaps left out, scalable quantities left as
+// slots. `renderBody` is passed in: the pipeline is 4 MB, so the Worker loads it lazily (load-pipeline.server.ts).
 
-import { mdLink } from "../md-link.mjs";
-import { mdCell, plural } from "@drdustinedwards/site-helpers/text";
-import GithubSlugger from "github-slugger";
-
-import { TOOLS } from "../../lib/phage-tools.mjs";
-import { productsForRows } from "../registry/align.mjs";
-import { itemPath } from "../registry/catalog.mjs";
 import { plainText } from "../../lib/search/records.mjs";
-import { keyResources, keyResourcesMarkdown } from "./key-resources.mjs";
 import { proofFromFile } from "./proof.mjs";
 import { formatQuantity, readConditions, segmentText } from "./marks.mjs";
 import { statusLabel } from "./taxonomy.mjs";
-import { allSteps, PLATFORMS, procedurePath, readCalcs } from "./parse.mjs";
-import { HOWTO_TYPES } from "./validate.mjs";
-import { storedLineage } from "./lineage.mjs";
+import { allSteps, procedurePath, readCalcs } from "./parse.mjs";
+import { HOWTO_TYPES } from "./validate-profiles.mjs";
+import { SLOT } from "./render-quantities.mjs";
+import { renderSections } from "./render-sections.mjs";
 
-/** The slot a scalable quantity leaves in a step's HTML, filled at request time (fillQuantities). */
-const SLOT = (/** @type {number} */ i) => `QZQ${i}QZQ`;
-const SLOT_PATTERN = /QZQ(\d+)QZQ/g;
-
-const GAP = /^MISSING:/;
-
-/** A heading as the pipeline writes it: rehype-slug's id, then the autolink inside. */
-const HEADING = /<h([1-6]) id="([^"]+)">([\s\S]*?)<\/h\1>/g;
+export const GAP = /^MISSING:/;
 
 /**
- * The ids of the sections the components draw from the front matter (ProcedureView), so a prose
- * heading with the same words takes the -1 suffix rather than the fixed section's id.
- *
- * @param {unknown} profile
- */
-export function fixedSectionIds(profile) {
-  const materials =
-    profile === "recipe"
-      ? "ingredients"
-      : profile === "computational"
-        ? "software-and-data"
-        : "reagents";
-  const fixed = [
-    materials,
-    "equipment",
-    "primers",
-    "troubleshooting",
-    "expected-results",
-    "limitations",
-    "references",
-    "proof-of-use",
-    "version-history",
-    "cite-this-procedure",
-    "key-resources",
-  ];
-  // A how-to's own sections (S2, S1), after the shared ones so no protocol's prose heading changes its id.
-  return profile === "computational"
-    ? [...fixed, "overview", "questions", "objectives", "key-points", "explanation"]
-    : fixed;
-}
-
-/**
- * The value, or null when it is a recorded gap or absent.
- *
  * @template T
  * @param {T} value
  * @returns {T | null}
  */
-function known(value) {
+export function known(value) {
   if (value === undefined || value === null || value === "") return null;
   if (typeof value === "string" && GAP.test(value)) return null;
   return value;
 }
 
 /** @param {unknown} v */
-const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] : [v]);
+export const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] : [v]);
 
 /**
  * @typedef {(input: { file: string, body: string, resolveImage: (src: string) => Promise<any> }) =>
  *   Promise<{ html: string, toc: Array<{ depth: number, id: string, text: string }>, blockedUrls: Array<{ url: string }> }>} RenderBody
  */
-
-/**
- * A primer as a protocol carries it: the lab registry's own facts about it, read when the protocol is compiled and stored
- * in the record, so the page, the sheet, the twin and a frozen version all print the same sequence, and the protocol's
- * file holds none (docs/REGISTRY.md). Its Tm and length are computed from the sequence where they are shown.
- *
- * @typedef {{ id: string, name: string, status: "published" | "draft", set: string | null, direction: string | null, sequence: string | null, reference: string | null, publishedIn?: string | null }} StoredPrimer
- */
-
-/**
- * A host strain as a protocol carries it: the lab registry's stated facts about it, read when the protocol is compiled and
- * stored in the record, so the page, the twin and a frozen version name one strain and the protocol's file types none.
- *
- * A reagent as a protocol carries it: the lab registry's name for it, read when the protocol is compiled, so a material that
- * names a reagent shows the registry's name and links its page and a frozen version keeps the name it was published with.
- *
- * An equipment item as a protocol carries it: the registry's stated facts (who makes it, and a centrifuge's rotor, or that the rotor
- * is a recorded gap), read when the protocol is compiled, so the protocol's Equipment table and twin say as it was published.
- *
- * @typedef {{ id: string, name: string, status: "published" | "draft", manufacturer: string | null, rotor: string | null, rotorGap: boolean }} StoredEquipment
- *
- * @typedef {{ id: string, name: string, status: "published" | "draft", preparedInLab: boolean, supplier: string | null, catalogNumber: string | null, productUrl: string | null, recipe: string | null }} StoredReagent
- *
- * @typedef {{ id: string, name: string, status: "published" | "draft", organism: string | null, strain: string | null, collection: string | null, collectionNumber: string | null }} StoredStrain
- */
-
-/**
- * Where a reagent comes from, in the words a protocol's table and twin use: a bought reagent's supplier and catalog number, linked to
- * its product page where there is one; a reagent prepared in the lab, linked to its recipe where one exists.
- *
- * @param {StoredReagent} reagent
- * @returns {{ text: string, href: string | null }}
- */
-export function reagentSource(reagent) {
-  if (reagent.preparedInLab) {
-    return {
-      text: reagent.recipe ? "Prepared in the lab (recipe)" : "Prepared in the lab",
-      href: reagent.recipe ? `/recipes/${reagent.recipe}` : null,
-    };
-  }
-  const text = [reagent.supplier, reagent.catalogNumber].filter(Boolean).join(", ");
-  return { text: text || "Not recorded", href: reagent.productUrl };
-}
 
 /**
  * @param {{
@@ -135,11 +39,11 @@ export function reagentSource(reagent) {
  *   gaps: Array<{ field: string, reason: string }>,
  *   renderBody: RenderBody,
  *   resolveImage?: (src: string) => Promise<{ width: number, height: number }>,
- *   primerRows?: StoredPrimer[],
- *   strainRows?: Array<StoredStrain & { path: string }>,
+ *   primerRows?: import("./render-stored.mjs").StoredPrimer[],
+ *   strainRows?: Array<import("./render-stored.mjs").StoredStrain & { path: string }>,
  *   organismNames?: Record<string, string>,
- *   reagentRows?: StoredReagent[],
- *   equipmentRows?: StoredEquipment[],
+ *   reagentRows?: import("./render-stored.mjs").StoredReagent[],
+ *   equipmentRows?: import("./render-stored.mjs").StoredEquipment[],
  * }} input
  */
 export async function renderProcedure({
@@ -278,44 +182,13 @@ export async function renderProcedure({
     };
   };
 
-  // One slugger for the whole page, as rehype-slug has for a whole post: each prose block is rendered
-  // on its own, so a heading repeated across blocks would otherwise keep one id twice. The sections the
-  // components draw themselves take their ids first.
-  const slugger = new GithubSlugger();
-  for (const id of fixedSectionIds(d.profile)) slugger.slug(id);
-  /** @type {Array<{ depth: number, id: string, text: string }>} */
-  const toc = [];
-  /** @type {Array<{ id: string, title: string, blocks: Array<{ type: "prose", html: string } | { type: "steps", steps: Array<Awaited<ReturnType<typeof renderStep>>> }> }>} */
-  const sections = [];
-  for (const section of parsed.sections) {
-    const sectionId = section.custom ? section.id : slugger.slug(section.title);
-    toc.push({ depth: 2, id: sectionId, text: section.title });
-    /** @type {(typeof sections)[number]["blocks"]} */
-    const blocks = [];
-    for (const block of section.blocks) {
-      if (block.type === "prose") {
-        const out = await renderBody({ file, body: block.markdown, resolveImage: refuseImage });
-        if (out.blockedUrls.length > 0) {
-          throw new Error(
-            `${file}: the URL allowlist refused ${out.blockedUrls.map((b) => b.url).join(", ")}`,
-          );
-        }
-        const html = out.html.replace(HEADING, (_all, level, id, inner) => {
-          const text = String(inner)
-            .replace(/<[^>]+>/g, "")
-            .replace(/#$/, "")
-            .trim();
-          const unique = slugger.slug(text);
-          if (Number(level) === 3) toc.push({ depth: 3, id: unique, text });
-          return `<h${level} id="${unique}">${String(inner).replace(`href="#${id}"`, `href="#${unique}"`)}</h${level}>`;
-        });
-        blocks.push({ type: "prose", html });
-      } else {
-        blocks.push({ type: "steps", steps: await Promise.all(block.steps.map(renderStep)) });
-      }
-    }
-    sections.push({ id: sectionId, title: section.title, blocks });
-  }
+  const { sections, toc } = await renderSections({
+    parsed,
+    file,
+    renderBody,
+    refuseImage,
+    renderStep,
+  });
 
   const reagentsById = new Map((reagentRows ?? []).map((r) => [r.id, r]));
   const materials = await Promise.all(
@@ -564,356 +437,3 @@ export async function renderProcedure({
 }
 
 /** @typedef {Awaited<ReturnType<typeof renderProcedure>>} ProcedureRecord */
-
-/**
- * The scale factor a request asks for, or 1. A protocol scales its material totals by the count of its
- * unit; a recipe scales its step amounts by servings.
- *
- * @param {ProcedureRecord} record
- * @param {number | null} asked the count (protocol) or servings (recipe) in the URL
- */
-export function scaleFactor(record, asked) {
-  if (!asked || !(asked > 0) || asked > 1000) return 1;
-  if (record.profile === "recipe" && record.servings) return asked / record.servings;
-  if (record.profile === "protocol" && record.scale) return asked / record.scale.count;
-  return 1;
-}
-
-/**
- * The step's HTML with its quantity slots filled. A protocol's step amounts are per unit and never
- * scale; a recipe's scale unless the file fixed them.
- *
- * @param {{ html: string | null, quantities: Array<{ name?: string, amount: string, unit: string, fixed: boolean, min: number | null, max: number | null }> }} step
- * @param {number} factor
- * @param {(q: { name?: string, amount: string, unit: string, fixed: boolean, min: number | null, max: number | null }) => string} [show] how a recipe shows an amount in the reader's units (recipe-views.mjs)
- */
-export function fillQuantities(step, factor, show) {
-  return (step.html ?? "").replace(SLOT_PATTERN, (_all, i) => {
-    const q = step.quantities[Number(i)];
-    if (!q) return "";
-    return show ? show(q) : formatQuantity({ ...q, raw: "" }, factor);
-  });
-}
-
-/**
- * The markdown twin: the same facts as the page, generated from the same file.
- *
- * @param {ProcedureRecord} record
- * @param {import("./parse.mjs").ParsedProcedure} parsed
- */
-export function procedureMarkdown(record, parsed) {
-  const d = parsed.data;
-  const out = [`# ${record.title}`, "", record.description, ""];
-  const facts = [
-    ["Type", record.howtoType ? HOWTO_TYPES[record.howtoType] : null],
-    ["Version", record.version],
-    ["Updated", record.updated],
-    ["First used", record.firstUsed],
-    ["Last run", record.lastRun],
-    ["Status", record.status],
-    ["Scale", record.scale ? plural(record.scale.count, record.scale.unit) : null],
-    ["Servings", record.servings],
-    ["Prep time", record.prepTime],
-    ["Cook time", record.cookTime],
-    ["Total time", record.time.total],
-    ["Hands-on time", record.time.handsOn],
-    // The parent's file name and version; the twin's route reads it out as the parent's title and address (lineage.mjs).
-    ["Based on", record.forkedFrom ? storedLineage(record.forkedFrom) : null],
-    [
-      "Host strain",
-      record.hostStrains.length > 0
-        ? record.hostStrains.map((s) => mdLink(s.name, s.path)).join("; ")
-        : null,
-    ],
-    ["Biosafety level", record.biosafetyLevel],
-    [
-      "Biosafety",
-      record.biosafety
-        ? [
-            record.biosafety.organism,
-            record.biosafety.strain,
-            record.biosafety.atcc ? `ATCC ${record.biosafety.atcc}` : null,
-          ]
-            .filter(Boolean)
-            .join(", ")
-        : null,
-    ],
-  ].filter(([, v]) => v !== null && v !== undefined && v !== "");
-  for (const [k, v] of facts) out.push(`- ${k}: ${v}`);
-  if (facts.length) out.push("");
-  // A tutorial opens with what it answers and teaches (S2), as the page does.
-  const bullets = (/** @type {string} */ title, /** @type {unknown} */ value) => {
-    const items = list(known(value));
-    if (items.length) out.push(`## ${title}`, "", ...items.map((x) => `- ${x}`), "");
-  };
-  bullets("Questions", d.questions);
-  bullets("Objectives", d.objectives);
-  if (parsed.intro) out.push(parsed.intro, "");
-
-  if (record.basedOn.length) {
-    out.push("## Based on", "");
-    for (const s of record.basedOn) {
-      const link = s.doi ? ` (doi:${s.doi})` : s.url ? ` (${s.url})` : "";
-      out.push(`- ${s.citation}${link}: ${s.for}`);
-    }
-    out.push("");
-  }
-
-  const heading =
-    record.profile === "recipe"
-      ? "Ingredients"
-      : record.profile === "computational"
-        ? "Software and data"
-        : "Reagents";
-  out.push(`## ${heading}`, "");
-  // The registry reagents the materials name, as the record baked them (the file holds only their ids).
-  const reagentOf = new Map(record.materials.map((m) => [m.name, m.reagent]));
-  for (const m of list(d.materials).length ? list(d.materials) : record.materials) {
-    const parts = [
-      known(m.amount) ? `${m.amount}${known(m.per) ? ` per ${m.per}` : ""}` : null,
-      list(m.stock).filter((s) => known(s) !== null).length
-        ? `stock ${list(m.stock)
-            .filter((s) => known(s) !== null)
-            .join(" or ")}`
-        : null,
-      known(m.final) ? `final ${m.final}` : null,
-      known(m.version) ? `version ${m.version}` : null,
-    ].filter(Boolean);
-    const note = known(m.note) ? ` ${m.note}` : "";
-    const reagent = reagentOf.get(m.name) ?? null;
-    const shown = m.display ?? reagent?.name ?? m.name;
-    if (reagent) {
-      const source = reagentSource(reagent);
-      parts.push(source.href ? `source [${source.text}](${source.href})` : `source ${source.text}`);
-    }
-    // A published reagent links its page, as the page's table does.
-    const named =
-      reagent?.status === "published" ? mdLink(shown, itemPath("reagent", reagent.id)) : shown;
-    out.push(
-      `- ${named}${m.group ? ` (${m.group})` : ""}${parts.length ? `: ${parts.join("; ")}.` : ""}${note}`,
-    );
-  }
-  out.push("");
-  for (const s of record.solutions) {
-    out.push(`### ${s.name}`, "");
-    for (const c of s.components)
-      out.push(
-        `- ${c.name}${c.final ? `, ${c.final} final` : ""}${c.amount ? `, ${c.amount}` : ""}`,
-      );
-    if (s.storage) out.push(`- Storage: ${s.storage}`);
-    if (s.shelfLife) out.push(`- Shelf life: ${s.shelfLife}`);
-    out.push("");
-  }
-  if (record.equipment.length) {
-    out.push("## Equipment", "");
-    // The registry facts of each item, as the record baked them (the file holds only the ids).
-    const itemOf = new Map(record.equipment.map((e) => [e.name, e.item]));
-    for (const e of list(d.equipment)) {
-      const name = typeof e === "string" ? e : String(e.name);
-      const item = itemOf.get(name) ?? null;
-      const facts = item
-        ? ` (${[`manufacturer ${item.manufacturer ?? "not recorded"}`, item.rotor ? `rotor ${item.rotor}` : item.rotorGap ? "rotor not recorded" : null].filter(Boolean).join("; ")})`
-        : "";
-      const named =
-        item?.status === "published" ? mdLink(name, itemPath("equipment", item.id)) : name;
-      out.push(`- ${named}${facts}${typeof e === "string" || !e.note ? "" : `: ${e.note}`}`);
-    }
-    out.push("");
-  }
-  if (record.primers.length) {
-    const products = productsForRows(record.primers);
-    out.push(
-      "## Primers",
-      "",
-      "| Primer | Direction | Sequence (5′ to 3′) | Product (computed) |",
-      "| --- | --- | --- | --- |",
-    );
-    for (const p of record.primers) {
-      const pair = products.get(p.id);
-      const sizes = pair
-        ? [...new Set(pair.products.map((x) => x.length))].map((n) => `${n} bp`).join(" or ")
-        : "";
-      out.push(
-        "| " +
-          mdLink(p.name, "/research/lab/primers/" + p.id) +
-          " | " +
-          mdCell(p.direction) +
-          " | " +
-          (p.sequence ? "`" + p.sequence + "`" : "") +
-          " | " +
-          sizes +
-          " |",
-      );
-    }
-    out.push("");
-    const references = [...new Set([...products.values()].map((pair) => pair.reference.id))];
-    if (references.length > 0)
-      out.push(
-        `Product sizes are computed from where the primers bind ${references.join(", ")}, in that accession's coordinates.`,
-        "",
-      );
-  }
-  out.push(...keyResourcesMarkdown(keyResources(record)));
-  if (known(d.environment)) out.push("## Environment", "", String(d.environment), "");
-  if (record.prerequisites.length)
-    out.push("## Prerequisites", "", ...list(d.prerequisites).map((p) => `- ${p}`), "");
-
-  for (const section of parsed.sections) {
-    out.push(`## ${section.title}`, "");
-    for (const block of section.blocks) {
-      if (block.type === "prose") {
-        out.push(block.markdown, "");
-        continue;
-      }
-      for (const step of block.steps) {
-        out.push(`${step.number}. ${step.segments.map((s) => segmentText(s)).join("")}`);
-        const flag = (/** @type {string} */ name, /** @type {string[]} */ items) => {
-          for (const item of items)
-            if (!GAP.test(item)) out.push(`   > ${name}: ${item.replace(/\n/g, "\n   > ")}`);
-        };
-        flag("Critical", step.flags.critical);
-        flag("Pause point", step.flags.pause);
-        flag("Spin", step.flags.spin);
-        flag("Why", step.flags.why);
-        flag("Expected", step.flags.expect);
-        for (const id of step.flags.troubleshooting)
-          out.push(`   > Troubleshooting: see "${id}" below.`);
-        for (const c of readCalcs(step.flags.calc))
-          out.push(
-            `   > Calculator: [${TOOLS[c.id]?.title}](${TOOLS[c.id]?.path})${
-              Object.keys(c.values).length
-                ? ` with ${Object.entries(c.values)
-                    .map(([k, v]) => `${k} ${v}`)
-                    .join(", ")}`
-                : ""
-            }`,
-          );
-        // Every platform's block, each under its name (S4): the page's tabs are a view of these.
-        for (const cmd of step.commands) {
-          if (cmd.platform)
-            out.push(
-              "",
-              `   ${PLATFORMS[/** @type {keyof typeof PLATFORMS} */ (cmd.platform)] ?? cmd.platform}:`,
-            );
-          out.push(
-            "",
-            `   \`\`\`${cmd.lang}`,
-            ...cmd.code.split("\n").map((l) => `   ${l}`),
-            "   ```",
-          );
-          if (cmd.output !== null) {
-            out.push(
-              "",
-              "   Expected output:",
-              "",
-              "   ```",
-              ...cmd.output.split("\n").map((l) => `   ${l}`),
-              "   ```",
-            );
-          }
-        }
-        for (const p of step.photos) out.push(`   ![${p.alt}](${p.src})`);
-        // A challenge and its solution, both: the page folds the solution away, and a machine reads it anyway.
-        step.flags.challenge.forEach((c, i) => {
-          out.push("", `   > Challenge: ${c.replace(/\n/g, "\n   > ")}`);
-          const solution = step.flags.solution[i];
-          if (solution) out.push("", `   > Solution: ${solution.replace(/\n/g, "\n   > ")}`);
-        });
-      }
-      out.push("");
-    }
-  }
-
-  bullets("Key points", d.key_points);
-  if (record.explanation.length)
-    out.push(
-      "## Explanation",
-      "",
-      ...record.explanation.map((e) => `- ${mdLink(e.title, e.url)}`),
-      "",
-    );
-
-  if (list(d.troubleshooting).length) {
-    out.push(
-      "## Troubleshooting",
-      "",
-      "| Step | Problem | Possible reason | Solution |",
-      "| --- | --- | --- | --- |",
-    );
-    for (const r of list(d.troubleshooting)) {
-      out.push(
-        `| ${mdCell(String(r.step ?? ""))} | ${mdCell(String(r.problem ?? ""))} | ${mdCell(String(r.reason ?? ""))} | ${mdCell(String(r.solution ?? ""))} |`,
-      );
-    }
-    out.push("");
-  }
-  if (known(d.expected_results))
-    out.push("## Expected results", "", String(d.expected_results), "");
-  if (known(d.limitations)) out.push("## Limitations", "", String(d.limitations), "");
-  if (list(d.substitutions).length) {
-    out.push("## Substitutions", "");
-    for (const s of list(d.substitutions))
-      out.push(`- For ${s.for}, use ${s.use}${s.note ? `: ${s.note}` : ""}`);
-    out.push("");
-  }
-  if (record.history.length) {
-    out.push("## Version history", "");
-    for (const h of list(d.history))
-      out.push(`- Version ${h.version}, ${h.date}: ${h.summary}${h.doi ? ` (doi:${h.doi})` : ""}`);
-    out.push("");
-  }
-  const refs = list(known(d.references));
-  if (refs.length) out.push("## References", "", ...refs.map((r) => `- ${r}`), "");
-  return `${out
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()}\n`;
-}
-
-/**
- * The search uid of the page at `path`: the one the page had when it was a content page, so a search
- * link survives the move. Also what removing a procedure's search records is keyed by.
- *
- * @param {string} path
- */
-export function procedureSearchUid(path) {
-  return `page:${path.slice(1).replaceAll("/", ":")}`;
-}
-
-/**
- * What the search index takes for this procedure, in the shape recordsForPages reads, with the uid
- * `procedureSearchUid` names.
- *
- * @param {ProcedureRecord} record
- * @param {import("./parse.mjs").ParsedProcedure} parsed
- */
-export function procedureSearchInput(record, parsed) {
-  const markdown = procedureMarkdown(record, parsed);
-  const sections = parsed.sections.map((section) => {
-    const body = section.blocks
-      .map((block) =>
-        block.type === "prose"
-          ? block.markdown
-          : block.steps
-              .map((s) =>
-                [
-                  s.segments.map((x) => segmentText(x)).join(""),
-                  ...s.flags.why,
-                  ...s.flags.critical,
-                ].join(" "),
-              )
-              .join(" "),
-      )
-      .join(" ");
-    return { anchor: section.id, title: section.title, body: plainText(body) };
-  });
-  return {
-    url: record.path,
-    uid: procedureSearchUid(record.path),
-    title: record.title,
-    description: record.description,
-    intro: plainText(parsed.intro),
-    sections,
-    markdown,
-  };
-}

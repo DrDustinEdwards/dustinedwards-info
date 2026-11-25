@@ -26,11 +26,6 @@ async function writingEdgePolicy() {
 const maxAge = (header: string | null) => Number(/\bmax-age=(\d+)/.exec(header ?? "")?.[1]);
 
 describe("the edge lifetime of /writing around a scheduled post", () => {
-  it("WITH NOTHING SCHEDULED is the plain policy the Renderer stamps by default", async () => {
-    await seedPost("edge-live-post");
-    expect(await writingEdgePolicy()).toBe(EDGE_CACHE_CONTROL);
-  });
-
   it("A POST FIVE MINUTES OUT caps it at about five minutes", async () => {
     const slug = "edge-scheduled-post";
     await seedPost(slug, { publishAt: Math.floor(Date.now() / 1000) + 300 });

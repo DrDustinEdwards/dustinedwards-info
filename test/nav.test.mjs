@@ -14,7 +14,8 @@ import {
 } from "../scripts/lib/nav-data.mjs";
 import { NAV_DATA } from "../app/lib/nav-data.generated.mjs";
 import { newestFirst } from "../app/lib/post-order.mjs";
-import { buildNav, isLive, liveMenu, menuLinks, menusAt, visiblePosts } from "../app/lib/nav.ts";
+import { buildNav, isLive, liveMenu, menuLinks, menusAt } from "../app/lib/nav.ts";
+import { visiblePosts } from "../app/lib/nav-menus.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const NOW = Date.parse("2026-10-11T12:00:00Z");

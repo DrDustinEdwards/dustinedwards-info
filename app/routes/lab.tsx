@@ -7,7 +7,8 @@ import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
 import { listRegistry } from "~/db/registry";
 import { getEnv } from "~/lib/context";
-import { INVENTORY, LAB_PATH, inventoryRows, kindLabel } from "~/kb/registry/catalog.mjs";
+import { INVENTORY, inventoryRows, kindLabel } from "~/kb/registry/catalog.mjs";
+import { LAB_PATH } from "~/kb/registry/address.mjs";
 import { LAB_CACHE_TAGS } from "~/kb/registry/route";
 import { pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
 

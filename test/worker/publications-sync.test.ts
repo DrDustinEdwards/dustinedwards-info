@@ -2,8 +2,6 @@ import { env } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
-import { runHealthChecks } from "~/lib/health/checks.server";
-import { runTool } from "~/lib/operator/api.server";
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { paperSearchUid } from "~/lib/publications/search-inputs.mjs";
 
@@ -11,13 +9,12 @@ import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 import classroom from "../../content/publications/10-3389-feduc-2023-1279921.md?raw";
 
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
+import { expectDrift, expectIdempotent, expectSynced, syncOf } from "./sync-harness";
 
 /* sync_publications and the publications-drift check: D1 converges to content/publications through the
  * compile and write doors a publication save uses (the repository is the source). The
  * citation counts come from OpenAlex, so the sync seeds a missing row and never touches one that exists. */
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const SMALL = "10-1128-mra-00888-24";
 const SMALL_DOI = "10.1128/mra.00888-24";
 /** Its twin carries the PDF's full text, which passes D1's 100 KB statement limit: the chunked append. */
@@ -41,9 +38,7 @@ const searchRows = async (slug: string) =>
       .bind(paperSearchUid(slug))
       .first<{ n: number }>()
   )?.n;
-const driftCheck = async () =>
-  (await runHealthChecks(env as never)).checks.find((c) => c.name === "publications-drift");
-const sync = () => runTool(operatorEnv(), operator, "sync_publications", {});
+const { sync, driftCheck } = syncOf("sync_publications", "publications-drift");
 
 let gh: SourceStub;
 
@@ -69,16 +64,7 @@ describe("sync_publications and the publications-drift check", () => {
     async () => {
       expect((await driftCheck())?.ok).toBe(false);
 
-      const first = await sync();
-      expect(first.ok, JSON.stringify(first)).toBe(true);
-      if (first.ok)
-        expect(first.data).toMatchObject({
-          repaired: 2,
-          removed: 0,
-          expected: 2,
-          present: 2,
-          converged: true,
-        });
+      await expectSynced(sync, { repaired: 2, removed: 0, expected: 2 });
       const big = await rowFor(BIG);
       expect(big?.source_blob_sha).toBe(await gitBlobSha(classroom));
       // More than one 100 KB statement could carry: the chunks were appended and the read-back matched them.
@@ -88,9 +74,7 @@ describe("sync_publications and the publications-drift check", () => {
       expect((await citation(BIG_DOI))?.count).toBe(6);
       expect((await driftCheck())?.ok).toBe(true);
 
-      const again = await sync();
-      expect(again.ok).toBe(true);
-      if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
+      await expectIdempotent(sync);
     },
   );
 
@@ -112,14 +96,9 @@ describe("sync_publications and the publications-drift check", () => {
       );
       expect(edited).not.toBe(godfather);
       await putSource(publicationPath(SMALL), edited);
-      const drifted = await driftCheck();
-      expect(drifted?.ok).toBe(false);
-      expect(drifted?.detail).toContain("1 sha-changed");
+      await expectDrift(driftCheck, { changed: 1 });
 
-      const result = await sync();
-      expect(result.ok, JSON.stringify(result)).toBe(true);
-      if (result.ok)
-        expect(result.data).toMatchObject({ repaired: 1, removed: 0, converged: true });
+      await expectSynced(sync, { repaired: 1, removed: 0 });
       expect((await rowFor(SMALL))?.source_blob_sha).toBe(await gitBlobSha(edited));
       const stored = await env.DB.prepare("SELECT record FROM publications WHERE slug = ?1")
         .bind(SMALL)
@@ -138,10 +117,7 @@ describe("sync_publications and the publications-drift check", () => {
       const drifted = await driftCheck();
       expect(drifted?.detail).toContain("1 row(s) with no file");
 
-      const result = await sync();
-      expect(result.ok, JSON.stringify(result)).toBe(true);
-      if (result.ok)
-        expect(result.data).toMatchObject({ repaired: 0, removed: 1, converged: true });
+      await expectSynced(sync, { repaired: 0, removed: 1 });
       expect(await rowFor(SMALL)).toBeNull();
       expect(await searchRows(SMALL)).toBe(0);
       expect(await citation(SMALL_DOI)).toBeNull();

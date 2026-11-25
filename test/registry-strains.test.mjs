@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
-import { STRAINS, phageYearsText, strainRow } from "../app/kb/registry/catalog.mjs";
+import { STRAINS, phageYearsText, strainRow } from "../app/kb/registry/catalog-strains.mjs";
 import { compileRegistryItem, registrySetErrors } from "../app/kb/registry/compile.mjs";
 import { STRAIN, designationOf } from "../app/kb/registry/strain.mjs";
 import { buildRegistry } from "../scripts/lib/registry.mjs";

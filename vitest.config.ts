@@ -84,7 +84,7 @@ const TEST_CARREL_SITE_KEY = "test-carrel-site-key-0123456789abcdef";
  * THE SAME FILES `wrangler d1 migrations apply` RUNS, in the same order, from
  * the same directory. That is the property that makes a D1 assertion here mean
  * anything: a hand-written schema for the tests would be a second owner of the
- * shape, and rule 11 says `app/db/schema.ts` and `drizzle/` are the owners.
+ * shape, and rule 11 says `app/db/schema*.ts` and `drizzle/` are the owners.
  * `test/schema-invariants.test.mjs` already binds those two to the live database; a
  * fixture schema would sit outside that chain entirely.
  */

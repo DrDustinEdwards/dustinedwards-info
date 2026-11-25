@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
-import { mateOf, pairProduct, primerRow, primerRows } from "../app/kb/registry/catalog.mjs";
+import { mateOf, pairProduct, primerRow, primerRows } from "../app/kb/registry/catalog-primers.mjs";
 import { compileRegistryItem, registrySetErrors } from "../app/kb/registry/compile.mjs";
 import { PRIMER } from "../app/kb/registry/primer.mjs";
 import { buildRegistry } from "../scripts/lib/registry.mjs";

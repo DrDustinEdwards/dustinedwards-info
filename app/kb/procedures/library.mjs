@@ -1,30 +1,18 @@
 // The protocol library's one declaration (docs/PROCEDURES.md): the fields a protocol is searched, filtered, sorted
-// and listed by, declared once for Capsomer's catalog. The page, its facets and counts, its sort menu, the CSV and
-// JSON downloads and the markdown twin all read this, so a field is described once. Pure: the route passes in its D1 records.
+// and listed by, declared once for Capsomer's catalog; the page, downloads and markdown twin all read it. Pure.
 
 import { mdLink } from "../md-link.mjs";
 import { mdCell } from "@drdustinedwards/site-helpers/text";
 import { recordsCsv } from "@dustinedwards/site-runtime/csv";
 import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
-
-import { TOOLS } from "../../lib/phage-tools.mjs";
 import {
-  CALCULATORS_PATH,
-  COURSES,
   LIBRARY_PATH,
-  LIBRARY_TABS,
-  METHODS,
-  PHAGE_PIPELINE,
   courseLabel,
   methodLabel,
-  NON_STRAIN_ORGANISMS,
   organismLabel,
   rememberOrganisms,
 } from "./taxonomy.mjs";
 
-export { LIBRARY_PATH };
-
-/** The kinds a library entry can be: a bench protocol, or a computational method. */
 const KINDS = Object.freeze({ protocol: "Protocol", computational: "Computational method" });
 
 /** @param {string} id */
@@ -164,9 +152,6 @@ export const LIBRARY = defineCatalog(
 );
 
 /**
- * The library as rows for a download: every fact the page shows, for the filter state in the address, as ids with
- * their words, so a machine reads what a person sees. The CSV and the JSON are both this.
- *
  * @param {LibraryItem[]} items
  * @param {URLSearchParams | string} params
  * @param {string} origin
@@ -205,9 +190,6 @@ export function libraryCsv(rows) {
 }
 
 /**
- * The twin's table: every protocol with the facts the page shows, drawn from the same items. Links are to the
- * protocols' own pages, so an agent can follow them.
- *
  * @param {LibraryItem[]} items
  * @param {string} origin
  */
@@ -243,232 +225,6 @@ export function libraryTable(head, rows) {
 
 /** @param {number} n @param {[string, string]} noun */
 export const countOf = (n, noun) => `${n} ${n === 1 ? noun[0] : noun[1]}`;
-
-/**
- * The overview's counts as a sentence: the one the page's count line and the twin both carry.
- *
- * @param {ReturnType<typeof libraryOverview>} overview
- */
-function overviewSentence(overview) {
-  const parts = [
-    `${countOf(overview.total, ["protocol", "protocols"])} across ${countOf(overview.methods, ["method", "methods"])}`,
-    overview.organisms > 0 ? `${countOf(overview.organisms, ["organism", "organisms"])}` : "",
-    overview.updated ? `newest updated ${overview.updated}` : "",
-  ].filter(Boolean);
-  return `${parts.join(", ")}.`;
-}
-
-/**
- * The overview for the twin: the count sentence, the workflow as a list with a link for each stage that has
- * protocols, and the methods with their counts, so a machine reads what the page shows.
- *
- * @param {ReturnType<typeof libraryOverview>} overview
- * @param {string} origin
- */
-export function overviewMarkdown(overview, origin) {
-  const noun = /** @type {[string, string]} */ (["protocol", "protocols"]);
-  const stage = (/** @type {(typeof overview.stages)[number]} */ s) =>
-    (s.href ? `- [${s.label}](${origin}${s.href}): ${countOf(s.count, noun)}` : `- ${s.label}`) +
-    s.tools.map((t) => `\n  - [${t.label}](${origin}${t.href})`).join("");
-  return [
-    "## In the library",
-    "",
-    overviewSentence(overview),
-    ...(overview.start.length > 0
-      ? [
-          "",
-          "### Start here",
-          "",
-          ...overview.start.map(
-            (p, i) => `${i + 1}. ${mdLink(p.title, origin + p.href)}: ${p.description}`,
-          ),
-        ]
-      : []),
-    "",
-    "### The phage workflow",
-    "",
-    ...overview.stages.map(stage),
-    ...overview.browse.flatMap((group) => [
-      "",
-      `### ${group.title}`,
-      "",
-      ...group.tiles.map((t) => {
-        const about =
-          "about" in t && typeof t.about === "string"
-            ? ` ([about the course](${origin}${t.about}))`
-            : "";
-        return `- [${t.label}](${origin}${t.href}): ${countOf(t.count, noun)}${about}`;
-      }),
-    ]),
-    "",
-    "### Calculators",
-    "",
-    `- [Phage Lab Calculators](${origin}${CALCULATORS_PATH}): ${countOf(calculatorCount(), ["calculator", "calculators"])}`,
-  ].join("\n");
-}
-
-/**
- * The address of the library narrowed to some values of a facet: the one a person reaches by choosing them there.
- *
- * @param {string} key the facet's parameter (method, organism, course)
- * @param {readonly string[]} values
- */
-function facetHref(key, values) {
-  return `${LIBRARY_PATH}?${values.map((v) => `${key}=${encodeURIComponent(v)}`).join("&")}`;
-}
-
-/** The library narrowed to some methods. @param {readonly string[]} methods */
-function methodHref(methods) {
-  return facetHref("method", methods);
-}
-
-/**
- * A calculator as a link: its page and the name its form carries, both from the one registry. An id the registry does
- * not know is an error here, not a missing link.
- *
- * @param {string} id
- */
-function toolLink(id) {
-  const tool = TOOLS[id];
-  if (!tool)
-    throw new Error(
-      `the phage workflow names a calculator "${id}" that phage-tools.mjs does not define`,
-    );
-  return { id, label: tool.title, href: tool.path };
-}
-
-/**
- * What the library says about itself, counted from its rows: how many protocols, over how many methods and
- * organisms, when the newest changed, a tile for each method that has a protocol, and the phage workflow with the
- * number of protocols under each stage. Nothing here is typed: a protocol saved changes every figure.
- *
- * @param {LibraryItem[]} items
- */
-export function libraryOverview(items) {
-  /** A tile for each id of a closed list that has a protocol: its words, its count and the library narrowed to it. */
-  const tilesOf = (
-    /** @type {string} */ key,
-    /** @type {Record<string, unknown>} */ list,
-    /** @type {(item: LibraryItem) => readonly string[]} */ valuesOf,
-    /** @type {(id: string) => string} */ label,
-  ) =>
-    Object.keys(list)
-      .map((id) => ({
-        id,
-        label: label(id),
-        count: items.filter((p) => valuesOf(p).includes(id)).length,
-        href: facetHref(key, [id]),
-      }))
-      .filter((tile) => tile.count > 0);
-  const tiles = tilesOf("method", METHODS, (p) => p.methods, methodLabel);
-  const browse = [
-    { id: "method", title: "Browse by method", tiles },
-    {
-      id: "course",
-      title: "Browse by course",
-      // A course's tile also names the page that describes it, so the course is one click from its protocols.
-      tiles: tilesOf("course", COURSES, (p) => p.courses, courseLabel).map((tile) => ({
-        ...tile,
-        about: COURSES[/** @type {keyof typeof COURSES} */ (tile.id)].path,
-      })),
-    },
-    {
-      id: "organism",
-      title: "Browse by organism",
-      tiles: tilesOf(
-        "organism",
-        Object.fromEntries(
-          [...new Set(items.flatMap((p) => p.organisms))]
-            .sort(
-              (a, b) =>
-                Number(Object.hasOwn(NON_STRAIN_ORGANISMS, a)) -
-                  Number(Object.hasOwn(NON_STRAIN_ORGANISMS, b)) ||
-                organismLabel(a).localeCompare(organismLabel(b), "en"),
-            )
-            .map((id) => [id, true]),
-        ),
-        (p) => p.organisms,
-        organismLabel,
-      ),
-    },
-  ].filter((group) => group.tiles.length > 0);
-  const stages = PHAGE_PIPELINE.map((stage) => {
-    const count = items.filter((p) => p.methods.some((m) => stage.methods.includes(m))).length;
-    const tools = stage.tools.map((id) => toolLink(id));
-    return {
-      id: stage.id,
-      label: stage.label,
-      count,
-      href: count > 0 ? methodHref(stage.methods) : null,
-      tools,
-    };
-  });
-  // The protocols that say where to begin, in the position each states (never inferred from anything else).
-  const start = items
-    .filter((p) => p.startHere !== null)
-    .sort((a, b) => /** @type {number} */ (a.startHere) - /** @type {number} */ (b.startHere))
-    .map((p) => ({ slug: p.slug, title: p.title, href: p.path, description: p.description }));
-  const dates = items
-    .map((p) => p.updated)
-    .filter(Boolean)
-    .sort();
-  return {
-    total: items.length,
-    methods: tiles.length,
-    organisms: new Set(items.flatMap((p) => p.organisms)).size,
-    updated: dates.at(-1) ?? "",
-    tiles,
-    browse,
-    stages,
-    start,
-  };
-}
-
-/**
- * The tabs over the catalog: All, then each kind of work with the number of protocols in it. A tab is a link, so a
- * tab, Back and a bookmark all work with no script. The current one is the tab whose methods are exactly the method
- * filter in the address; All is current while no method is chosen. The registry's kinds (primers, as they land) follow the
- * calculators as links to their own pages, counted from the registry and never the current tab here.
- *
- * @param {LibraryItem[]} items
- * @param {readonly string[]} chosen the method ids in the address
- * @param {Array<{ id: string, label: string, count: number, href: string }>} [registry] one entry for each registry kind that has items
- */
-export function libraryTabs(items, chosen, registry = []) {
-  const same = (/** @type {readonly string[]} */ methods) =>
-    chosen.length === methods.length && methods.every((m) => chosen.includes(m));
-  return [
-    {
-      id: "all",
-      label: "All",
-      count: items.length,
-      href: LIBRARY_PATH,
-      current: chosen.length === 0,
-    },
-    ...LIBRARY_TABS.map((tab) => ({
-      id: tab.id,
-      label: tab.label,
-      count: items.filter((p) => p.methods.some((m) => tab.methods.includes(m))).length,
-      href: methodHref(tab.methods),
-      current: same(tab.methods),
-    })),
-    // The calculators are not protocols, so they are not rows of this catalog: their tab is a link to their own page,
-    // counted from the registry that holds them, and never the current one here.
-    {
-      id: "calculators",
-      label: "Calculators",
-      count: calculatorCount(),
-      href: CALCULATORS_PATH,
-      current: false,
-    },
-    ...registry.map((tab) => ({ ...tab, current: false })),
-  ];
-}
-
-/** How many calculator pages there are: the distinct pages the registry's tools sit on. */
-function calculatorCount() {
-  return new Set(Object.values(TOOLS).map((tool) => tool.path)).size;
-}
 
 /**
  * How to cite the library, from the site's own identity and the library's address: nothing typed here but the shape
@@ -508,61 +264,5 @@ export function citeMarkdown(citation, origin) {
     citation.access,
     "",
     citation.protocol,
-  ].join("\n");
-}
-
-/**
- * Where a protocol sits in the phage workflow, drawn from the same stages the library's strip uses: its stage (the first
- * whose methods it carries out), the protocols of the nearest earlier and later stage that has any, and the calculators
- * of its stage. Nothing is typed per protocol: a protocol saved changes its neighbors' links. A protocol outside the
- * workflow (a PCR primer set) has none, and so does a stage with nothing before or after it.
- *
- * @param {LibraryItem[]} items every published library entry
- * @param {string} path the protocol's own path
- */
-export function workflowContext(items, path) {
-  const self = items.find((p) => p.path === path);
-  if (!self) return null;
-  const stageOf = (/** @type {LibraryItem} */ p) =>
-    PHAGE_PIPELINE.findIndex((stage) => p.methods.some((m) => stage.methods.includes(m)));
-  const at = stageOf(self);
-  if (at === -1) return null;
-  const link = (/** @type {LibraryItem} */ p) => ({ title: p.title, href: p.path });
-  const others = items.filter((p) => p.path !== path);
-  const nearest = (/** @type {number} */ step) => {
-    for (let i = at + step; i >= 0 && i < PHAGE_PIPELINE.length; i += step) {
-      const found = others.filter((p) => stageOf(p) === i);
-      if (found.length > 0) return found.map(link);
-    }
-    return [];
-  };
-  const stage = /** @type {(typeof PHAGE_PIPELINE)[number]} */ (PHAGE_PIPELINE[at]);
-  return {
-    stage: stage.label,
-    before: nearest(-1),
-    after: nearest(1),
-    tools: stage.tools.map(toolLink),
-  };
-}
-
-/**
- * The same context as lines for the markdown twin, so an agent reads the neighbors a person sees.
- *
- * @param {ReturnType<typeof workflowContext>} context
- * @param {string} origin
- */
-export function workflowMarkdown(context, origin) {
-  if (!context) return "";
-  const links = (/** @type {Array<{ title: string, href: string }>} */ list) =>
-    list.map((p) => mdLink(p.title, origin + p.href)).join(", ");
-  return [
-    "## In the phage workflow",
-    "",
-    `Stage: ${context.stage}.`,
-    ...(context.before.length > 0 ? ["", `Before this: ${links(context.before)}.`] : []),
-    ...(context.after.length > 0 ? ["", `After this: ${links(context.after)}.`] : []),
-    ...(context.tools.length > 0
-      ? ["", `Calculators: ${links(context.tools.map((t) => ({ title: t.label, href: t.href })))}.`]
-      : []),
   ].join("\n");
 }

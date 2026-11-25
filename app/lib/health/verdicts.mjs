@@ -115,9 +115,6 @@ export function contentDriftVerdict(files, rows) {
 }
 
 /**
- * The same comparison for the procedure files and the procedures table, so what counts as drift is one
- * rule for both.
- *
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -131,8 +128,6 @@ export function procedureDriftVerdict(files, rows) {
 }
 
 /**
- * The same comparison for the dictionary entry files and the dictionary_entries table.
- *
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -146,8 +141,6 @@ export function dictionaryDriftVerdict(files, rows) {
 }
 
 /**
- * The same comparison for the page files and the pages table.
- *
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -157,8 +150,6 @@ export function pageDriftVerdict(files, rows) {
 }
 
 /**
- * The same comparison for the CV files and the cv table.
- *
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -196,8 +187,6 @@ export function cvPdfDriftVerdict({ stored, expected }) {
 }
 
 /**
- * The same comparison for the publication files and the publications table.
- *
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -211,8 +200,6 @@ export function publicationDriftVerdict(files, rows) {
 }
 
 /**
- * The same comparison for the roster files and the roster table.
- *
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -222,8 +209,6 @@ export function rosterDriftVerdict(files, rows) {
 }
 
 /**
- * The same comparison for the phage files and the phages table.
- *
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -233,8 +218,6 @@ export function phageDriftVerdict(files, rows) {
 }
 
 /**
- * The same comparison for the registry files and the registry table. An item is read by its address, `<kind>/<id>`.
- *
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -248,8 +231,6 @@ export function registryDriftVerdict(files, rows) {
 }
 
 /**
- * The same comparison for content/llms.txt and the settings row /llms.txt is served from: one file, one row.
- *
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}

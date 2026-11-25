@@ -12,9 +12,6 @@ import { pickAd } from "~/utility-ads/registry";
  * ErrorBoundary. SiteHeader and ShellFooter read no loader data, so nothing is missing on the error path. A 404 keeps
  * the site's own help under the message: the site search started from the missing address, and the sections.
  *
- * At the foot, bottom right, sits one small vintage comic-book ad, picked at random on the server for each request
- * (docs/UTILITY-ADS.md). It is this site's theme slot on Capsomer's page: the page above it is unchanged, with the same
- * background, and the ad is hidden decoration after the message, the buttons and the help.
  * `?ad=<id>` names one, for a link to it. The pages that render this do not hydrate, so the server's pick is the page's.
  */
 export function SiteErrorPage({ error }: { error: unknown }) {

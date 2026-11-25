@@ -92,10 +92,6 @@ em { font-style: italic; }
 `;
 
 /**
- * The print document for a resolved CV: the letterhead, the twin's markdown through the site's pipeline, the
- * fonts inlined, and the fingerprint. A function of the CV alone, so whatever holds a CV (the script from the
- * files, the Worker from D1) renders the same page.
- *
  * @param {import("./entries.mjs").Cv} CV
  * @param {{ renderBody: (input: { file: string, body: string, resolveImage: (src: string) => Promise<never> }) => Promise<{ html: string, blockedUrls: Array<{ url: string }> }>, fontCss: string }} deps
  *   the site's markdown pipeline, and the `@font-face` rules for PDF_FONTS

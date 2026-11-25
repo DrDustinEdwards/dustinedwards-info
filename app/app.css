@@ -17,18 +17,13 @@
   }
 }
 
-/* Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/
-   paths immutable. */
-/* optional, not swap (Google's advice: web.dev "Best practices for fonts"): a face that
-   misses its ~100 ms window leaves the visit in its size-matched fallback below, so text never moves once
-   drawn. Under swap the fallbacks, within about 1% of each face, still re-wrapped a title or a control row
-   now and then (D5). lib/preloads.ts preloads each page's first face so it usually arrives. */
-/* Three rules on one name, from `capsomer fallback-font` (Capsomer 0.66): Georgia up to weight 549,
-   scaled to the face at opsz 17 and weight 400 (the 17px body); Georgia Bold from 550, scaled to the
-   face at opsz 22 and weight 600 or 700 (the 18 to 34px serif titles). Each rule covers its range, so
-   the browser never synthesizes bold. In Chrome against Gelasio (Georgia's metric twin), the fallback's
-   width is within 1% of the face in 17px body text and 3.5% in the serif titles; the one Georgia-regular
-   rule it replaces was 5% narrower in body text and 8% in 17px bold. */
+/* Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/ paths
+   immutable. font-display optional, not swap (web.dev "Best practices for fonts"): a face that misses its
+   ~100 ms window leaves the visit in its size-matched fallback, so text never moves once drawn.
+   lib/preloads.ts preloads each page's first face so it usually arrives. */
+/* Three rules on one name, from `capsomer fallback-font` (Capsomer 0.66): Georgia up to weight 549 scaled
+   to the face at opsz 17 and weight 400 (the 17px body); Georgia Bold from 550 scaled at opsz 22 and weight
+   600 or 700 (the serif titles). Each covers its range, so the browser never synthesizes bold. */
 @font-face {
   font-family: "Source Serif 4 Web Fallback";
   font-style: normal;
@@ -399,117 +394,5 @@
   }
 }
 
-/* A transparent outline keeps each control's edge once its fill is gone. */
-@media (forced-colors: active) {
-  .cap-skip {
-    outline: var(--line-w) solid transparent;
-  }
-}
-
-html,
-body {
-  /* On body, not the token block (check:contrast parses those as colors), and not .admin, because the
-     public chrome reads it. */
-  --site-inset: var(--space-6);
-  background: var(--page-paper);
-  color: var(--text);
-  font-family: var(--font-sans);
-}
-
-::selection {
-  background: var(--selection-bg);
-  color: var(--text);
-}
-
-/* Links are Capsomer's (capsomer/base.css and capsomer/link.css, link.md) on the site's own colors: no line
-   (--link-decoration), and a link in running text is told from the words around it by weight (--link-weight),
-   because brand and visited purples fail CVD simulation on hue alone (WCAG 1.4.1: G183 and F73 take weight as a
-   cue that is not color). Under the pointer a text link (no class) darkens on a soft tint (--link-hover-bg), which a
-   press makes stronger, cloned onto each line it wraps to; a menu is told by its place, and a component link draws
-   its own. link.css adds the
-   mark for a link that leaves the site, opens a file or sends mail. Element-level and :where(), so any component
-   rule outranks them; Capsomer's letterhead and family footer keep their own links, and so do the dark signs (the
-   direction strip and a.cap-sign) and a link drawn as a button (a.cap-btn), whose type this unlayered color would
-   otherwise paint purple on the sign or on the primary button's purple. */
-a:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a, .cap-sign, .cap-btn)) {
-  color: var(--brand);
-  text-decoration: var(--link-decoration);
-}
-
-/* Weight only where a link sits among words of the body's weight: not in a menu, which is told by its place, and
-   not in a heading or other bold run, which it would make lighter. */
-a:where(
-  :not(
-    [class*="cap-"],
-    nav a,
-    :is(h1, h2, h3, h4, h5, h6, b, strong, th, dt, .cap-form-boxes, .cap-checklist-line) a,
-    .cap-site-header a,
-    .cap-family-footer a
-  )
-) {
-  font-weight: var(--link-weight);
-}
-
-a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)) {
-  border-radius: var(--radius-s);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-
-a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)):hover {
-  background: var(--link-hover-bg);
-  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
-}
-
-a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)):active {
-  background: var(--link-pressed-bg);
-  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-pressed-bg);
-}
-
-/* Forced colors paint no tint, so the pointer gets the system's own cue. */
-@media (forced-colors: active) {
-  a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)):hover {
-    text-decoration: underline;
-  }
-}
-
-/* The direction strip keeps its own link states (capsomer manual.css): a visited, hovered or pressed crumb
-   painted in these purples vanishes on the dark band. */
-a:visited:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) {
-  color: var(--visited);
-}
-
-a:hover:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) {
-  color: var(--brand-hover);
-}
-
-a:active:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) {
-  color: var(--brand-pressed);
-}
-
-.muted {
-  color: var(--text-secondary);
-}
-
-/* A dependency pinned to a git commit has a range with no break in it (the colophon lists them). */
-.dep-range {
-  overflow-wrap: anywhere;
-}
-
-/* The site's focus ring, in Capsomer's base layer as capsomer/base.css draws it, so a component that
-   draws its own indicator wins: the header search draws one ring on its box and none on its input, and
-   unlayered, this rule put a second ring inside the first. */
-@layer cap.base {
-  :focus-visible {
-    outline: var(--focus-width) solid var(--brand);
-    outline-offset: var(--focus-offset);
-  }
-}
-
-.site-logo-brand {
-  fill: var(--brand);
-}
-
-/* The tokens stay in this file because scripts/lib/tokens.mjs and check:contrast parse this path. */
-/* The public sheets are JavaScript imports in root.tsx, after this file's rules: CSS drops an @import
-   that follows any rule. */
+/* Tokens stay in this file: scripts/lib/tokens.mjs and check:contrast parse this path. The element and link
+   rules are styles/site-base.css, a JavaScript import right after this file (CSS drops a late @import). */

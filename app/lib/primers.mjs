@@ -1,15 +1,9 @@
 // PCR primer arithmetic: reverse complements, primer sites on a template, and product sizes.
-//
-// Dustin's protocol rule: primer sequences and reverse complements are handled by tested code and
-// diffed against the cited paper, never worked out by hand on a page. Melting temperature is not
-// computed here: the registry computes one under stated conditions (app/kb/registry/tm.mjs), because
-// the papers do not all give salt, primer and Mg2+ concentrations, so no paper's figure is comparable.
-//
-// COORDINATES are 1-based and inclusive, the way GenBank numbers a record, so a site or product
-// reported here can be checked against the accession's own feature table without an off-by-one.
-//
-// IUPAC codes are honored on both sides. A primer base and a template base MATCH when the sets of
-// nucleotides they stand for share at least one member, so an `N` in either matches anything.
+// Dustin's protocol rule: primers are handled by tested code and diffed against the cited paper, never
+// worked out by hand. No melting temperature here: the registry computes one under stated conditions
+// (app/kb/registry/tm.mjs), because papers do not all give salt, primer and Mg2+ concentrations.
+// Coordinates are 1-based and inclusive, as GenBank numbers a record. A primer and a template base
+// MATCH when their IUPAC sets share a member, so an `N` on either side matches anything.
 
 /** @type {Record<string, string>} each IUPAC code and the nucleotides it stands for */
 const IUPAC = {
@@ -81,8 +75,6 @@ export function reverseComplement(seq) {
 }
 
 /**
- * The first record of a FASTA file.
- *
  * @param {string} text
  * @returns {{ header: string, sequence: string }}
  */
@@ -131,8 +123,6 @@ function compatible(a, b) {
  */
 
 /**
- * Hamming comparison of a primer (in template orientation) against the template at `at`.
- *
  * @param {string} template
  * @param {string} probe
  * @param {number} at 0-based
@@ -176,7 +166,6 @@ export function findSites(template, primer, options = {}) {
   /** @type {Site[]} */
   const found = [];
   for (const strand of /** @type {const} */ (["+", "-"])) {
-    // The primer written as it appears on the + strand of the template.
     const onTemplate = strand === "+" ? p : reverseComplement(p);
     const L = onTemplate.length;
     // Map an index in `onTemplate` back to a 1-based position in the primer from its 5′ end.
@@ -208,7 +197,6 @@ export function findSites(template, primer, options = {}) {
     }
     if (maxIndels === 0) continue;
 
-    // One extra base in the primer: drop each primer base in turn and fit what is left.
     for (let drop = 0; drop < L; drop += 1) {
       const probe = onTemplate.slice(0, drop) + onTemplate.slice(drop + 1);
       for (let at = 0; at + probe.length <= t.length; at += 1) {
@@ -222,7 +210,6 @@ export function findSites(template, primer, options = {}) {
         });
       }
     }
-    // One base missing from the primer: the template carries one more base than the primer does.
     for (let gap = 1; gap < L; gap += 1) {
       for (let at = 0; at + L + 1 <= t.length; at += 1) {
         const window = t.slice(at, at + gap) + t.slice(at + gap + 1, at + L + 1);

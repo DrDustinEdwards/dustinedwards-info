@@ -2,28 +2,26 @@ import { plural } from "@drdustinedwards/site-helpers/text";
 import { Catalog } from "capsomer/react/catalog";
 import type { CatalogResult } from "capsomer/behavior/catalog";
 
+import { INVENTORY, kindLabel, type InventoryRow } from "~/kb/registry/catalog.mjs";
 import {
-  INVENTORY,
   EQUIPMENT_CATALOG,
-  PRIMERS,
   REAGENTS,
-  STRAINS,
-  kindLabel,
-  mateOf,
-  pairProduct,
-  phageYearsText,
-  productSpanText,
-  productText,
-  siteText,
   reagentLabel,
   reagentSource,
   type EquipmentRow,
-  type InventoryRow,
+  type ReagentRow,
+} from "~/kb/registry/catalog-reagents.mjs";
+import {
+  PRIMERS,
+  mateOf,
+  pairProduct,
+  productSpanText,
+  productText,
+  siteText,
   type PrimerListRow,
   type PrimerRow,
-  type ReagentRow,
-  type StrainRow,
-} from "~/kb/registry/catalog.mjs";
+} from "~/kb/registry/catalog-primers.mjs";
+import { STRAINS, phageYearsText, type StrainRow } from "~/kb/registry/catalog-strains.mjs";
 import { TmNote } from "~/components/tm-note";
 import { MAX_MISMATCHES } from "~/kb/registry/align.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";

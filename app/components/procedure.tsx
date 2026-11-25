@@ -5,15 +5,14 @@ import { ProcedurePrimers } from "~/components/procedure-primers";
 import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";
 import type { resolveProof } from "~/kb/procedures/proof.mjs";
-import type { workflowContext } from "~/kb/procedures/library.mjs";
-import { bibtex, citationText, citeFacts, versionPath } from "~/kb/procedures/cite.mjs";
-import { fixedSectionIds, type ProcedureRecord } from "~/kb/procedures/render.mjs";
+import type { workflowContext } from "~/kb/procedures/library-workflow.mjs";
+import { citeFacts } from "~/kb/procedures/cite.mjs";
+import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
+import { fixedSectionIds } from "~/kb/procedures/render-sections.mjs";
 import type { Lineage } from "~/kb/procedures/lineage.mjs";
 import { keyResources } from "~/kb/procedures/key-resources.mjs";
-import { cueStages, splitCyclingTables } from "~/kb/procedures/cycling.mjs";
 import { miseEnPlace, type UnitSystem } from "~/kb/procedures/recipe-views.mjs";
 import { contentPicture } from "~/lib/media/images.mjs";
-import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import {
   type Block,
   EquipmentTable,
@@ -27,6 +26,12 @@ import {
   materialsHeading,
 } from "~/components/procedure-materials";
 import { Bullets, StepItem, Steps } from "~/components/procedure-steps";
+import {
+  CyclingProgram,
+  TroubleshootingTable,
+  proseWithPrograms,
+} from "~/components/procedure-tables";
+import { CiteBlock, VersionHistory } from "~/components/procedure-versions";
 import { RENDERED } from "~/lib/content/render-version";
 import { PROSE } from "~/lib/prose-context";
 
@@ -37,200 +42,6 @@ import "capsomer/qr.css";
  * and its printable sheet. The HTML fragments in the record were rendered from the repository's file by
  * the site's own pipeline, with the URL allowlist applied, so they are set as HTML here as a post's are.
  */
-
-function TroubleshootingTable({ record }: { record: ProcedureRecord }) {
-  return (
-    <div className="table-scroll" tabIndex={0} role="region" aria-label="Troubleshooting">
-      <table className="procedure-trouble">
-        <thead>
-          <tr>
-            <th scope="col">Step</th>
-            <th scope="col">Problem</th>
-            <th scope="col">Possible reason</th>
-            <th scope="col">Solution</th>
-          </tr>
-        </thead>
-        <tbody>
-          {record.troubleshooting.map((row) => (
-            <tr key={row.id} id={`trouble-${row.id}`}>
-              <td>{row.step}</td>
-              <td dangerouslySetInnerHTML={html(row.problem)} />
-              <td dangerouslySetInnerHTML={html(row.reason)} />
-              <td dangerouslySetInnerHTML={html(row.solution)} />
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/**
- * Each section's blocks, with every cycling table in the prose marked for the program it prints, in page order
- * (cycling.mjs). The sheet keeps the tables: on paper at the bench a table is the compact form.
- */
-function proseWithPrograms(record: ProcedureRecord) {
-  const programs = Array.isArray(record.cycling) ? record.cycling.length : 0;
-  let next = 0;
-  return record.sections.map((section) => ({
-    section,
-    blocks: section.blocks.map((block) => {
-      if (block.type !== "prose") return { block, parts: [] };
-      const split = splitCyclingTables(block.html, next, programs);
-      next = split.next;
-      return { block, parts: split.parts };
-    }),
-  }));
-}
-
-/**
- * A PCR program as a row of Apollo cue cards, one a stage, each with roll blocks under its strip (Capsomer's manual
- * theme). The blocks are drawn and hidden; the strip says the stage in words.
- */
-function CyclingProgram({ program }: { program: unknown }) {
-  const stages = cueStages(program);
-  const set =
-    typeof (program as { set?: unknown })?.set === "string"
-      ? (program as { set: string }).set
-      : null;
-  return (
-    <ol
-      className="procedure-program"
-      aria-label={set ? `Cycling program: ${set}` : "Cycling program"}
-    >
-      {stages.map((stage, n) => (
-        <li key={n} className="cap-cue">
-          <p className="cap-cue-strip">
-            <span>{set ?? "Cycling program"}</span>
-            <span>
-              Stage {n + 1} of {stages.length}
-            </span>
-          </p>
-          <ol className="cap-roll" aria-hidden="true">
-            {stages.map((_, k) => (
-              <li key={k} data-state={k < n ? "done" : k === n ? "now" : "ahead"} />
-            ))}
-          </ol>
-          <p className="cap-cue-title">{stage.title}</p>
-          <ul className="cap-cue-lines">
-            {stage.lines.map((l, k) => (
-              <li key={k}>
-                <span className="cap-cue-name">{l.name}</span>
-                <span className="cap-cue-value">{l.value}</span>
-              </li>
-            ))}
-          </ul>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-/**
- * What a frozen version's page says when it is not the one the site is at: which version is, and where. `current` is
- * the procedure's live page, with its version (null when none is assigned); null when the procedure is no longer
- * published.
- */
-export function VersionNotice({
-  record,
-  current,
-}: {
-  record: ProcedureRecord;
-  current: { path: string; version: string | null } | null;
-}) {
-  if (current && current.version === record.version) return null;
-  const date = citeFacts(record)?.date;
-  return (
-    <p className="procedure-version-notice" role="note">
-      This is version {record.version}
-      {date ? (
-        <>
-          , dated <time dateTime={date}>{date}</time>
-        </>
-      ) : null}
-      , kept as it was published.{" "}
-      {current ? (
-        <>
-          {current.version ? (
-            <>The current version is version {current.version}: </>
-          ) : (
-            <>The procedure has since moved on: </>
-          )}
-          <a href={current.path}>read the current page</a>.
-        </>
-      ) : (
-        <>The procedure is no longer on the site, so there is no current version.</>
-      )}
-    </p>
-  );
-}
-
-/** What changed in each version, newest first. Nothing is drawn until the file writes a history. */
-function VersionHistory({
-  record,
-  basePath,
-  frozen,
-}: {
-  record: ProcedureRecord;
-  basePath: string;
-  frozen: string[];
-}) {
-  // A row compiled before histories existed has no `history` until the next sync rewrites it.
-  if (!record.history?.length) return null;
-  return (
-    <section aria-labelledby="version-history">
-      <Heading id="version-history">Version history</Heading>
-      <ol className="procedure-history" reversed>
-        {record.history.map((h) => (
-          <li key={h.version}>
-            <strong>
-              {frozen.includes(h.version) ? (
-                <a href={versionPath(basePath, h.version)}>Version {h.version}</a>
-              ) : (
-                <>Version {h.version}</>
-              )}
-            </strong>
-            , <time dateTime={h.date}>{h.date}</time>:{" "}
-            <span dangerouslySetInnerHTML={html(h.summaryHtml)} />
-            {h.doi ? (
-              <>
-                {" "}
-                <a href={`https://doi.org/${h.doi}`}>doi:{h.doi}</a>
-              </>
-            ) : null}
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
-/**
- * How to cite this version, and the BibTeX for it. Drawn only for a version that has been assigned: a procedure with no
- * version cannot be cited, and a DOI is minted only for a version that is. The citation points at the version's frozen
- * copy, or its DOI once it has one. The Zenodo deposit metadata is not on the page; `npm run zenodo:metadata -- <slug>`
- * prints it from the same file.
- */
-function CiteBlock({ record }: { record: ProcedureRecord }) {
-  const facts = citeFacts(record);
-  if (!facts) return null;
-  const where = {
-    origin: SITE_ORIGIN,
-    creator: { name: SITE.name, affiliation: SITE.affiliation },
-  };
-  return (
-    <section aria-labelledby="cite-this-procedure">
-      <Heading id="cite-this-procedure">Cite this procedure</Heading>
-      <p className="procedure-cite">{citationText(record, facts, where)}</p>
-      <details className="procedure-bibtex">
-        <summary>BibTeX</summary>
-        <pre>
-          <code>{bibtex(record, facts, where)}</code>
-        </pre>
-      </details>
-    </section>
-  );
-}
 
 function commandsOf(record: ProcedureRecord) {
   return record.sections.flatMap((s) =>

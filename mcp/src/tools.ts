@@ -1,29 +1,11 @@
 /**
- * The five tools (capsid/research/design-mcp-servers.md section 6).
- *
- * WHOLE JOBS, NOT ENDPOINT MIRRORS (rule 4). Each finishes a job: read the
- * Knowledge Base registry, refresh citations, check the publications against
- * ORCID and Crossref, and keep a procedure. Backups are Capsid Admin's, and
- * webmentions are moderated in Carrel, for every site. The orchestration
- * lives here, in code, and every step of it is still one authenticated request
- * to the operator API, which owns every rule.
- *
- * NO CONTENT, MEDIA OR MENTION TOOLS (rule 11, and one place per job). Carrel owns all
- * writing and every site's media library, so posts, pages, the CV, the
- * dictionary, the roster, the phages, publications and llms.txt are read and
- * written there, photos are imported and deleted there (carrel_import_media,
- * carrel_delete_media), and webmentions are reviewed and decided there
- * (carrel_review_mentions, carrel_decide_mention). This server runs the site.
- *
- * NAMES (rule 5) are `dei_{action}_{resource}`. ANNOTATIONS (rule 6) are set
- * honestly per tool, with the reasoning beside each one that is not obvious.
- * RESPONSES (rule 7) page every list (default 25, at most 100, with has_more and
- * an opaque next_cursor) and an input error says how to fix the input.
- *
- * EVERY CALL GOES THROUGH site-runtime's invokeTool (mcp-handler.ts), which
- * proves the caller owns what the tool names (rule 12.1), checks the scope each
- * tool declares here (12.3), and writes the append-only log before and after
- * (12.4). A tool handler never runs without all three.
+ * The five tools (capsid/research/design-mcp-servers.md section 6): WHOLE JOBS, NOT ENDPOINT MIRRORS (rule 4).
+ * Orchestration lives here, in code, and every step is one authenticated request to the operator API, which
+ * owns every rule. NO CONTENT, MEDIA OR MENTION TOOLS (rule 11): Carrel owns all writing, every media library
+ * and webmention review; backups are Capsid Admin's. NAMES (rule 5) are `dei_{action}_{resource}`, ANNOTATIONS
+ * (rule 6) are set honestly per tool with the reasoning beside each non-obvious one, RESPONSES (rule 7) page every
+ * list (default 25, at most 100). EVERY CALL GOES THROUGH site-runtime's invokeTool (mcp-handler.ts): caller
+ * ownership (12.1), declared scope (12.3), append-only log before and after (12.4).
  */
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";

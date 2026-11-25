@@ -1,7 +1,4 @@
 /**
- * Platform bookkeeping tables are not handled here: they are a property of where the rows came
- * from, not of SQLite.
- *
  * @param {{ name: string, sql: string | null }[]} rows
  * @returns {{ virtual: string[], shadow: string[], real: string[] }}
  */

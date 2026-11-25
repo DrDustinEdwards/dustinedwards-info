@@ -14,7 +14,7 @@ import bacteriophagesPage from "../../content/pages/research-bacteriophages.md?r
 import scienceEducationPage from "../../content/pages/research-science-education.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
-import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import { putSource, source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
 import { renderRoute, routeContext, recordPurges, carrelSend, carrelGet } from "./route-helpers";
 import { seedPages, seedPhages } from "./seed";
 import { testEnv } from "./test-env";
@@ -60,7 +60,6 @@ async function twin() {
     params: {},
   } as never);
 }
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const searchBodies = async () =>
   (
     await testEnv.DB.prepare("SELECT body FROM search_docs WHERE url LIKE ?1")

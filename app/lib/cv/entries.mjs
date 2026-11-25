@@ -1,9 +1,8 @@
 /**
- * The CV resolved: the files in content/cv/ (assembled by app/lib/cv/compile.mjs) joined to the publication
- * records, one flat list every surface renders. The page (app/routes/cv.tsx), the markdown twin
- * (app/lib/cv/markdown.mjs, served by app/routes/cv[.md].ts) and the PDF (rendered from the twin by
- * app/lib/cv/pdf.server.ts, and offline by scripts/build-cv-pdf.mjs) all resolve it with `buildCv`, so they cannot say different things. Pure and clock-free, so the twin and
- * the PDF fingerprint are reproducible.
+ * The CV resolved: the files in content/cv/ (app/lib/cv/compile.mjs) joined to the publication records,
+ * one flat list every surface renders. The page, the markdown twin and the PDF all resolve it with
+ * `buildCv`, so they cannot say different things. Pure and clock-free, so the twin and the PDF
+ * fingerprint are reproducible.
  */
 
 import { slugify } from "@drdustinedwards/site-helpers/slug";

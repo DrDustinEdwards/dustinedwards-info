@@ -118,9 +118,6 @@ function writeField(key, value) {
 }
 
 /**
- * A step list's own lines: a numbered item, then its indented lines (flags, commands, wrapped words), with the blank
- * lines inside the list kept where they were.
- *
  * @param {string[]} lines
  * @param {number} i the index of the item line
  */
@@ -250,8 +247,6 @@ function writeBody(body) {
 }
 
 /**
- * A file as a form's model: every front-matter field's value, in the file's order, and for a procedure its body.
- *
  * @param {string} raw
  * @param {{ body?: boolean }} [options] body: false for a registry item, whose file is its front matter alone
  * @returns {FormModel}

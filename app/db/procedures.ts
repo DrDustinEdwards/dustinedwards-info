@@ -6,7 +6,7 @@ import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
 
 import { getDb } from "./client";
-import { procedures } from "./schema";
+import { procedures } from "./schema-source";
 
 export type ProcedureRow = {
   slug: string;
@@ -61,7 +61,6 @@ export async function listPublishedProcedures(env: Env) {
     .orderBy(asc(procedures.path));
 }
 
-/** For the operator's list_procedures: every row, drafts included. */
 export async function listProceduresForOperator(env: Env) {
   const rows = await getDb(env)
     .select({

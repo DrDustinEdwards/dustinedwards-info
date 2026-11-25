@@ -1,16 +1,11 @@
 /**
- * The MCP server and its era routing.
+ * The MCP server and its era routing. The PRIMARY handler is `legacy: "reject"` (stateless-native 2026-07-28);
+ * prior-era traffic is diverted by site-runtime's routeMcpEra, given the SDK's isLegacyRequest at the ONE call
+ * site below.
  *
- * The PRIMARY handler is `legacy: "reject"`: stateless-native 2026-07-28, the
- * design-center era, with no compatibility thinking inside it. Prior-era traffic
- * is detected and diverted by site-runtime's routeMcpEra, given the SDK's
- * isLegacyRequest at the ONE call site below.
- *
- * REMOVAL CONDITION: stop passing `isLegacyRequest` when
- * `node scripts/probe-report.mjs` shows the target clients opening with
- * `server/discover` instead of `initialize` (Claude Code and claude.ai still
- * open with `initialize`). Delete it on the
- * capture, never on a release note. Without it this is a modern-only server.
+ * REMOVAL CONDITION: stop passing `isLegacyRequest` when `node scripts/probe-report.mjs` shows the target
+ * clients opening with `server/discover` instead of `initialize` (Claude Code and claude.ai still use
+ * `initialize`). Delete it on the capture, never on a release note.
  */
 
 import {

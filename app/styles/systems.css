@@ -30,7 +30,7 @@
 }
 
 /* The card carries the focus ring (Capsomer's :focus-within), so the site's own ring on every focused element
-   (app.css, unlayered, so it outranks Capsomer's layer) is taken off the card's link, or the name gets a second. */
+   (site-base.css, unlayered, so it outranks Capsomer's layer) is taken off the card's link, or the name gets a second. */
 .systems-map .cap-system-map-card-name a:focus-visible {
   outline: none;
 }

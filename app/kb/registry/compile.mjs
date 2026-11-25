@@ -1,13 +1,10 @@
-// The one door from a registry file to the row the registry is drawn from (docs/REGISTRY.md): parse, validate, hash.
-// build:content, sync:content, the gates and the adapter's registry save all call compileRegistryItem, so a file CI
-// passes is the file the save accepts. Pure and dependency-light, so the Worker and the Node scripts import the same
-// module.
-//
-// An item is ONE file, `content/registry/<kind>/<id>.md`, and the file is its front matter and nothing else. What
-// every kind has (a name, and `draft` for its status) is the table's own columns; what a kind knows beyond that is its `fields`
-// (app/kb/registry/kinds.mjs), judged by that kind's rules. The validator REFUSES any field the kind does not
-// declare, so nothing enters the repository or D1 that a page would not show, and it states a value nobody has yet
-// as "MISSING: <why>", never a guess.
+/*
+ * The one door from a registry file to the row the registry is drawn from (docs/REGISTRY.md): parse, validate,
+ * hash. build:content, sync:content, the gates and the adapter's save all call compileRegistryItem, so a file CI
+ * passes is the file the save accepts. An item is ONE file, `content/registry/<kind>/<id>.md`, front matter only:
+ * a name and `draft` are the table's columns, the rest is the kind's `fields` (kinds.mjs). The validator REFUSES
+ * any field the kind does not declare, and states a value nobody has yet as "MISSING: <why>", never a guess.
+ */
 
 import { gitBlobSha } from "../../lib/content/hashes.mjs";
 import { foldText } from "../../lib/cv/view.mjs";
@@ -27,9 +24,6 @@ export function registrySlug(/** @type {string} */ kind, /** @type {string} */ i
 }
 
 /**
- * The kind and id a slug names, or null when it is not exactly `<kind>/<id>` in the allowed shapes, so a slug can
- * never name another path.
- *
  * @param {string} slug
  * @returns {{ kind: string, id: string } | null}
  */
@@ -54,9 +48,6 @@ export function registryPath(/** @type {string} */ slug) {
  */
 
 /**
- * Judges one file and, when it passes, builds the item. Every message the file has is returned, never the first
- * alone, so a writer fixes all of them at once.
- *
  * @param {{ slug: string, raw: string, host: RegistryHost, pipeline: RegistryPipeline, kinds?: Readonly<Record<string, KindSpec>>, sourcePath?: string }} input
  * @returns {Promise<
  *   | { ok: false, errors: string[] }

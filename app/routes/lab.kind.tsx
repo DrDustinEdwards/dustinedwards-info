@@ -23,29 +23,32 @@ import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import {
   EQUIPMENT_CATALOG,
-  LAB_PATH,
-  PRIMERS,
   REAGENTS,
-  STRAINS,
   equipmentRow,
   equipmentRows,
-  hasItemPage,
-  itemPath,
-  kindFromSegment,
-  kindPath,
-  primerRow,
-  primerRows,
-  protocolsUsing,
-  protocolsUsingStrain,
   reagentLabel,
   reagentRow,
   reagentRows,
   reagentSource,
+} from "~/kb/registry/catalog-reagents.mjs";
+import {
+  LAB_PATH,
+  hasItemPage,
+  itemPath,
+  kindFromSegment,
+  kindPath,
+} from "~/kb/registry/address.mjs";
+import { PRIMERS, primerRow, primerRows, protocolsUsing } from "~/kb/registry/catalog-primers.mjs";
+import {
+  STRAINS,
+  protocolsUsingStrain,
   strainRow,
   strainRows,
-} from "~/kb/registry/catalog.mjs";
+} from "~/kb/registry/catalog-strains.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
-import type { EquipmentRow, PrimerRow, ReagentRow, StrainRow } from "~/kb/registry/catalog.mjs";
+import type { EquipmentRow, ReagentRow } from "~/kb/registry/catalog-reagents.mjs";
+import type { PrimerRow } from "~/kb/registry/catalog-primers.mjs";
+import type { StrainRow } from "~/kb/registry/catalog-strains.mjs";
 import { LAB_CACHE_TAGS } from "~/kb/registry/route";
 import { pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
 

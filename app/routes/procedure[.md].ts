@@ -5,7 +5,8 @@ import {
 } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
-import { libraryItems, workflowContext, workflowMarkdown } from "~/kb/procedures/library.mjs";
+import { libraryItems } from "~/kb/procedures/library.mjs";
+import { workflowContext, workflowMarkdown } from "~/kb/procedures/library-workflow.mjs";
 import { withLineage } from "~/kb/procedures/lineage.mjs";
 import { lineageFor } from "~/kb/procedures/lineage.server";
 import { proofMarkdown } from "~/kb/procedures/proof.mjs";

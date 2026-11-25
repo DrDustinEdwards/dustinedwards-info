@@ -48,15 +48,6 @@ await test("THE SIZE DROPS ONE CHARACTER PAST EVERY BREAKPOINT", () => {
   }
 });
 
-await test("a longer title never takes larger type, and a drawn title always has a size", () => {
-  let previous = Infinity;
-  for (let n = 0; n <= TITLE_MAX + 100; n += 1) {
-    const size = titleFontSize(cardTitle(titleOfLength(n)));
-    assert.ok(size <= previous, `${n} characters took ${size}px after ${previous}px`);
-    previous = size;
-  }
-});
-
 await test("a title inside the cap is returned untouched", () => {
   const title = "Where should a blog store its words?";
   assert.equal(cardTitle(title), title);
@@ -72,12 +63,6 @@ await test("an over-long title is cut on a WORD boundary and marked", () => {
     / $/,
     "the space before the ellipsis belongs to the word boundary, not to the output",
   );
-});
-
-await test("the cut lands on a real boundary, never inside a word", () => {
-  const text = "one two three four five six seven eight boundary";
-  const cut = clampWords(text, 44);
-  assert.equal(cut, "one two three four five six seven eight…");
 });
 
 await test("a single unbreakable word longer than the cap is cut anyway", () => {

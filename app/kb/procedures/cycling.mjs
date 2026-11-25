@@ -11,9 +11,6 @@ const known = (v) =>
     : String(v);
 
 /**
- * One line of a card: the temperature as its name and the time as its value. A temperature the file has not
- * recorded is left as a dash rather than a guess.
- *
  * @param {any} step
  * @returns {{ name: string, value: string }}
  */

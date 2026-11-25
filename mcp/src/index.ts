@@ -1,31 +1,24 @@
 /**
  * dustinedwards-mcp: the operator MCP wrapper (Dustin Edwards Admin).
  *
- * THE LAW (Capsid capsid/mcp-wrapper-standard.md). This Worker contains NO policy, NO gates, and NO
- * second write path. Every tool call becomes an authenticated HTTP request to POST /api/operator on the dustinedwards
- * Worker, where all rules live. If this Worker vanished, nothing about what is allowed would change.
+ * THE LAW (Capsid capsid/mcp-wrapper-standard.md): NO policy, NO gates, NO second write path. Every tool call
+ * becomes an authenticated POST /api/operator on the dustinedwards Worker, where all rules live. It is a
+ * SEPARATE Worker because mounted on the app Worker, the cheap path would be an in-process call that skips
+ * operator authentication and the rate limiter; here that call is unreachable.
  *
- * It is a SEPARATE Worker for a structural reason, not a stylistic one: the only path from here to the publish machinery
- * IS the API. Mounted as a route on the app Worker, the cheap path would be an in-process call that silently skips
- * operator authentication and the rate limiter. Here that call is not merely discouraged, it is unreachable.
+ * The Worker is site-runtime's adminMcpWorker, the door every admin MCP server shares (Origin and Host checks,
+ * OAuth provider, Cloudflare Access admitting the single ADMIN_EMAIL, rate limit, /owner, /health, the
+ * tool-call log). What is this server's own:
  *
- * The Worker is site-runtime's adminMcpWorker, the door every admin MCP server shares: the Origin and Host checks, the
- * list-only test key, the OAuth provider bound to PUBLIC_ORIGIN + /mcp, the Cloudflare Access sign-in admitting the
- * single ADMIN_EMAIL (on every request too), the rate limit, /owner, /health and the tool-call log's daily copy (also
- * run now through /api/operator's run_job, behind OPERATOR_TOKEN, by Capsid Admin). What
- * is this server's own is below:
- *
- *   agentKeys              Grok cannot complete OAuth, so its AGENT_KEY_GROK secret is
- *                          its door, read only unless AGENT_WRITE names it. The principal is the secret's name, never the
- *                          request's; it has its own rate limit, operator rights only (the API sees OPERATOR_TOKEN), and
- *                          the same handleMcp as the OAuth door, so one tool surface.
- *   /probe/*               the client measurement instrument (probe.ts), OUTSIDE the OAuth provider on purpose: it
- *                          observes unauthenticated client behavior. One no-op tool, no route to the operator API, and
+ *   agentKeys              Grok cannot complete OAuth, so its AGENT_KEY_GROK secret is its door, read only
+ *                          unless AGENT_WRITE names it. The principal is the secret's name, never the request's;
+ *                          own rate limit, operator rights only, the same handleMcp as the OAuth door.
+ *   /probe/*               the client measurement instrument (probe.ts), OUTSIDE the OAuth provider on purpose:
+ *                          it observes unauthenticated clients. One no-op tool, no route to the operator API,
  *                          every capture (a KV write anyone can trigger) metered per address.
- *   probe-kv               its /health check, warn level: only the instrument uses it.
+ *   probe-kv               its /health check, warn level.
  *
- * Access rather than dustinedwards.info's own Better Auth: this server's identity stays independent of the site's Google
- * project, so a change there cannot affect operator access here.
+ * Access rather than the site's Better Auth, so a change to the site's Google project cannot affect operator access.
  */
 
 import OAuthProvider from "@cloudflare/workers-oauth-provider";

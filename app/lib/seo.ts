@@ -38,13 +38,10 @@ const DEFAULT_OG_IMAGE = shareCard(
   "A microscope, the site's mark, on purple",
 );
 
-// The person, the role, the headship, the department and the university are the CV's: derived from
-// content/cv/profile.md and appointments.md by app/lib/identity.mjs (written to identity.generated.mjs at build),
-// so a CV change reaches the site settings, the titles, the About text and the structured data.
-// `role` is the visible identity line; `jobTitle` is the Person record's, which also names the headship
-// `affiliation` is structured data (worksFor), so it stays short and literal; `org` is the full line for people to read.
-// The description is the name and the role, then what the work is about, so it is 70 to 155 characters, the length search
-// shows (area 1). "Dr." is the doctorate the CV states, so it follows the degree rather than being typed.
+// The person, role, headship, department and university are the CV's, derived by app/lib/identity.mjs,
+// so a CV change reaches the site settings, titles, About text and structured data.
+// `affiliation` is structured data (worksFor), so it stays short and literal; `org` is the full line for people.
+// The description is 70 to 155 characters, the length search shows. "Dr." follows the degree the CV states.
 const HONORIFIC = /^(Ph\.?D|M\.?D|D\.?V\.?M|Ed\.?D|D\.?Sc)\.?$/i.test(IDENTITY.degree)
   ? "Dr. "
   : "";
@@ -104,9 +101,7 @@ export function postSocial(post: PostSocialFields) {
         : DEFAULT_OG_IMAGE;
   return {
     canonical,
-    /** The title a search result shows, before the site's suffix: the author's search title, else the post's. */
     title: search.searchTitle ?? post.title,
-    /** The canonical the head links: the author's, else the page's own. */
     canonicalHref: search.canonical ?? canonical,
     noindex: search.noindex === true,
     description,
@@ -126,7 +121,6 @@ const SECTIONS = {
   "/software": "Software",
 };
 
-/** A visible trail (app/components/breadcrumb.tsx), from its hub down to the page. */
 export type Trail = Array<[string, string]>;
 
 /**
@@ -174,9 +168,7 @@ export function pageMeta(page: {
   socialTitle?: string;
   /** The page's Markdown twin, a path on the site: Prelum links it as `<link rel="alternate" type="text/markdown">`. */
   markdown?: string;
-  /** Prelum writes `noindex, follow`. */
   noindex?: boolean;
-  /** The WebPage subtype: `CollectionPage` for a list. */
   pageType?: string;
   trail?: Trail;
 }) {
@@ -220,10 +212,8 @@ export function profilePageJsonLd(origin: string, page: { path: string; descript
  */
 export { EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL };
 
-/** A response whose address changes when its bytes do (hashed media, uploads). */
 export const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
-/** The small text files crawlers read (robots.txt, security.txt, llms.txt). */
 export const HOURLY_CACHE_CONTROL = "public, max-age=3600";
 
 /** Paths no crawler needs, in /robots.txt and /ai.txt alike. /search/ask is here because every answer is billed. */
@@ -280,7 +270,6 @@ export function publicHtmlHeaders(tag: string = PAGES_CACHE_TAG, edge?: string) 
 
 export const HTML_VARY_ACCEPT = "Accept";
 
-/** site-runtime's `UNCACHED`: what settleCacheHeaders gives anything not marked shared. */
 export const NO_STORE_CACHE_CONTROL = UNCACHED;
 
 type ArticleSeo = {
@@ -296,7 +285,6 @@ type ArticleSeo = {
   tags: string[];
 };
 
-/** The facts Prelum's `headTags` and `article` both read, so the Open Graph tags and the JSON-LD cannot drift apart. */
 export function articleFacts(post: ArticleSeo) {
   return {
     published: post.publishAt,
@@ -341,7 +329,6 @@ export const OWNER_PUBMED =
   "https://pubmed.ncbi.nlm.nih.gov/?term=Edwards+Dustin%5BAuthor%5D&sort=date";
 export const OWNER_FACULTY_PAGE = "https://faculty.tarleton.edu/dcedwards/";
 
-// Each ties to Tarleton.
 const OWNER_SEA_PHAGES = "https://seaphages.org/faculty/318/";
 const OWNER_SCOPUS = "https://www.scopus.com/authid/detail.uri?authorId=57204587587";
 const OWNER_LOOP = "https://loop.frontiersin.org/people/2520780";
@@ -370,7 +357,6 @@ function photoObject(origin: string, photo: { key: string; width: number; height
 const GERMOMICS_URL = "https://germomics.com/";
 export const GERMOMICS_X_URL = "https://x.com/Germomics";
 
-// The footer's `rel="me"` profiles, in order.
 /** @public read by check:content (scripts/machine-readable/microformats.mjs) from a bundle Knip cannot follow */
 export const OWNER_PROFILES = [OWNER_SCHOLAR, OWNER_ORCID, OWNER_PUBMED] as const;
 
@@ -387,7 +373,6 @@ const OWNER_SAME_AS = [
   GERMOMICS_X_URL,
 ];
 
-// What he is known for.
 const OWNER_KNOWS_ABOUT = [
   "Virology",
   "Bacteriophages",
@@ -449,10 +434,8 @@ export function publicationsJsonLd(
     year: number;
     journal: string | null;
     slug: string;
-    /** Null for a submitted manuscript, which has no DOI yet. */
     doi: string | null;
     pdfPath: string | null;
-    /** The curated type, so a chapter here is the same Chapter its own page describes. */
     type?: string;
   }[],
 ) {

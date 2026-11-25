@@ -34,8 +34,6 @@ export function paperBibtex(paper) {
 }
 
 /**
- * One paper as a RIS record, by the same alias table.
- *
  * @param {any} paper
  */
 export function paperRis(paper) {

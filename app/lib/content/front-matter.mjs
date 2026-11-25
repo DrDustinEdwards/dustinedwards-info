@@ -5,8 +5,6 @@
 import { matter } from "@drdustinedwards/site-helpers/matter";
 
 /**
- * The house-style error for one wide dash the pipeline's findWideDashes found.
- *
  * @param {{ line: number, column: number, char: string, excerpt: string }} hit
  */
 export const wideDashError = (hit) =>

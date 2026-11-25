@@ -1,16 +1,10 @@
-// The one phage save, called by the site-api adapter for Carrel (app/lib/carrel/phage-handler.server.ts), and
-// the reads sync_phages and its drift check use. The phage table is edited through Carrel and nothing else:
-// there is no save tool and no admin editor. A save compiles the file the way CI does (compile.mjs), refuses
-// it with every message if it fails, commits it to the repository (unless it is byte-identical,
-// commitUnlessUnchanged), then writes its D1 row and re-derives the page that is drawn from the rows, so the
-// table changes on the next request with no build or deploy. The commit is never reverted when a derived write
-// fails: the error says the commit landed and how to repair it.
-//
-// /research/phages is compiled from these rows (its table, its twin, its search records), and
-// those live in the page's own row. So a write refreshes that page row FIRST, through the page compile door,
-// and the phage's own row LAST: the phage row's blob sha is what the drift check reads as "current", so a
-// failure between the two leaves the phage reading stale and the repair re-runs both. The purge is the pages
-// tag, because the page's HTML and its twin both embed the table.
+// The one phage save, called by the site-api adapter for Carrel (app/lib/carrel/phage-handler.server.ts), plus
+// the reads sync_phages and its drift check use. A save compiles the file the way CI does (compile.mjs), refuses
+// it with every message if it fails, commits it (unless byte-identical), then writes its D1 row and re-derives
+// the page drawn from the rows. The commit is never reverted when a derived write fails: the error says so.
+// ORDER: the page row is refreshed FIRST and the phage's own row LAST, because the phage row's blob sha is what
+// the drift check reads as current, so a failure between the two reads stale and the repair re-runs both. The
+// purge is the pages tag, since the page's HTML and its twin both embed the table.
 
 import { listPhages } from "~/db/phages";
 import { ContentInvalid } from "~/lib/carrel/errors.server";

@@ -1,14 +1,12 @@
-// The strain kind of the lab registry (docs/REGISTRY.md): the bacterial hosts the lab's phage work grows. A strain record
-// states what the lab's own pages state about one host (its organism, the strain designation where it has one, the culture
-// collection and the number the collection gives it, the SEA-PHAGES Guide's page for it) and the biosafety level, which is
-// Dustin's to set and is MISSING until the biosafety officer check is done (core.md).
-//
-// The strain's id is the phages' host key (app/lib/phages/compile.mjs HOSTS), so a phage's host and a strain are one word,
-// and what follows from it is COMPUTED: the phages isolated on the host are read from the phages table, the protocols that use
-// the strain are read from the protocols (which name their host strains by id), and the strain's full name is its organism and
-// designation, which the record's `name` must equal.
+/*
+ * The strain kind of the lab registry (docs/REGISTRY.md): the bacterial hosts the phage work grows. A record states
+ * the organism, designation, culture collection and number, the SEA-PHAGES Guide's page, and the biosafety level,
+ * Dustin's to set and MISSING until the biosafety officer check is done (core.md). The id is the phages' host key
+ * (app/lib/phages/compile.mjs HOSTS), so a host and a strain are one word. COMPUTED: the phages isolated on the
+ * host, the protocols that use it, and the full name (organism and designation), which `name` must equal.
+ */
 
-import { BIOSAFETY_LEVELS } from "../procedures/validate.mjs";
+import { BIOSAFETY_LEVELS } from "../procedures/validate-profiles.mjs";
 import { httpsUrl, oneLine, stated } from "./primer.mjs";
 
 /** @type {import("./kinds.mjs").KindSpec} */
@@ -62,11 +60,8 @@ export function designationOf(fields) {
 }
 
 /**
- * A strain as a protocol carries it (`StoredStrain` in app/kb/procedures/render.mjs): the stated facts, none computed, so the
- * protocol's page, twin and frozen versions name one strain.
- *
  * @param {import("./kinds.mjs").RegistryItem} item
- * @returns {import("../procedures/render.mjs").StoredStrain}
+ * @returns {import("../procedures/render-stored.mjs").StoredStrain}
  */
 export function storedStrain(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);

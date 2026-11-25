@@ -5,7 +5,7 @@ import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import type { MemberRow } from "@dustinedwards/site-runtime/members";
 
 import { getDb } from "./client";
-import { memberAudit, memberTerms, members } from "./schema";
+import { memberAudit, memberTerms, members } from "./schema-lab";
 
 export type SyncState = "pending" | "accepted" | "failed" | "not_needed";
 
@@ -40,7 +40,6 @@ function asMemberRow(row: {
   return { ...row, status: row.status as MemberRow["status"] };
 }
 
-/** One person's row by their normalized email, or null. */
 export async function getMember(env: Env, email: string): Promise<MemberRow | null> {
   const row = await getDb(env).select(ROW).from(members).where(eq(members.email, email)).get();
   return row ? asMemberRow(row) : null;

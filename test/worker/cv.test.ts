@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { CV_PAGE } from "~/lib/cv/entries.mjs";
-import { CV_FILES, cvSourcePath } from "~/lib/cv/parse.mjs";
+import { cvSourcePath } from "~/lib/cv/parse.mjs";
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
@@ -12,7 +12,8 @@ import { loader as twinLoader } from "~/routes/cv[.md]";
 import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
-import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import { rawOf, repository, withGrant } from "./cv-source";
+import { putSource, source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
 import { collectingContext, fakeAssets, workingBrowser } from "./cv-pdf-fixtures";
 import { renderRoute, routeContext, carrelRequest } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
@@ -26,25 +27,9 @@ import { testEnv } from "./test-env";
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
 
-const FILES = import.meta.glob("../../content/cv/*.md", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-}) as Record<string, string>;
-const rawOf = (slug: string) => {
-  const found = FILES[`../../content/cv/${slug}.md`];
-  if (found === undefined) throw new Error(`no content/cv/${slug}.md`);
-  return found;
-};
-const repository = () =>
-  Object.fromEntries(CV_FILES.map(({ slug }) => [cvSourcePath(slug), rawOf(slug)]));
-
 const ADDED_GRANT = "Added Through Carrel Equipment Award";
 const grants = rawOf("grants");
-const editedGrants = grants.replace(
-  "entries:\n",
-  `entries:\n  - year: 2026\n    amount: 4321\n    title: ${ADDED_GRANT}\n    funder: Example Foundation\n    areas: []\n    role: recipient\n`,
-);
+const editedGrants = withGrant(ADDED_GRANT, 4321);
 const profile = rawOf("profile");
 const editedProfile = profile.replace("national: 170", "national: 171");
 
@@ -104,7 +89,6 @@ const charts = async () =>
       params: {},
     } as never)
   ).text();
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const cvSearchHits = async (needle: string) =>
   (
     await testEnv.DB.prepare(

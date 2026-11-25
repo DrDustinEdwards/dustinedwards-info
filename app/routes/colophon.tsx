@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { SearchField } from "capsomer/react/field";
 
+import { type Anchor, AnchorItem, byComponent } from "~/components/colophon-features";
+import { StackDiagram } from "~/components/colophon-stack-diagram";
 import { EvidenceRow } from "~/components/evidence-row";
 import { getEnv } from "~/lib/context";
 import { readHealthTile } from "@dustinedwards/site-runtime/health-snapshot";
@@ -100,149 +102,6 @@ function SectionHead({ id }: { id: string }) {
       <h2 id={section.id}>{section.title}</h2>
       {section.lead ? <p>{section.lead}</p> : null}
     </>
-  );
-}
-
-type Anchor = {
-  kind: string;
-  path?: string;
-  gate?: string;
-  text?: string;
-  id?: string;
-  anonymousGet?: boolean;
-};
-
-function byComponent() {
-  const groups = new Map<string, typeof features.features>();
-  for (const feature of features.features) {
-    const existing = groups.get(feature.component);
-    if (existing) existing.push(feature);
-    else groups.set(feature.component, [feature]);
-  }
-  return [...groups.entries()];
-}
-
-/** A gate anchor names the script rather than linking: the scripts are not served. */
-function AnchorItem({ anchor }: { anchor: Anchor }) {
-  if (anchor.kind === "route" && anchor.path) {
-    /* A link a reader cannot follow reads as evidence until clicked, so such a path is named, not linked. */
-    const followable =
-      !anchor.path.includes(":") && !anchor.path.includes("*") && anchor.anonymousGet !== false;
-    return (
-      <li>
-        <span className="muted">route </span>
-        {followable ? (
-          <Link to={anchor.path}>
-            <code>{anchor.path}</code>
-          </Link>
-        ) : (
-          <code>{anchor.path}</code>
-        )}
-      </li>
-    );
-  }
-  if (anchor.kind === "gate") {
-    return (
-      <li>
-        <span className="muted">gate </span>
-        <code>{anchor.gate}</code>
-      </li>
-    );
-  }
-  if (anchor.kind === "assertion") {
-    return (
-      <li>
-        <span className="muted">assertion in </span>
-        <code>{anchor.gate}</code>
-        <span className="muted">: </span>
-        <q>{anchor.text}</q>
-      </li>
-    );
-  }
-  return (
-    <li>
-      <span className="muted">decision </span>
-      <code>{anchor.id}</code>
-    </li>
-  );
-}
-
-/** The bindings grouped for the diagram. A kind with no group here lands in "Other", so a new binding still shows. */
-const STACK_GROUPS = [
-  { label: "Data", kinds: ["d1", "r2", "kv", "durable_object"] },
-  { label: "Queues", kinds: ["queue_producer", "queue_consumer"] },
-  { label: "AI", kinds: ["ai", "ai_search"] },
-  { label: "Media and files", kinds: ["images", "assets"] },
-] as const;
-
-/**
- * How a request moves through the stack, drawn from the same bindings data as the table below, so the
- * diagram cannot name a resource the Worker no longer holds. Plain HTML: an ordered list of layers.
- */
-function StackDiagram() {
-  const grouped = new Set<string>(STACK_GROUPS.flatMap((group) => group.kinds));
-  const groups = [
-    ...STACK_GROUPS.map((group) => ({
-      label: group.label,
-      names: stack.bindings
-        .filter((binding) => (group.kinds as readonly string[]).includes(binding.kind))
-        .map((binding) => binding.name),
-    })),
-    {
-      label: "Other",
-      names: stack.bindings
-        .filter((binding) => !grouped.has(binding.kind))
-        .map((binding) => binding.name),
-    },
-  ].filter((group) => group.names.length > 0);
-  return (
-    <figure className="colophon-stack">
-      <ol className="colophon-stack-layers" aria-label="Layers of the stack, top to bottom">
-        <li>
-          <span className="colophon-stack-tag">Callers</span>
-          <ul className="colophon-stack-boxes">
-            <li>Readers and their browsers</li>
-            <li>
-              <a href="#run">Carrel</a>, through <code>/api/carrel/v1</code>
-            </li>
-            <li>
-              <a href="#run">Capsid</a> and the admin server, through <code>/api/operator</code>
-            </li>
-          </ul>
-        </li>
-        <li>
-          <span className="colophon-stack-tag">Cloudflare edge</span>
-          <ul className="colophon-stack-boxes">
-            <li>Edge page cache</li>
-          </ul>
-        </li>
-        <li>
-          <span className="colophon-stack-tag">Worker</span>
-          <ul className="colophon-stack-boxes">
-            <li>React Router</li>
-            <li>
-              <a href="#run">Prelum, site-runtime, site-api</a>
-            </li>
-            <li>
-              <Link to={CAPSOMER_PAGE_PATH}>Capsomer</Link>
-            </li>
-          </ul>
-        </li>
-        <li>
-          <span className="colophon-stack-tag">
-            <a href="#bindings">Bindings</a>
-          </span>
-          <ul className="colophon-stack-boxes">
-            {groups.map((group) => (
-              <li key={group.label}>
-                <strong>{group.label}</strong>
-                <span className="colophon-stack-names">{group.names.join(", ")}</span>
-              </li>
-            ))}
-          </ul>
-        </li>
-      </ol>
-    </figure>
   );
 }
 

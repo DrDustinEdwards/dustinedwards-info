@@ -7,7 +7,7 @@ import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import type { PageRecord } from "~/lib/pages/compile.mjs";
 
 import { getDb } from "./client";
-import { pages } from "./schema";
+import { pages } from "./schema-source";
 
 export type PageRow = {
   slug: string;

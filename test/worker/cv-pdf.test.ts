@@ -5,7 +5,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { readCv } from "~/db/cv";
 import { cvPdfStamp } from "~/lib/cv/pdf-html.mjs";
 import { CV_PDF_KEY, FINGERPRINT_FIELD, ensureCvPdf } from "~/lib/cv/pdf.server";
-import { CV_FILES, cvSourcePath } from "~/lib/cv/parse.mjs";
+import { cvSourcePath } from "~/lib/cv/parse.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
 import { loader as pdfLoader } from "~/routes/cv-pdf";
@@ -17,7 +17,8 @@ import {
   fakePdf,
   workingBrowser,
 } from "./cv-pdf-fixtures";
-import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import { rawOf, repository, withGrant } from "./cv-source";
+import { source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
 import { routeContext, carrelRequest } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
@@ -30,26 +31,8 @@ import { testEnv } from "./test-env";
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
 
-const FILES = import.meta.glob("../../content/cv/*.md", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-}) as Record<string, string>;
-const rawOf = (slug: string) => {
-  const found = FILES[`../../content/cv/${slug}.md`];
-  if (found === undefined) throw new Error(`no content/cv/${slug}.md`);
-  return found;
-};
-const repository = () =>
-  Object.fromEntries(CV_FILES.map(({ slug }) => [cvSourcePath(slug), rawOf(slug)]));
-
 const FIRST = "First Pdf Equipment Award";
 const SECOND = "Second Pdf Equipment Award";
-const withGrant = (title: string, amount: number) =>
-  rawOf("grants").replace(
-    "entries:\n",
-    `entries:\n  - year: 2026\n    amount: ${amount}\n    title: ${title}\n    funder: Example Foundation\n    areas: []\n    role: recipient\n`,
-  );
 
 let gh: SourceStub;
 
@@ -86,7 +69,6 @@ function world(browser: Env["BROWSER"]) {
 
 const stored = () => env.OG.head(CV_PDF_KEY);
 const fingerprintOfD1 = async () => cvPdfStamp(await readCv(env as never));
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const check = async (w: { env: Env }) =>
   (await runHealthChecks(w.env)).checks.find((c) => c.name === "cv-pdf-drift");
 const grantsRow = () =>

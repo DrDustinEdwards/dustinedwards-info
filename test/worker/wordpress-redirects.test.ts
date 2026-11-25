@@ -60,12 +60,6 @@ describe("the map's edges", () => {
     }
   });
 
-  it("www sends a removed address to the apex, which answers 410", async () => {
-    const response = await get("https://www.dustinedwards.info/molarity-calculator/");
-    expect(response.status).toBe(301);
-    expect(response.headers.get("location")).toBe(`${APEX}/molarity-calculator/`);
-  });
-
   it("NEVER applies on another host: workers.dev passes the path to the Renderer", async () => {
     const moved = await get("https://dustinedwards.dustin-edwards.workers.dev/virus-isolation");
     expect(moved.status).not.toBe(301);

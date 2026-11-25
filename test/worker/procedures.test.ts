@@ -10,14 +10,14 @@ import { runTool } from "~/lib/operator/api.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { procedurePath } from "~/kb/procedures/parse.mjs";
-import { procedureSearchUid } from "~/kb/procedures/render.mjs";
+import { procedureSearchUid } from "~/kb/procedures/render-markdown.mjs";
 import { loader as pageLoader } from "~/routes/procedure";
 import { loader as twinLoader } from "~/routes/procedure[.md]";
 
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 import zncl2 from "../../content/procedures/phage-dna-extraction.md?raw";
 
-import { routeContext } from "./route-helpers";
+import { routeContext, operatorEnv, operator, procedureRecord } from "./route-helpers";
 import { putSource, removeSource, source, stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
@@ -26,8 +26,6 @@ import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
  * draws the edited step. No build and no deploy sit between the two, which is the procedure system's
  * whole claim. */
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const PAGE = "https://example.com/research/protocols/phage-dna-extraction";
 const SLUG = "phage-dna-extraction";
 
@@ -49,14 +47,7 @@ afterEach(async () => {
   await gh.restore();
 });
 
-async function page() {
-  const out = await pageLoader({
-    request: new Request(PAGE),
-    context: routeContext(),
-    params: { slug: SLUG },
-  } as never);
-  return out.record;
-}
+const page = () => procedureRecord(SLUG);
 
 /** Every step's words, as the page draws them. */
 async function stepTexts() {

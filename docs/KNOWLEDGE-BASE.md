@@ -187,7 +187,7 @@ Each step is one pull request, labeled `visual` where a reader sees it, and name
 4. **Inventory**: migration for `kb_lots`, `kb_locations`, `kb_audit`. The 41 registry records are already rows (their
    files are the source), so the import is of lots, which start empty; every `MISSING` field of the records is on the
    Needs info list.
-   (Tables done: `drizzle/0029_kb_inventory.sql` and `app/db/schema.ts`, all three empty and unread. A lot names its
+   (Tables done: `drizzle/0029_kb_inventory.sql` and `app/db/schema-lab.ts`, all three empty and unread. A lot names its
    registry item by `item_kind` and `item_id` with no foreign key, because `sync:content` rewrites the registry;
    `kb_audit` takes one row per write to a lot or location. Nothing writes them yet and no panel shows them: the
    Inventory tab and every write path wait for job_4acb6ae89b9f, since lots are edited by lab people. The write paths

@@ -8,8 +8,6 @@ const PAPER_SLUG = /^[0-9a-z][0-9a-z-]*$/;
 const PHAGE_KEY = /^[a-z][a-z0-9]*$/;
 
 /**
- * The errors in a `proof_of_use` value, or none.
- *
  * @param {unknown} value
  * @returns {string[]}
  */

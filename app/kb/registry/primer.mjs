@@ -1,16 +1,9 @@
-// The primer kind of the lab registry (docs/REGISTRY.md). A primer record states what the lab's protocols state about one
-// oligo (its sequence as stored, its direction, the set it works in and what that set targets) and what the literature says
-// about it, as read: the paper that prints it, that paper's own name for it, the sequence the paper prints, the product size
-// the paper states, and the reference sequence the primer is placed on.
-//
-// Anything not stored is COMPUTED and so cannot drift: its length, GC content, Tm and reverse complement come from the
-// sequence (tm.mjs, primers.mjs); its position, strand and mismatches on the reference, and a pair's product, come from the
-// reference by tested code (align.mjs); whether the stored sequence matches the printed one is a comparison, not a field; and
-// the protocols that use it are found from the protocols, which name their primers by id.
-//
-// A fact nobody could read is written "MISSING: <why>" with the reason (paywalled, not stated), never filled from memory or
-// inferred. A sequence that DIFFERS from the one a paper prints is shown as differing on its page and listed by
-// check:content; it is never corrected silently, and the decision to change it is the seat's.
+// The primer kind of the lab registry (docs/REGISTRY.md): what the lab's protocols state about one oligo
+// (sequence as stored, direction, the set it works in) and what the literature says about it, as read.
+// Anything not stored is COMPUTED and cannot drift: length, GC, Tm, reverse complement (tm.mjs, primers.mjs),
+// position, strand and mismatches on the reference (align.mjs), and the protocols that use it.
+// A fact nobody could read is "MISSING: <why>", never filled from memory. A sequence that DIFFERS from the
+// paper's is shown as differing and listed by check:content, never corrected silently; the seat decides.
 
 import { DOI_PATTERN } from "@drdustinedwards/site-helpers/scholar";
 
@@ -180,12 +173,8 @@ export function missingReason(value) {
 }
 
 /**
- * A primer as a protocol carries it (`StoredPrimer` in app/kb/procedures/render.mjs): the registry's stated facts, none
- * computed. The protocol's record holds these so its page, sheet, twin and frozen versions print one sequence, and a pair's
- * product is computed from them where it is shown.
- *
  * @param {import("./kinds.mjs").RegistryItem} item
- * @returns {import("../procedures/render.mjs").StoredPrimer}
+ * @returns {import("../procedures/render-stored.mjs").StoredPrimer}
  */
 export function storedPrimer(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);

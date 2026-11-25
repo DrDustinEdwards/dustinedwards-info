@@ -16,8 +16,8 @@ import {
   source,
   stubSources,
   versionOf,
-  writes,
   type SourceStub,
+  commits,
 } from "./source-stub";
 import { purgedTagsOf, routeContext, recordPurges, carrelSend, carrelGet } from "./route-helpers";
 import { seedPages, seedProcedures, seedPublications } from "./seed";
@@ -74,7 +74,6 @@ const setRow = (value: string) =>
   )
     .bind(LLMS_SETTING_KEY, value)
     .run();
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const operatorEnv = () => testEnv as unknown as Parameters<typeof runTool>[0];
 const operator = { kind: "operator", id: "test" } as const;
 const driftCheck = async () =>

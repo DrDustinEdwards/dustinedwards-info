@@ -5,7 +5,7 @@
 import { foldText } from "../lib/cv/view.mjs";
 import { BASES } from "./bases.mjs";
 import { labelGaps } from "./gap-labels.mjs";
-import { hasItemPage, itemPath, kindPath } from "./registry/catalog.mjs";
+import { hasItemPage, itemPath, kindPath } from "./registry/address.mjs";
 import { isGap } from "./procedures/gap.mjs";
 import { KINDS } from "./registry/kinds.mjs";
 
@@ -70,8 +70,6 @@ export function kbTabs(entries, gaps) {
 }
 
 /**
- * A base's entries, narrowed by a search over the title, description and slug (case and accents folded), in title order.
- *
  * @param {KbEntry[]} entries
  * @param {string} tab
  * @param {string} [q]
@@ -94,9 +92,6 @@ function itemHref(item) {
 }
 
 /**
- * Every recorded gap (`MISSING: <why>`), entries first in title order, then registry items in the registry's order, each
- * with the field and the reason as written.
- *
  * @param {KbEntry[]} entries
  * @param {KbItem[]} items
  * @returns {KbGap[]}

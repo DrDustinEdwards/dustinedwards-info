@@ -3,7 +3,8 @@ import { useLocation, useMatches } from "react-router";
 
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SiteNavPanel } from "~/components/site-nav-panel";
-import { buildNav, type NavItem } from "~/lib/nav";
+import { buildNav } from "~/lib/nav";
+import type { NavItem } from "~/lib/nav-menus";
 import { type RunningHeadHandle, runningHeadSection } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
 import listboxCss from "capsomer/listbox.css?url";
@@ -45,8 +46,6 @@ function RunningHead({ pathname }: { pathname: string }) {
  * Capsomer's letterhead (capsomer/react/site-header, `variant="letterhead"`), rendered with no hydration because the
  * public plane sends no React: the mark with "Dustin Edwards" alone, Home and the five sections, each opening the
  * site's structured panel (site-nav-panel.tsx), then search and the no-script theme form. Every link is in this
- * markup with no script; app/enhance/header.ts wires Capsomer's behavior (the panels, the tips and search) on top.
- * The palette island starts on Command-K, with its stylesheets from the header (app/enhance/theme.ts). No
  * `prefetch="intent"`: hover prefetch comes from the rules file the Worker names in each public page's header
  * (workers/app.ts).
  */

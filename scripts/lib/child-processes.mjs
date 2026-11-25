@@ -86,7 +86,6 @@ export function descendantPids(rootPid, table, childNeedle) {
   const found = [];
   let frontier = [rootPid];
   const needle = isWindows && childNeedle !== undefined ? normalizeCommand(childNeedle) : null;
-  // Bounded: a reused pid can manufacture a parentage cycle.
   for (let depth = 0; depth < table.size && frontier.length > 0; depth += 1) {
     /** @type {number[]} */
     const next = [];
@@ -104,8 +103,6 @@ export function descendantPids(rootPid, table, childNeedle) {
 }
 
 /**
- * Signal 0 checks existence without delivering anything; `EPERM` means it exists.
- *
  * @param {number} pid
  * @returns {boolean}
  */
@@ -202,8 +199,6 @@ export class ChildRegistry {
   }
 
   /**
-   * `needles` must be specific enough that a process inheriting the pid cannot match them.
-   *
    * @param {number | undefined} pid
    * @param {string} kind
    * @param {string[]} needles

@@ -34,7 +34,6 @@ export type KbForm = {
   references: Record<"troubleshooting" | "calculators" | "solutions", Choice[]>;
 };
 
-/** A value as YAML text, for a field the form edits as YAML. */
 function yamlText(value: unknown): string {
   if (value === undefined || value === null) return "";
   return stringifyMatter("", { v: value })

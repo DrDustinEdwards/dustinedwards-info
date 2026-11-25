@@ -3,18 +3,11 @@
 //
 //   node scripts/mutation-score.mjs --list                    which modules, and which node:test files cover each
 //   node scripts/mutation-score.mjs --module app/lib/x.mjs    one module
-//   node scripts/mutation-score.mjs [--shard I/N] [--limit N] every module, or the I-th of N slices of them (CI: .github/workflows/mutation.yml)
+//   node scripts/mutation-score.mjs [--shard I/N] [--limit N] every module, or the I-th of N slices (CI: .github/workflows/mutation.yml)
 //
-// Slices are balanced by time, not by count: scripts/mutation-seconds.json holds each module's measured seconds on a CI
-// runner, and the modules are dealt longest first to the slice with the least so far. One module (the registry catalog)
-// takes most of an hour while forty take under a minute, so a slice of every Nth module ran anywhere from 15 to 96
-// minutes. A module the file does not name counts as the median until it is measured; each slice's summary records the
-// seconds every module took, so refreshing the file is copying those numbers in.
-//
-// Stryker's built-in command runner, one `node --test` command per mutant over the files that import the module. It says
-// whether each mutant was killed, not which test killed it, so it is a score and not a kill matrix.
-// Stryker is run through npx, pinned below, and is not a dependency of the site. Measured, not gated: this never fails on a
-// low score, and it exits non-zero only when Stryker itself could not run.
+// Slices are balanced by time, not count: scripts/mutation-seconds.json holds each module's measured seconds, dealt
+// longest first to the lightest slice; an unnamed module counts as the median. Stryker's command runner runs one
+// `node --test` per mutant, via npx, not a dependency. Measured, not gated: exits non-zero only when Stryker could not run.
 
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";

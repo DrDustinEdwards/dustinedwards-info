@@ -14,7 +14,8 @@ import { hasFilters } from "@drdustinedwards/site-helpers/search";
 import { askAvailable } from "~/lib/search/ask.server";
 import { recordZeroResult } from "~/lib/search/zero-result.server";
 import { SEARCH_BASES, baseLabel } from "~/kb/search-bases.mjs";
-import { parseSort, search, zeroState, type SearchHit } from "~/lib/search/search.server";
+import { parseSort, search, zeroState } from "~/lib/search/search.server";
+import type { SearchHit } from "~/lib/search/search-types";
 import {
   EDGE_CACHE_HEADER,
   NO_STORE_CACHE_CONTROL,

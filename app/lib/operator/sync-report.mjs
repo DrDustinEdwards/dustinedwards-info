@@ -45,7 +45,6 @@ export function askSyncReport(counts) {
  * ABSOLUTE drift: an index holding more than its source is stale too, and a negative number would read
  * as healthy to a caller testing `drift > 0`.
  *
- *
  * @param {unknown} expectedRaw @param {unknown} presentRaw
  * @returns {{ expected: number, present: number, drift: number, converged: boolean }}
  */
@@ -64,7 +63,6 @@ function convergence(expectedRaw, presentRaw) {
 /**
  * Media drifts by KEY: dropping one file while inventing one row leaves the totals equal, so drift is
  * `missing` plus `extra`, not a count difference.
- *
  *
  * @param {{
  *   indexed: number,
@@ -112,8 +110,6 @@ function stringList(v) {
 }
 
 /**
- * An unreadable count is not a passing count.
- *
  * @param {unknown} a @param {unknown} b
  */
 function unreadable(a, b) {

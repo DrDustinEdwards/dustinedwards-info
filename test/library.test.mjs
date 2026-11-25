@@ -5,10 +5,10 @@ import {
   libraryCsv,
   libraryItems,
   libraryMarkdown,
-  workflowContext,
-  libraryOverview,
   libraryRecords,
 } from "../app/kb/procedures/library.mjs";
+import { workflowContext } from "../app/kb/procedures/library-workflow.mjs";
+import { libraryOverview } from "../app/kb/procedures/library-overview.mjs";
 
 /* The protocol library's pure half (app/kb/procedures/library.mjs): what a row is made of, how the catalog counts
  * and filters it, and what the downloads and the twin say. Records here are minimal; the real ones come from D1. */

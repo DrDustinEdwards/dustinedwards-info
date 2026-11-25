@@ -6,8 +6,6 @@
  */
 
 /**
- * The human page for a PhagesDB record name.
- *
  * @param {string} record
  */
 export function phagesDbUrl(record) {

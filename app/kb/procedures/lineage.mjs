@@ -15,9 +15,6 @@ export function entryPathFor(profile, slug) {
  */
 
 /**
- * Where a variant points: the frozen copy of the version it was copied at when there is one, else the parent's live page,
- * else (a parent not published) its name with no link.
- *
  * @param {{ slug: string, version: string | null } | null} forkedFrom
  * @param {string} profile
  * @param {{ live: { title: string, path: string } | null, frozen: { title: string } | null }} parent

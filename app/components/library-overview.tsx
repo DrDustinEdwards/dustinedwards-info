@@ -1,4 +1,5 @@
-import { countOf, type libraryOverview } from "~/kb/procedures/library.mjs";
+import { countOf } from "~/kb/procedures/library.mjs";
+import { type libraryOverview } from "~/kb/procedures/library-overview.mjs";
 
 /**
  * The library's overview (docs/PROCEDURES.md): the phage workflow as a line of stations, then the ways in, all

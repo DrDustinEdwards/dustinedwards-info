@@ -4,10 +4,11 @@
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { gitBlobSha } from "../../lib/content/hashes.mjs";
-import { itemPath } from "../registry/catalog.mjs";
+import { itemPath } from "../registry/address.mjs";
 import { NON_STRAIN_ORGANISMS } from "./taxonomy.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";
-import { procedureSearchInput, renderProcedure } from "./render.mjs";
+import { renderProcedure } from "./render.mjs";
+import { procedureSearchInput } from "./render-markdown.mjs";
 import { validateProcedure } from "./validate.mjs";
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 import { wideDashError } from "../../lib/content/front-matter.mjs";
@@ -19,10 +20,10 @@ import { wideDashError } from "../../lib/content/front-matter.mjs";
  *   pipeline: { renderBody: import("./render.mjs").RenderBody, findWideDashes: (text: string) => Array<{ line: number, column: number, char: string, excerpt: string }> },
  *   resolveImage?: (src: string) => Promise<{ width: number, height: number }>,
  *   registry?: {
- *     primers: (ids: string[]) => Promise<Map<string, import("./render.mjs").StoredPrimer>>,
- *     strains: (ids: string[]) => Promise<Map<string, import("./render.mjs").StoredStrain>>,
- *     reagents: (ids: string[]) => Promise<Map<string, import("./render.mjs").StoredReagent>>,
- *     equipment: (ids: string[]) => Promise<Map<string, import("./render.mjs").StoredEquipment>>,
+ *     primers: (ids: string[]) => Promise<Map<string, import("./render-stored.mjs").StoredPrimer>>,
+ *     strains: (ids: string[]) => Promise<Map<string, import("./render-stored.mjs").StoredStrain>>,
+ *     reagents: (ids: string[]) => Promise<Map<string, import("./render-stored.mjs").StoredReagent>>,
+ *     equipment: (ids: string[]) => Promise<Map<string, import("./render-stored.mjs").StoredEquipment>>,
  *   },
  * }} input
  * @returns {Promise<

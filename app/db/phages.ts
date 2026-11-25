@@ -6,7 +6,7 @@ import { asc } from "drizzle-orm";
 import { sortPhages, type Phage } from "~/lib/phages/compile.mjs";
 
 import { getDb } from "./client";
-import { phages } from "./schema";
+import { phages } from "./schema-source";
 
 /**
  * Every phage, in the page's order. An empty table is a fault, never an empty table on the page: the page is

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { LIBRARY_BASES } from "../app/kb/libraries.mjs";
-import { LAB_PATH } from "../app/kb/registry/catalog.mjs";
+import { LAB_PATH } from "../app/kb/registry/address.mjs";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_OWN_ROUTE } from "../app/lib/content-pages.mjs";
 
 import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";

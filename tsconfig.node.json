@@ -149,6 +149,7 @@
     "app/lib/cv/compile.mjs",
     "app/lib/cv/entries.mjs",
     "app/lib/cv/view.mjs",
+    "app/lib/cv/chart-data.mjs",
     "app/lib/cv/markdown.mjs",
     // The print document and the fingerprint, which the Worker and scripts/build-cv-pdf.mjs both draw from.
     "app/lib/cv/pdf-html.mjs",
@@ -231,6 +232,7 @@
     "app/lib/tag-path.mjs",
     "app/lib/series-path.mjs",
     "app/lib/nav.ts",
+    "app/lib/nav-menus.ts",
     // The newest paper, the posts and the lab's town the header panels show. Written by build:nav-data (build:content and install),
     // like identity.generated.mjs; nav.ts imports it, so this project has to reach it.
     "app/lib/nav-data.generated.mjs",
@@ -244,9 +246,17 @@
     "app/kb/procedures/marks.mjs",
     "app/kb/procedures/parse.mjs",
     "app/kb/procedures/validate.mjs",
+    "app/kb/procedures/validate-gaps.mjs",
+    "app/kb/procedures/validate-profiles.mjs",
+    "app/kb/procedures/validate-steps.mjs",
+    "app/kb/procedures/validate-values.mjs",
     "app/kb/procedures/taxonomy.mjs",
     "app/kb/procedures/proof.mjs",
     "app/kb/procedures/render.mjs",
+    "app/kb/procedures/render-markdown.mjs",
+    "app/kb/procedures/render-quantities.mjs",
+    "app/kb/procedures/render-sections.mjs",
+    "app/kb/procedures/render-stored.mjs",
     "app/kb/procedures/key-resources.mjs",
     "app/kb/procedures/compile.mjs",
     "app/kb/procedures/cite.mjs",
@@ -278,6 +288,9 @@
     "app/lib/dictionary/parse.mjs",
     "app/lib/dictionary/compile.mjs",
     "app/lib/phage-table.mjs",
+    "app/lib/phage-tools-base.mjs",
+    "app/lib/phage-tools-dilution.mjs",
+    "app/lib/phage-tools-lysate.mjs",
     "app/lib/phage-tools.mjs",
     // The roster's compile path: build:content and sync:content compile every cohort file with the SAME module
     // the Carrel adapter's roster save runs (docs/ROSTER.md). scripts/lib/roster.mjs is included by the scripts project.
@@ -296,7 +309,11 @@
     "app/kb/registry/strain.mjs",
     "app/kb/registry/tm.mjs",
     // How the registry reads on the site: scripts/check-links.mjs names each page from it, and it reads the primer arithmetic.
+    "app/kb/registry/address.mjs",
     "app/kb/registry/catalog.mjs",
+    "app/kb/registry/catalog-primers.mjs",
+    "app/kb/registry/catalog-reagents.mjs",
+    "app/kb/registry/catalog-strains.mjs",
     "app/lib/primers.mjs",
     // Where a primer binds a reference and the product a pair makes (docs/REGISTRY.md), with the references it reads.
     "app/kb/registry/align.mjs",

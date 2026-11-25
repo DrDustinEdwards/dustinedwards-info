@@ -6,7 +6,7 @@ import { and, asc, eq } from "drizzle-orm";
 import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
 
 import { getDb } from "./client";
-import { procedureVersions } from "./schema";
+import { procedureVersions } from "./schema-source";
 
 export type FrozenVersion = {
   slug: string;

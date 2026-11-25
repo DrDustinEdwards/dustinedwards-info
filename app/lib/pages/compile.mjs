@@ -66,12 +66,10 @@ export function expandPageTokens(text, phages) {
   return expandPhageTokens(withIdentity, phages);
 }
 
-/** The repository path of a page's file, from its file key (`research-phages`). */
 export function pageSourcePath(/** @type {string} */ slug) {
   return `${PAGES_DIR}/${slug}.md`;
 }
 
-/** The file key of a registered path: `/research/phages` is `research-phages`. */
 export function pageSlug(/** @type {string} */ path) {
   return contentPageFile(path).slice(0, -3);
 }
@@ -256,8 +254,6 @@ export async function compilePage({
     };
   }
   const fm = /** @type {Record<string, unknown>} */ (parsed.data);
-  // A phage fact a page states (the count, the span, a genome's size) is read from the phage rows by a token,
-  // never typed, so the title and description fill the same way the body does.
   /** @param {unknown} value @returns {string} */
   const filled = (value) => {
     const result = expandPageTokens(String(value ?? ""), phages);

@@ -2,7 +2,8 @@ import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { LICENSE_LINK } from "~/lib/license.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
-import { LIBRARY_PATH, libraryItems, libraryRecords } from "~/kb/procedures/library.mjs";
+import { libraryItems, libraryRecords } from "~/kb/procedures/library.mjs";
+import { LIBRARY_PATH } from "~/kb/procedures/taxonomy.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import { LICENSE_URL, SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 

@@ -30,11 +30,9 @@ import { uptimeStepOutcome } from "./lib/uptime-step.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/* Imported from `app/lib/seo.ts`, never restated: a stale copy would read the wrong host. */
 const ORIGIN = SITE_ORIGIN;
 const READINESS_PATH = "/health";
 
-/* The commit worker-deploy shipped: the run's own, as /health reports it. */
 const shaFull =
   process.env.GITHUB_SHA ??
   spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
@@ -60,12 +58,10 @@ function refuse(why, remedy) {
 /**
  * A spawn error (npx not found) is printed and carried in `text`, so a refusal names it.
  *
- * Asynchronous on purpose: the operator calls and /health reuse one pooled HTTP/2 connection to the site, and
- * spawnSync froze this process's event loop for a whole child (build:og runs over a minute). A connection the edge
- * closed meanwhile could not be noticed, nor could undici's own idle expiry (keepAliveTimeout, 4 s) retire it, so the
- * next request went out on a dead socket and failed in milliseconds without reaching the edge: sync_media's
- * UND_ERR_SOCKET after build:og and sync_ask's ECONNRESET after the sync. With the loop free,
- * the idle connection is retired after 4 s and the next call opens a fresh one.
+ * Asynchronous on purpose: spawnSync froze the event loop for a whole child (build:og runs over a minute),
+ * so the pooled HTTP/2 connection the operator calls reuse went idle unnoticed, and the next request
+ * failed on a dead socket (UND_ERR_SOCKET, ECONNRESET). With the loop free undici retires it after 4 s.
+ *
  * @param {string} command @param {string[]} args
  * @param {{ capture?: boolean }} [options]
  * @returns {Promise<{ code: number, text: string }>}
@@ -80,7 +76,6 @@ function run(command, args, { capture = false } = {}) {
       shell: process.platform === "win32",
       stdio: capture ? ["inherit", "pipe", "pipe"] : "inherit",
     });
-    // Both streams into one buffer in arrival order, printed whole once the child ends, as before.
     child.stdout?.on("data", (chunk) => out.push(chunk));
     child.stderr?.on("data", (chunk) => out.push(chunk));
     child.on("error", (error) => {
@@ -129,7 +124,6 @@ announce(`Readiness: ${READINESS_PATH} reports ok`);
 
   if (!verdict.ok) refuse(verdict.why, verdict.remedy);
 
-  /* A failing deferred check is printed, not refused; it is asserted after its repair step. */
   const deferredFailing = verdict.deferredFailing ?? [];
   for (const name of deferredFailing) {
     console.log(
@@ -176,7 +170,6 @@ for (const step of [
   if ((await run("node", step)).code !== 0) refuse(`${step[0]} failed`, "Nothing was synced.");
 }
 
-/* Rebuilt so the sync reads this deploy's content, not whatever a previous step left. */
 announce("build:content, the local build product the sync reads");
 /* build:content reads stack.json, a build product, and this job starts from a fresh checkout. */
 if (
@@ -376,11 +369,9 @@ let browserMiss = "";
 announce("Converged");
 console.log(`  commit       ${sha}`);
 console.log(`  search index ${docs} records, identity and prose agree`);
-/* A skip is not a miss, so it stays out of the misses table and the exit code, but is repeated here. */
 if (uptimeSkip) console.log(`\n  SKIPPED, uptime monitors: ${uptimeSkip}.`);
 console.log(`\n  NOT run here: verify-live (bills per Ask probe) and check:all --remote.\n`);
 
-/* Nonzero on any miss, after the record. Every miss is named: the faults are independent. */
 const misses = [
   { key: "ask", title: "THE ASK INDEX", text: askMiss, advice: INDEX_ADVICE },
   { key: "cv-pdf", title: "THE CV PDF", text: cvPdfMiss },

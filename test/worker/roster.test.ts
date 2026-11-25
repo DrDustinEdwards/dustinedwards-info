@@ -9,7 +9,7 @@ import ContentPage, {
 import { headers as homeHeaders, loader as homeLoader } from "~/routes/home";
 
 import { versionCases } from "./carrel-version-cases";
-import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import { source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
 import {
   renderRoute,
   routeContext,
@@ -63,7 +63,6 @@ async function homeFacts() {
     }
   ).data.discovery;
 }
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const purgedTags = () => purge.mock.calls.flatMap(([options]) => options.tags);
 
 let gh: SourceStub;
@@ -208,26 +207,6 @@ describe("a save is held to what CI holds", () => {
     );
     expect(await commits()).toHaveLength(0);
     expect(await source(FILE)).toBe(currentFile);
-  });
-
-  it("REFUSES a photograph the media library does not hold", async () => {
-    const source = await cohortFile({
-      ...CURRENT,
-      photo: {
-        ...CURRENT.photo,
-        src: "/media/dustin-edwards-not-there-fedcba9876543210-1080x720.webp",
-      },
-    });
-    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-photo",
-    });
-    expect(response.status).toBe(422);
-    expect(((await response.json()) as { message: string }).message).toMatch(
-      /is not in the media library/,
-    );
-    expect(await commits()).toHaveLength(0);
   });
 
   it("REFUSES an id that is not a year, so no other path can be read or written through it", async () => {

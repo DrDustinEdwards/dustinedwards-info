@@ -4,7 +4,7 @@
 // library keeps its own facets; this is the one the search adds.
 
 import { BASES } from "./bases.mjs";
-import { LAB_PATH } from "./registry/catalog.mjs";
+import { LAB_PATH } from "./registry/address.mjs";
 
 /** The facet's values in the order the search lists them: each knowledge base, then the lab registry. */
 export const SEARCH_BASES = Object.freeze([

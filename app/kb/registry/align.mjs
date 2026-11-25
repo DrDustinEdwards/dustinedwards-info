@@ -130,10 +130,6 @@ export function pairProducts(
 }
 
 /**
- * The products a protocol's primers make, computed, for the primer table of a page, sheet or twin: each set that holds one
- * forward and one reverse primer on one reference gives its pair's products, keyed by the id of both primers. A row with no
- * mate, no reference or no placement has no entry.
- *
  * @param {Array<{ id: string, set: string | null, direction: string | null, sequence: string | null, reference: string | null }>} rows
  * @returns {Map<string, { reference: Placement["reference"], products: Product[] }>}
  */

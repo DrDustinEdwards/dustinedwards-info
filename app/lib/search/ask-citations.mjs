@@ -13,8 +13,6 @@ const POST_ID = /^\/writing\/[a-z0-9][a-z0-9-]*(#[^#\s]+)?$/;
 const PAPER_ID = new RegExp(`^${PUBLICATIONS_PATH}/[a-z0-9][a-z0-9-]*/(${PAPER_PART}\\d+)?$`);
 
 /**
- * The row id a chunk carries, or "" for a chunk that carries none.
- *
  * @param {unknown} chunk a chunk from AI Search's search, or from the `chunks` event of its chat completions
  * @returns {string}
  */

@@ -2,12 +2,13 @@ import { plural } from "@drdustinedwards/site-helpers/text";
 import { ScaleControl } from "capsomer/react/scale-control";
 import { markup } from "capsomer/behavior/trusted-html";
 
-import { reagentSource, type ProcedureRecord } from "~/kb/procedures/render.mjs";
+import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
+import { reagentSource } from "~/kb/procedures/render-stored.mjs";
 import { lineageText, type Lineage } from "~/kb/procedures/lineage.mjs";
-import { HOWTO_TYPES } from "~/kb/procedures/validate.mjs";
+import { HOWTO_TYPES } from "~/kb/procedures/validate-profiles.mjs";
 import type { KeyResourceGroup } from "~/kb/procedures/key-resources.mjs";
 import { BASES } from "~/kb/bases.mjs";
-import { itemPath } from "~/kb/registry/catalog.mjs";
+import { itemPath } from "~/kb/registry/address.mjs";
 import {
   UNIT_SYSTEMS,
   ingredientSteps,

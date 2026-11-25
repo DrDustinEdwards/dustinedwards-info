@@ -3,7 +3,7 @@
 import { oneOf } from "capsomer/behavior/catalog";
 import { LIBRARY_BASES, libraryTrail } from "../libraries.mjs";
 import type { ProcedureRecord } from "./render.mjs";
-import { scaleFactor } from "./render.mjs";
+import { scaleFactor } from "./render-quantities.mjs";
 import { UNIT_SYSTEMS, type UnitSystem } from "./recipe-views.mjs";
 
 /** Every procedure response carries it; a save purges it (app/kb/procedures/save.server.ts). */

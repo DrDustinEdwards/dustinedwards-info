@@ -12,7 +12,6 @@ const COMPRESSIBLE =
 const BROTLI_QUALITY = 4;
 
 /**
- * Starts the proxy on `port`, forwarding to `target` (an http origin on this machine).
  * @param {string} target
  * @param {number} port
  * @returns {Promise<{ origin: string, close: () => Promise<void> }>}

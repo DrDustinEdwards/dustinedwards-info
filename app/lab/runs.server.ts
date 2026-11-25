@@ -1,15 +1,9 @@
 /**
- * /lab-bench/runs: run records with the lots they used (docs/KNOWLEDGE-BASE.md step 7, finding P2), so a bad lot traces to
- * every run that used it.
- *
- * Append-only: a saved run is never edited. A correction is a new run naming the one it replaces,
- * recorded by the run's own author or by someone who reads all runs, and a run is replaced at most once. The tables'
- * triggers refuse any UPDATE or DELETE whatever the code does.
- *
- * A new run's lot changes are writes to kb_lots, each with its kb_audit row in the same batch: the amount it used comes
- * off the lot (in the lot's own unit), a lot first used today is marked opened, and a lot the run emptied is marked
- * empty. A correction records the lots it used for the trace and changes no lot: a lot's amount is put right on its own
- * page, which audits that too.
+ * /lab-bench/runs: run records with the lots they used (docs/KNOWLEDGE-BASE.md step 7, finding P2), so a bad
+ * lot traces to every run that used it. Append-only: the tables' triggers refuse any UPDATE or DELETE. A
+ * correction is a new run naming the one it replaces (at most once). A new run's lot changes are kb_lots
+ * writes with their kb_audit rows in one batch; a correction changes no lot, whose amount is put right on its
+ * own page.
  */
 
 import { errorMessage } from "@dustinedwards/site-runtime/log";

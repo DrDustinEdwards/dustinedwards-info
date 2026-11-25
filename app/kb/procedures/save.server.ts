@@ -20,7 +20,7 @@ import { freezeStatement, frozenBlobSha } from "~/db/procedure-versions";
 import { needsFreeze, versionPath } from "./cite.mjs";
 import { compileProcedure } from "./compile.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";
-import { procedureSearchUid } from "./render.mjs";
+import { procedureSearchUid } from "./render-markdown.mjs";
 
 type ProcedureEnv = Env;
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */

@@ -2,7 +2,7 @@ import { kvPageRecord } from "@drdustinedwards/site-helpers/lastmod";
 import { PAGE_DATES_KEY } from "~/lib/page-dates.server";
 import { listBlogPosts, listBlogSeries, listBlogTags, nextScheduledPublishAt } from "~/db";
 import { listPublishedPageSources, listPublishedPageTitles } from "~/db/pages";
-import { listPostsWithImages } from "~/db/posts";
+import { listPostsWithImages } from "~/db/posts-series";
 import { listPublishedProcedures } from "~/db/procedures";
 import { listPublishedRegistrySources, listRegistry } from "~/db/registry";
 import { listRoster } from "~/db/roster";
@@ -11,7 +11,7 @@ import { listPublishedPublicationSources, listPublishedPublications } from "~/db
 import { BASES } from "~/kb/bases.mjs";
 import { LIBRARY_BASES } from "~/kb/libraries.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
-import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/kb/registry/catalog.mjs";
+import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/kb/registry/address.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
 import {
   CONTENT_PAGE_PATHS,
@@ -58,7 +58,12 @@ export const STATIC_PAGES = [
   {
     path: "/features",
     title: "Features",
-    sources: ["app/routes/features.tsx", "app/lib/features.mjs"],
+    sources: [
+      "app/routes/features.tsx",
+      "app/lib/features.mjs",
+      "app/lib/features-publishing.mjs",
+      "app/lib/features-platform.mjs",
+    ],
   },
   {
     path: "/systems",
@@ -137,17 +142,15 @@ const kindTitle = (kind: string) => {
 };
 
 /**
- * Every public URL, the one list sitemap.xml and the site map page are both drawn from. Drafts,
- * unpublished rows and empty libraries are left out here, so neither can list one. Also returns the next
- * scheduled publish, which both use for the edge cache's lifetime, and the files only sitemap.xml lists.
+ * Every public URL, the one list sitemap.xml and the site map page are both drawn from; drafts, unpublished rows
+ * and empty libraries are left out. Also returns the next scheduled publish (for the edge cache's lifetime) and
+ * the files only sitemap.xml lists.
  *
- * `lastmod` is the day the page's content last changed, never a sync or deploy time, which would mark every
- * page changed together and teach crawlers to ignore the field. A post or procedure uses the `updated` date
- * its author wrote; any other page uses its source file's last commit (scripts/lib/source-dates.mjs); an index,
- * tag or series is as new as the newest page it lists. A page with no dated source (a deploy's shallow checkout has no
- * git history for its route file) takes the day its text last changed, from the page-dates job's record
- * (page-dates.server.ts); `tracked: false` skips that, which is how the job finds the pages it dates. With neither,
- * `lastmod` is left out.
+ * `lastmod` is the day the content last changed, never a sync or deploy time, which would mark every page
+ * changed together and teach crawlers to ignore the field. A post or procedure uses its author's `updated`; any
+ * other page its source file's last commit (scripts/lib/source-dates.mjs); an index, tag or series the newest
+ * page it lists; a page with no dated source the day its text last changed (page-dates.server.ts; `tracked:
+ * false` skips that, which is how the job finds the pages it dates). With none, `lastmod` is left out.
  */
 export async function gatherSiteUrls(
   env: Env,

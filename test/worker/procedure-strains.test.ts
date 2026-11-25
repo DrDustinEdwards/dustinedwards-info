@@ -7,10 +7,9 @@ import { ProcedureView } from "~/components/procedure";
 import { runTool } from "~/lib/operator/api.server";
 import { procedurePath } from "~/kb/procedures/parse.mjs";
 import { saveRegistryItem } from "~/kb/registry/save.server";
-import { loader as pageLoader } from "~/routes/procedure";
 
 import isolation from "../../content/procedures/phage-isolation.md?raw";
-import { routeContext, recordPurges } from "./route-helpers";
+import { recordPurges, operatorEnv, operator, procedureRecord } from "./route-helpers";
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles } from "./seed";
 
@@ -31,15 +30,12 @@ const registryFiles = Object.fromEntries(
 );
 const FOLIORUM = "content/registry/strain/foliorum.md";
 const SLUG = "phage-isolation";
-const PAGE = `https://example.com/research/protocols/${SLUG}`;
 
 /* The save's purge goes to the Renderer over the loopback (cache-purge.server.ts), replaced here with a recording one. */
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
 recordPurges(purge);
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 const gitEnv = () => env as unknown as Parameters<typeof saveRegistryItem>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const carrel = { kind: "carrel", changeId: "chg-strain" } as const;
 
 let gh: SourceStub;
@@ -65,14 +61,7 @@ const save = async () => {
   });
   expect(saved.ok, JSON.stringify(saved)).toBe(true);
 };
-const record = async () =>
-  (
-    await pageLoader({
-      request: new Request(PAGE),
-      context: routeContext(),
-      params: { slug: SLUG },
-    } as never)
-  ).record;
+const record = () => procedureRecord(SLUG);
 const stored = async () =>
   JSON.parse(
     (

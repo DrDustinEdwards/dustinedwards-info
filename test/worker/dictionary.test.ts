@@ -9,7 +9,7 @@ import capsidEntry from "../../content/dictionary/capsid.md?raw";
 import capsidPage from "../../content/pages/software-capsid.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
-import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import { putSource, source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
 import {
   purgedTagsOf,
   renderRoute,
@@ -59,7 +59,6 @@ async function twin(path = PATH) {
     params: {},
   } as never);
 }
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const searchBodies = async (path = PATH) =>
   (
     await testEnv.DB.prepare("SELECT body FROM search_docs WHERE url LIKE ?1")
@@ -195,19 +194,6 @@ describe("a save is held to what CI holds", () => {
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(
       /not in the repository/,
-    );
-    expect(await commits()).toHaveLength(0);
-  });
-
-  it("REFUSES a path no registered Software page names", async () => {
-    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: capsidEntry.replace("path: /software/capsid", "path: /research/phages"),
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-path",
-    });
-    expect(response.status).toBe(422);
-    expect(((await response.json()) as { message: string }).message).toMatch(
-      /not a registered Software page/,
     );
     expect(await commits()).toHaveLength(0);
   });

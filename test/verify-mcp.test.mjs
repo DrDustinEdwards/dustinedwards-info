@@ -66,7 +66,6 @@ function root(config) {
 
 await test("mcpConfig reads PUBLIC_ORIGIN through comments", () => {
   const config = `{
-    // the one public address
     "vars": { "PUBLIC_ORIGIN": "${ORIGIN}/" }
   }`;
   assert.deepEqual(mcpConfig(root(config)), { ok: true, origin: ORIGIN });

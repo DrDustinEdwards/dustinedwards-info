@@ -15,8 +15,8 @@ import {
   matches,
   parseState,
   stateToSearch,
-  timelineData,
 } from "../app/lib/cv/view.mjs";
+import { timelineData } from "../app/lib/cv/chart-data.mjs";
 import { cvFingerprint } from "../app/lib/cv/pdf-html.mjs";
 
 // The CV as the build resolves it: the files in content/cv/ joined to the records in content/publications/. The

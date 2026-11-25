@@ -1,15 +1,12 @@
-// The equipment kind of the lab registry (docs/REGISTRY.md): the instruments and labware the lab's protocols list under
-// Equipment. Like the reagents, the equipment is one table (the library's Equipment tab) with a page for each item that lists the
-// protocols using it (docs/KNOWLEDGE-BASE.md, A1), and each protocol's own Equipment table is drawn from these records beside the
-// protocol's own words for the item.
-//
-// A record states what the lab's own pages state about one item: its name and who makes it, which is `MISSING: <why>` where no
-// record in the repository says and is listed for Dustin. A centrifuge also carries the rotor its speeds are read for, which is
-// Dustin's to name (core.md: the ZnCl2 rotor), so it is recorded as a gap and the protocols' rpm cannot yet be given as x g.
-//
-// What the protocols do with an item is the PROTOCOLS' and is never stored here: a protocol lists it under its own words (55 °C
-// water bath for molten top agar, plate incubator at 29 °C for M. foliorum) and names the record with `equipment: <id>`, so the
-// setting is the protocol's own and the table lists the protocols that name it.
+/*
+ * The equipment kind of the lab registry (docs/REGISTRY.md): the instruments and labware protocols list under
+ * Equipment. One table with a page per item listing the protocols that use it; each protocol's own Equipment table
+ * is drawn from these records beside the protocol's own words for the item.
+ * A record states its name and maker (`MISSING: <why>` where no record says). A centrifuge also carries the rotor
+ * its speeds are read for, Dustin's to name (core.md: the ZnCl2 rotor), so it is a gap and rpm cannot yet be x g.
+ * What a protocol does with an item (55 C water bath) is the PROTOCOL's and never stored here: it names the record
+ * with `equipment: <id>`.
+ */
 
 import { oneLine, stated } from "./primer.mjs";
 
@@ -25,12 +22,8 @@ export const EQUIPMENT = {
 };
 
 /**
- * An equipment item as a protocol carries it (`StoredEquipment` in app/kb/procedures/render.mjs): the registry's stated facts, none
- * computed, so the protocol's Equipment table, twin and frozen versions say who makes each as it was when the protocol was published.
- * `rotorGap` is whether a rotor is recorded as missing, so a centrifuge's table says so rather than leaving it blank.
- *
  * @param {import("./kinds.mjs").RegistryItem} item
- * @returns {import("../procedures/render.mjs").StoredEquipment}
+ * @returns {import("../procedures/render-stored.mjs").StoredEquipment}
  */
 export function storedEquipment(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);

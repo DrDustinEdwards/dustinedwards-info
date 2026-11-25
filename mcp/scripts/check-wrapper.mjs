@@ -1,308 +1,25 @@
 /**
- * check:wrapper. Proves the no-policy law MECHANICALLY.
- *
- * The law is that this Worker contains no policy, no gates, and no second write
- * path, and that its only route to the publish machinery is an HTTP request to
- * the operator API. A law asserted only in a README is a law that drifts, so this
- * gate reads the actual source and the actual wrangler config and fails when they
- * disagree with it.
- *
- * It fails in BOTH directions on purpose. Adding a forbidden binding fails, and so
- * does removing a required tool or letting the binding allowlist drift out of
- * sync with the config. A gate that only catches additions cannot notice a
- * deletion, and half this repo's guarantees are about things that must stay.
- *
- * Pure: no network, no deployment, no Cloudflare API. Same principle as the app's
- * check:ask-guards and check:search.
- *
- * Verified by planting violations. See the PLANTED VIOLATIONS block at the bottom.
+ * check:wrapper. Proves the no-policy law mechanically: this Worker holds no policy, no gates and no second write
+ * path, and reaches the publish machinery only through the operator API. It reads the source and the wrangler
+ * config and fails in both directions (a forbidden addition, or a required tool or allowlist entry gone).
+ * Pure: no network. Verified by `npm run check:wrapper:plant` (scripts/plant-violations.sh).
  */
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SRC = join(ROOT, "src");
-/*
- * THE SITE'S CHECKOUT, one level up.
- * The gate READS two site files (the operator API's tool list and the site's
- * origin) so that what it checks against is derived rather than restated. It
- * reads them; the Worker imports nothing from them.
- */
-const SITE_ROOT = join(ROOT, "..");
-
-let failures = 0;
-let assertions = 0;
-
-function check(label, condition, detail = "") {
-  assertions += 1;
-  if (!condition) {
-    failures += 1;
-    console.error(`FAIL  ${label}${detail ? `\n      ${detail}` : ""}`);
-  }
-}
-
-// jsonc: strip line comments before parsing. Block comments are stripped first
-// because this config's own comments name forbidden binding types in prose, and a
-// parser that looked at comments would find the prose before the config. That
-// exact trap has already been hit twice in this portfolio.
-function readJsonc(path) {
-  const raw = readFileSync(path, "utf8");
-  const withoutBlocks = raw.replace(/\/\*[\s\S]*?\*\//g, "");
-  const withoutLines = withoutBlocks.replace(/^\s*\/\/.*$/gm, "");
-  return JSON.parse(withoutLines);
-}
-
-function sourceFiles() {
-  return readdirSync(SRC)
-    .filter((f) => f.endsWith(".ts"))
-    .map((f) => ({ name: f, text: readFileSync(join(SRC, f), "utf8") }));
-}
-
-/**
- * TWO strippers, and picking the wrong one silently disables an assertion.
- * Verified the hard way: the first version of this gate used codeOnly()
- * everywhere, and three of eleven planted violations went undetected because the
- * thing being searched for lived in a string literal that codeOnly() had already
- * removed.
- *
- * withoutComments  strips comments, KEEPS strings. Use for assertions about
- *                  string CONTENT: urls, paths, config values, option values.
- * codeOnly         strips comments AND strings. Use for assertions about
- *                  executable code: identifiers, branches, property access.
- *
- * Both strip comments, because this file's own prose and the source's module
- * headers name the very things being forbidden. A parser that reads comments
- * finds the documentation before the code, which is a trap this portfolio has now
- * hit three times.
- */
-function withoutComments(text) {
-  return text.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
-}
-
-function codeOnly(text) {
-  return withoutComments(text)
-    .replace(/`(?:\\[\s\S]|[^\\`])*`/g, '""')
-    .replace(/"(?:\\.|[^\\"])*"/g, '""')
-    .replace(/'(?:\\.|[^\\'])*'/g, '""');
-}
-
-/**
- * Resolve the wrangler config.
- *
- * The real `wrangler.jsonc` is gitignored, because it carries live KV namespace
- * ids and this repo is public. So a fresh clone has only
- * `wrangler.jsonc.example`, and this gate has to work there too or it becomes a
- * gate that only its author can run.
- *
- * Every assertion here is about binding SHAPE (which keys exist, which binding
- * names, whether the DO migration is sqlite-backed), never about id VALUES, so
- * the example proves exactly as much as the real file. Preference order is real
- * first, so a developer who has both is checked against what actually deploys.
- *
- * The gap this leaves, stated rather than hidden: on a machine with ONLY the
- * example, a forbidden binding added to the real file would not be seen. That is
- * closed below by asserting the two agree whenever both are present.
- */
-function resolveConfig() {
-  const real = join(ROOT, "wrangler.jsonc");
-  const example = join(ROOT, "wrangler.jsonc.example");
-  if (existsSync(real)) return { path: real, which: "wrangler.jsonc" };
-  if (existsSync(example)) return { path: example, which: "wrangler.jsonc.example" };
-  // Fails CLOSED. No config means nothing can be proven, which is not a pass.
-  console.error(
-    "FAIL  no wrangler config found (neither wrangler.jsonc nor wrangler.jsonc.example)",
-  );
-  process.exit(1);
-}
-
-const configSource = resolveConfig();
-const config = readJsonc(configSource.path);
-const files = sourceFiles();
-
-// When both exist they must describe the same bindings, or the example is
-// decoration and the fresh-clone run is checking a fiction.
-if (configSource.which === "wrangler.jsonc" && existsSync(join(ROOT, "wrangler.jsonc.example"))) {
-  const shape = (c) =>
-    JSON.stringify({
-      keys: Object.keys(c).sort(),
-      kv: (c.kv_namespaces ?? []).map((n) => n.binding).sort(),
-      dobj: (c.durable_objects?.bindings ?? []).map((b) => b.class_name).sort(),
-      services: (c.services ?? []).map((b) => `${b.binding}:${b.service}`).sort(),
-      r2: (c.r2_buckets ?? []).map((b) => `${b.binding}:${b.bucket_name}`).sort(),
-      routes: JSON.stringify(c.routes ?? []),
-      migrations: (c.migrations ?? [])
-        .map((m) => m.new_sqlite_classes ?? [])
-        .flat()
-        .sort(),
-      flags: (c.compatibility_flags ?? []).slice().sort(),
-      main: c.main,
-      vars: Object.keys(c.vars ?? {}).sort(),
-    });
-  check(
-    "wrangler.jsonc.example describes the same bindings as wrangler.jsonc",
-    shape(config) === shape(readJsonc(join(ROOT, "wrangler.jsonc.example"))),
-    "The example is what a fresh clone checks, so drift there silently weakens this gate.",
-  );
-}
-
-// A. Bindings are an allowlist, derived from the config rather than restated.
-
-// Any of these would give the wrapper a second route to app data, which is the
-// one thing it must not have.
-const FORBIDDEN_BINDING_KEYS = [
-  "d1_databases",
-  "ai",
-  "vectorize",
-  "hyperdrive",
-  "queues",
-  "browser",
-  "mtls_certificates",
-  "analytics_engine_datasets",
-  "dispatch_namespaces",
-  "pipelines",
-];
-
-for (const key of FORBIDDEN_BINDING_KEYS) {
-  check(
-    `wrangler.jsonc has no "${key}" binding`,
-    config[key] === undefined,
-    `Found ${key}. The wrapper's only route to the app is an HTTP call to the operator API.`,
-  );
-}
-
-// The one R2 bucket is the tool-call log's own copies (checklist L6-L7), never one of the site's.
-const actualR2 = (config.r2_buckets ?? []).map((b) => `${b.binding}:${b.bucket_name}`).sort();
-check(
-  "the only R2 bucket is AUDIT_BUCKET, the tool-call log's copies",
-  JSON.stringify(actualR2) === JSON.stringify(["AUDIT_BUCKET:dustinedwards-admin-mcp-tool-calls"]),
-  `Found ${actualR2.join(", ") || "(none)"}. A bucket of the site's would be a second route to its data.`,
-);
-
-const ALLOWED_KV = ["OAUTH_KV", "PROBE_KV"];
-const actualKv = (config.kv_namespaces ?? []).map((n) => n.binding).sort();
-check(
-  "KV bindings are exactly the OAuth store and the probe log",
-  JSON.stringify(actualKv) === JSON.stringify([...ALLOWED_KV].sort()),
-  `Expected ${ALLOWED_KV.join(", ")} but found ${actualKv.join(", ") || "(none)"}.`,
-);
-
-/*
- * ONE SERVICE BINDING, to the site Worker, and it is the API leg. Since the
- * move into dustinedwards-info the operator API is reached over `SITE` instead
- * of the public URL (design section 6 step 4). It is still an HTTP request
- * carrying OPERATOR_TOKEN through the operator API's authentication and rate
- * limiter, so it is the same single door, reached without an internet hop. Any
- * other service would be a second door.
- */
-const actualServices = (config.services ?? []).map((b) => `${b.binding}:${b.service}`).sort();
-check(
-  "the only service binding is SITE, to the dustinedwards Worker",
-  JSON.stringify(actualServices) === JSON.stringify(["SITE:dustinedwards"]),
-  `Found ${actualServices.join(", ") || "(none)"}. The API leg is one binding to one Worker.`,
-);
-
-const ALLOWED_DO_CLASSES = ["OperatorRateLimit", "ToolCallLog"];
-const actualDo = (config.durable_objects?.bindings ?? []).map((b) => b.class_name).sort();
-check(
-  "Durable Objects are exactly the rate limiter and the tool-call log",
-  JSON.stringify(actualDo) === JSON.stringify([...ALLOWED_DO_CLASSES].sort()),
-  `Expected ${ALLOWED_DO_CLASSES.join(", ")} but found ${actualDo.join(", ") || "(none)"}.`,
-);
-
-// The limiter must be a SQLite-backed class. The async storage API is
-// non-atomic across an await and let 8 through a ceiling of 3.
-check(
-  "The rate limiter is registered as a new_sqlite_classes migration",
-  (config.migrations ?? []).some((m) => (m.new_sqlite_classes ?? []).includes("OperatorRateLimit")),
-  "Without SQLite the counter is not atomic and the limit does not hold.",
-);
-
-// The tool-call log is append-only by construction, and that needs the
-// synchronous SQLite class, as the limiter does.
-check(
-  "The tool-call log is registered as a new_sqlite_classes migration",
-  (config.migrations ?? []).some((m) => (m.new_sqlite_classes ?? []).includes("ToolCallLog")),
-  "Rule 12.4: every tool call is logged, append-only.",
-);
-
-// ONE PUBLIC ADDRESS. Tokens are bound to PUBLIC_ORIGIN + /mcp, so a second
-// host would be a second resource nobody configured.
-check(
-  "workers.dev is off and the one route is the admin-mcp custom domain",
-  config.workers_dev === false &&
-    JSON.stringify(config.routes ?? []) ===
-      JSON.stringify([{ pattern: "admin-mcp.dustinedwards.info", custom_domain: true }]),
-  "The server answers at https://admin-mcp.dustinedwards.info only.",
-);
-check(
-  "PUBLIC_ORIGIN names that custom domain",
-  config.vars?.PUBLIC_ORIGIN === "https://admin-mcp.dustinedwards.info",
-  `Found ${config.vars?.PUBLIC_ORIGIN}. The OAuth resource is PUBLIC_ORIGIN + /mcp.`,
-);
-
-// SITE_ORIGIN is a checked copy of the site's own constant, never a second
-// source: read from app/lib/site-origin.mjs here, compared, and a drift fails.
-{
-  const source = readFileSync(join(SITE_ROOT, "app/lib/site-origin.mjs"), "utf8");
-  const siteOrigin = (source.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1];
-  check(
-    "SITE_ORIGIN equals SITE_ORIGIN in app/lib/site-origin.mjs",
-    Boolean(siteOrigin) && config.vars?.SITE_ORIGIN === siteOrigin,
-    `wrangler config says ${config.vars?.SITE_ORIGIN}, app/lib/site-origin.mjs says ${siteOrigin}.`,
-  );
-}
-
-check(
-  "the old public operator URL var is gone",
-  config.vars?.OPERATOR_API_URL === undefined,
-  "The API leg is the SITE binding now; a URL var would be a second route.",
-);
-
-// The deploy target must never be the conformance test entry, which mounts the
-// handler with the client leg and the limiter removed.
-check(
-  "main is the production entry, not the conformance test entry",
-  config.main === "src/index.ts",
-  `Found main=${config.main}. test/conformance-entry.ts is a gate harness and must never deploy.`,
-);
-
-// CIMD needs this flag, and it is what the client actually uses.
-check(
-  "global_fetch_strictly_public is enabled for CIMD",
-  (config.compatibility_flags ?? []).includes("global_fetch_strictly_public"),
-);
-
-// B. Credentials and vars the wrapper must never hold.
-
-// GITHUB_TOKEN would be a repository WRITE credential. The site holds none
-// (its content source is D1), and the wrapper must never hold one either: it could
-// commit directly and bypass every gate, the second write path the law forbids.
-const FORBIDDEN_NAMES = [
-  "GITHUB_TOKEN",
-  "BETTER_AUTH_SECRET",
-  "GOOGLE_CLIENT_SECRET",
-  "AI_SEARCH",
-  "ASK_BUDGET",
-  "APP_KV",
-];
-
-const configText = readFileSync(configSource.path, "utf8");
-for (const name of FORBIDDEN_NAMES) {
-  check(
-    `wrangler.jsonc does not reference ${name}`,
-    !configText.includes(name),
-    `${name} belongs to the app, not to the wrapper.`,
-  );
-  for (const f of files) {
-    check(
-      `src/${f.name} does not reference ${name}`,
-      !withoutComments(f.text).includes(name),
-      `${name} belongs to the app, not to the wrapper.`,
-    );
-  }
-}
+import {
+  SITE_ROOT,
+  SRC,
+  assertions,
+  check,
+  codeOnly,
+  config,
+  failures,
+  files,
+  withoutComments,
+} from "./check-wrapper-gate.mjs";
+import "./check-wrapper-config.mjs";
 
 // C. No shared code with the app.
 
@@ -705,18 +422,9 @@ console.log(
 );
 
 /*
- * PLANTED VIOLATIONS. See scripts/plant-violations.sh, which is the harness that
- * proves this gate actually fails. Run it with `npm run check:wrapper:plant`.
- *
- * A gate never observed failing has not been verified, and that applies to the
- * HARNESS too. The first attempt at this reverted with `git checkout -- .`, which
- * does not touch untracked files, so each plant's residue survived into the next
- * one and every result after the first was contaminated: they failed, but not
- * necessarily for the reason under test. The harness now snapshots and restores
- * the exact files it edits, so each plant is independent, and it verifies the
- * baseline is green again afterwards.
- *
- * That mistake also destroyed uncommitted work, which is the hazard
- * dustinedwards/workflow-mainline.md records as one of this project's recurring
- * failures. Commit before running a harness that reverts anything.
+ * PLANTED VIOLATIONS. scripts/plant-violations.sh is the harness that proves this gate fails
+ * (`npm run check:wrapper:plant`); a gate never observed failing has not been verified. The harness snapshots and
+ * restores the exact files it edits: `git checkout -- .` leaves untracked files, so residue contaminated later
+ * plants and destroyed uncommitted work. Commit before running a harness that reverts anything
+ * (dustinedwards/workflow-mainline.md).
  */

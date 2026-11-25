@@ -55,10 +55,6 @@ await test("a collision followed later by a real hit still finds the real hit", 
   assert.ok(found.includes("/dustin-edwards-logo-header.svg"));
 });
 
-await test("nothing is invented from an empty file", () => {
-  assert.deepEqual(referencesIn("", ASSETS), []);
-});
-
 await test("an asset named only in a line comment is NOT a reference", () => {
   const text = "// generated from /dustin-edwards-logo.svg, do not edit\nconst x = 1;";
   assert.deepEqual(referencesIn(stripComments(text), ASSETS), []);

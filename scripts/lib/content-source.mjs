@@ -69,8 +69,6 @@ export function matchesPull(root, file, entry) {
 }
 
 /**
- * The rows of a `wrangler d1 execute --json` answer.
- *
  * @param {{ status: number, stdout: string, output: string }} read
  * @param {string} what
  */

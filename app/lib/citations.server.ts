@@ -2,7 +2,7 @@ import type { RouterContextProvider } from "react-router";
 import { inList } from "@dustinedwards/site-runtime/d1";
 
 import { getDb } from "~/db/client";
-import { publicationCitations } from "~/db/schema";
+import { publicationCitations } from "~/db/schema-source";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { SITE_USER_AGENT } from "~/lib/site-origin.mjs";

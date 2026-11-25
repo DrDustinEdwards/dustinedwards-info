@@ -9,10 +9,9 @@ import { DURATIONS, UNITS } from "./kb-form-fields";
 import { PIECE_NAMES, pieceLabel, stepPieces, writePiece, type Piece } from "~/kb/step-marks.mjs";
 
 /*
- * A step's words with its marks as chips (docs/KNOWLEDGE-BASE.md), as protocols.io shows a step's components: typing is
- * plain text, and each reagent, piece of equipment, timer and temperature is one chip that is edited in a small popover
- * and deleted as one unit. Under the chips the step stays the text the file holds: a chip carries the exact text it was
- * read from, so a step nobody touched is written back byte for byte, and an edited chip is written in the format's own
+ * A step's words with its marks as chips (docs/KNOWLEDGE-BASE.md): each reagent, piece of equipment, timer and
+ * temperature is one chip, edited in a popover and deleted as one unit. A chip carries the exact text it was read
+ * from, so a step nobody touched is written back byte for byte; an edited chip is written in the format's own
  * spelling (step-marks.mjs). Marks typed by hand become chips when the text loses focus.
  */
 

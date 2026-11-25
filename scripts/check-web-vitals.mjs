@@ -2,30 +2,13 @@
 //
 //   node scripts/check-web-vitals.mjs [origin] [--runs N]
 //
-// Lighthouse, performance category only, with its DEFAULT config, which is
-// the mobile form factor with its default simulated mobile throttling (slow 4G, 4x CPU). The
-// browser is puppeteer's bundled chrome-headless-shell (which `npm ci` already downloads beside
-// its Chrome), and Lighthouse drives it over its debugging port, so there is no second browser.
-//
-// WHY THE SHELL AND NOT puppeteer's DEFAULT HEADLESS: the default (new) headless mode makes
-// Lighthouse fail on / with NO_NAVSTART, and so does handing Lighthouse a puppeteer page.
-// chrome-launcher was not used: on Windows its kill() throws EPERM removing its temp profile.
-//
-// SIMULATED throttling scales the CPU time the host really spent, so a busy host inflates TBT.
-// Each page prints Lighthouse's benchmark index for the host that measured it (higher is faster;
-// under about 1000 the numbers are suspect), and CI takes the median of three runs.
-//
-// WHAT IT CANNOT MEASURE: INP. INP needs a real person's input and a lab run has none, so this
-// reports Total Blocking Time as Lighthouse's lab proxy for it, graded against Lighthouse's own
-// mobile TBT "good" boundary of 200ms, and prints that it is a proxy. It is not INP.
-//
-// VERDICT: per metric, ok / WARN (over the threshold) / FAIL (over twice it). Exit 0 when
-// nothing FAILs (warnings print and do not block), exit 1 on any FAIL, exit 2 when any page
-// could not be measured. An unmeasured page is never reported as a pass.
-//
-// The origin is the first positional argument, else WEB_VITALS_ORIGIN, else SITE_ORIGIN
-// (app/lib/site-origin.mjs, the one place the repo states it). Pages are measured one at a time and
-// the browser is closed at the end, to keep memory modest on a small host.
+// Lighthouse, performance only, DEFAULT config (mobile, simulated slow 4G and 4x CPU), driving puppeteer's
+// chrome-headless-shell, not its default headless mode (NO_NAVSTART on /). SIMULATED throttling scales the host's
+// real CPU time, so each page prints the host's benchmark index (under about 1000 the numbers are suspect); CI
+// takes the median of three. INP cannot be measured in a lab: Total Blocking Time is reported as its proxy.
+// VERDICT per metric: ok / WARN (over the threshold) / FAIL (over twice it). Exit 0 when nothing FAILs, 1 on any
+// FAIL, 2 when a page could not be measured; an unmeasured page is never a pass. Origin: first argument, else
+// WEB_VITALS_ORIGIN, else SITE_ORIGIN (app/lib/site-origin.mjs).
 
 import lighthouse from "lighthouse";
 import puppeteer from "puppeteer";

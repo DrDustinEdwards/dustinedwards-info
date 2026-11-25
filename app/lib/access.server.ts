@@ -8,24 +8,17 @@ import { OWASP_EVENTS, logEvent, requestFields } from "@dustinedwards/site-runti
 import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 /**
- * Who Cloudflare Access says is asking. Access sits in front of /admin on the apex and signs a token
- * for each request it lets through; this reads that token and trusts nothing else. The administrators
- * are ADMIN_EMAIL and CO_OWNER_EMAILS (secrets, read by site-runtime's `adminEmails`), checked here as
- * well as by the Access policy (Zero Trust > Access > Applications > dustinedwards-login > Policies),
- * so a policy that admits too much still makes nobody else an administrator. Unset, nobody is.
+ * Who Cloudflare Access says is asking: it signs a token for each request it lets through to /admin, and this
+ * reads that token and trusts nothing else. Administrators are ADMIN_EMAIL and CO_OWNER_EMAILS (site-runtime's
+ * `adminEmails`), checked here as well as by the Access policy, so a policy that admits too much still makes
+ * nobody else an administrator. Unset, nobody is. The token check is site-runtime's `access`; the verdicts:
  *
- * The token check itself (signature by a published key, RS256 pinned, issuer, audience, dates, the
- * cached key set) is the family's one copy, `@dustinedwards/site-runtime/access`. What is here is the
- * site's own reading of a verdict:
- *
- * - `human`: a person Access admitted; `email` is who (lowercased), and is what edits are attributed to.
- *   From `accessIdentity`, also on the roster; a person Access admitted who is not is `refused`
- *   (`not-admin`). /lab-bench's identity (app/lab/access.server.ts) is not checked against the list: its
- *   members are not administrators, and their rows decide what they may do.
- * - `service`: an Access service token (no person). Never an administrator; it only gets a request
- *   past Access, and the bearer credentials below still decide what it may do.
+ * - `human`: a person Access admitted; `email` (lowercased) is who edits are attributed to. One not on the
+ *   roster is `refused` (`not-admin`). /lab-bench's identity (app/lab/access.server.ts) is not checked against
+ *   the list: its members' rows decide what they may do.
+ * - `service`: an Access service token (no person). Never an administrator; the bearer credentials below decide.
  * - `absent`: no token, or this Worker has no Access configuration.
- * - `refused`: a token was presented and failed verification, which is an answer and not a login page.
+ * - `refused`: a token was presented and failed verification, an answer and not a login page.
  */
 export type AccessIdentity =
   | { kind: "human"; email: string }

@@ -13,7 +13,7 @@ import { loader as twinLoader } from "~/routes/procedure[.md]";
 
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 
-import { routeContext } from "./route-helpers";
+import { routeContext, operatorEnv, operator } from "./route-helpers";
 import { stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
@@ -21,8 +21,6 @@ import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
  * was copied at. Published, it must point at a version that is frozen; its page, twin and JSON-LD name the parent by its
  * title and link the frozen copy. The parent is the repository's phage-isolation, given a version here. */
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const PARENT = "/research/protocols/phage-isolation";
 const CHILD = "isolation-variant";
 const CHILD_PATH = `/research/protocols/${CHILD}`;

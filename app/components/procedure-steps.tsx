@@ -1,7 +1,8 @@
 import "capsomer/tabs.css";
 import { Picture } from "capsomer/react/picture";
 import { StepCalculators } from "~/components/phage-tool";
-import { fillQuantities, type ProcedureRecord } from "~/kb/procedures/render.mjs";
+import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
+import { fillQuantities } from "~/kb/procedures/render-quantities.mjs";
 import { PLATFORMS } from "~/kb/procedures/parse.mjs";
 import {
   gramsPerCup,

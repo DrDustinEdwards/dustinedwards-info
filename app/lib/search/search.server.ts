@@ -3,7 +3,6 @@
 
 import {
   PUBLISHED_STATUS,
-  RRF_K,
   applySort,
   fuse,
   hasFilters,
@@ -13,7 +12,9 @@ import {
 } from "@drdustinedwards/site-helpers/search";
 import { clampTitle } from "@dustinedwards/site-runtime/share-card";
 import { MARK_CLOSE, MARK_OPEN } from "capsomer/behavior/search-results";
-import { SEARCH_BASES, baseOfUrl, basePrefix } from "~/kb/search-bases.mjs";
+import { basePrefix } from "~/kb/search-bases.mjs";
+import { explainFor, buildFacets } from "./search-aggregates.server";
+import type { MatchReason, RawRow, SearchExplain, SearchFacets, SearchHit } from "./search-types";
 import { PAPER_PART } from "./ask-citations.mjs";
 import { PUBLICATIONS_PATH } from "~/lib/publications/paths.mjs";
 
@@ -41,55 +42,6 @@ const IDENTITY_WEIGHTS = { title: 10.0, tags: 4.0 };
 const MARK_START_SQL = `char(${MARK_OPEN.charCodeAt(0)})`;
 const MARK_END_SQL = `char(${MARK_CLOSE.charCodeAt(0)})`;
 
-/** "filter" is not an index match: it labels a browse-path record, where there was no text to match. */
-type MatchReason = "title" | "tag" | "body" | "filter";
-
-export interface SearchHit {
-  uid: string;
-  url: string;
-  type: string;
-  title: string;
-  docTitle: string;
-  docUrl: string;
-  anchor: string | null;
-  tags: string[];
-  publishAt: number | null;
-  /** Text with Capsomer's MARK_OPEN and MARK_CLOSE around each matched term; never markup (Snippet or snippetHtml draws it). */
-  snippet: string;
-  why: MatchReason[];
-  score: number;
-}
-
-interface SearchFacets {
-  types: Array<{ value: string; count: number }>;
-  /** The knowledge bases the hits belong to (app/kb/search-bases.mjs), each with its words. */
-  bases: Array<{ value: string; label: string; count: number }>;
-  tags: Array<{ value: string; count: number }>;
-  years: Array<{ value: number; count: number }>;
-}
-
-/** No score field: bm25 across differently tokenized indexes is not comparable, so it never leaves SQL. */
-interface SearchExplainRow {
-  uid: string;
-  title: string;
-  /** Records are section-grained, so a row's own title is often a bare heading. */
-  docTitle: string;
-  url: string;
-  identityRank: number | null;
-  proseRank: number | null;
-  identityContribution: number | null;
-  proseContribution: number | null;
-  score: number;
-}
-
-interface SearchExplain {
-  k: number;
-  layers: string[];
-  identityCount: number;
-  proseCount: number;
-  rows: SearchExplainRow[];
-}
-
 export interface SearchResult {
   parsed: ParsedQuery;
   hits: SearchHit[];
@@ -101,19 +53,6 @@ export interface SearchResult {
   truncated: boolean;
   tookMs: number;
   explain?: SearchExplain;
-}
-
-interface RawRow {
-  uid: string;
-  url: string;
-  type: string;
-  title: string;
-  doc_title: string;
-  doc_url: string;
-  anchor: string | null;
-  doc_tags: string;
-  publish_at: number | null;
-  snippet: string;
 }
 
 /** The pipe-delimited `doc_tags` column as a list. */
@@ -393,70 +332,6 @@ async function browse(
     tookMs: browseTook,
   };
 }
-
-/** Each fused row's rank and RRF contribution in each layer, for `?explain`. */
-function explainFor(
-  fused: ReturnType<typeof fuse<RawRow>>,
-  identityRows: RawRow[],
-  proseRows: RawRow[],
-): SearchExplain {
-  return {
-    k: RRF_K,
-    layers: ["search_identity", "search_prose"],
-    identityCount: identityRows.length,
-    proseCount: proseRows.length,
-    rows: fused.map(({ item, score, sources, ranks, contributions }) => {
-      const at = (list: number) => sources.indexOf(list);
-      const i = at(0);
-      const p = at(1);
-      const rank = (n: number) => (n === -1 ? null : (ranks[n] ?? null));
-      const contribution = (n: number) => (n === -1 ? null : (contributions[n] ?? null));
-      return {
-        uid: item.uid,
-        title: item.title,
-        docTitle: item.doc_title,
-        url: item.url,
-        identityRank: rank(i),
-        proseRank: rank(p),
-        identityContribution: contribution(i),
-        proseContribution: contribution(p),
-        score,
-      };
-    }),
-  };
-}
-
-/** Over the whole match set, not the page. If truncated, the caller must present these as a floor. */
-function buildFacets(hits: SearchHit[]): SearchFacets {
-  const types = new Map<string, number>();
-  const bases = new Map<string, number>();
-  const tags = new Map<string, number>();
-  const years = new Map<number, number>();
-
-  for (const hit of hits) {
-    types.set(hit.type, (types.get(hit.type) ?? 0) + 1);
-    const base = baseOfUrl(hit.docUrl);
-    if (base) bases.set(base, (bases.get(base) ?? 0) + 1);
-    for (const tag of hit.tags) tags.set(tag, (tags.get(tag) ?? 0) + 1);
-    if (hit.publishAt !== null) {
-      const year = new Date(hit.publishAt * 1000).getUTCFullYear();
-      years.set(year, (years.get(year) ?? 0) + 1);
-    }
-  }
-
-  return {
-    types: [...types].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
-    // In the bases' own order, not by count, so the list reads the same from one search to the next.
-    bases: SEARCH_BASES.filter((b) => bases.has(b.id)).map((b) => ({
-      value: b.id,
-      label: b.label,
-      count: bases.get(b.id) ?? 0,
-    })),
-    tags: [...tags].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
-    years: [...years].map(([value, count]) => ({ value, count })).sort((a, b) => b.value - a.value),
-  };
-}
-
 /**
  * The Ask index's corpus: the SQL AI Search runs on every sync of the dustinedwards-ask instance, whose data source
  * is this database (https://developers.cloudflare.com/ai-search/configuration/data-source/d1/). One row per published

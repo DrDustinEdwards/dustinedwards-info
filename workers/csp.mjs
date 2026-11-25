@@ -66,15 +66,13 @@ export function isMediaPath(pathname) {
 
 /**
  * What this site loads, the one list site-runtime's pageSecurity builds the policy from (workers/security-headers.mjs).
- * Every render gets a nonce (site-runtime ./worker), and a stored public page has it renewed per reader (`renew`), so no
- * two readers share one. Public pages run no inline script at all: /site.js and the islands it imports are same-origin, so
- * 'self' covers them, and the prefetch rules come from a same-origin file the response header names (site-runtime
- * ./prefetch), which needs no allowance. The private planes are `private, no-store` and rendered for their reader alone.
- * A /media path keeps the UPLOAD_HEADERS policy its response carries (workers/app.ts), which the package leaves alone.
- * No 'strict-dynamic': browsers ignore every host
- * source while it is present, so an approved file could never run; 'self' covers /site.js and the islands. The
- * admin plane's nonce also covers CodeMirror's inline <style>, which cannot be turned off. Nonces do not apply to style
- * attributes, and Shiki emits about 117 inline style="" per post, so those are allowed as attributes only.
+ * Every render gets a nonce (site-runtime ./worker), renewed per reader on a stored public page. Public pages run
+ * no inline script: /site.js and its islands are same-origin, so 'self' covers them, as it does the prefetch rules
+ * (a same-origin file named by the response header). The private planes are `private, no-store`. A /media path
+ * keeps the UPLOAD_HEADERS policy its response carries (workers/app.ts). No 'strict-dynamic': browsers then ignore
+ * every host source, so 'self' could not cover the files. The admin nonce also covers CodeMirror's inline <style>,
+ * which cannot be turned off. Nonces do not apply to style attributes, and Shiki emits about 117 inline style=""
+ * per post, so those are allowed as attributes only.
  *
  * @param {{ nonce: string | undefined }} context
  */
