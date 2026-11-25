@@ -142,6 +142,9 @@
     "wrangler": "4.166.0"
   },
   "overrides": {
+    "satori": {
+      "fflate": "0.7.5"
+    },
     "linkedom": {
       "htmlparser2": "$htmlparser2"
     },
