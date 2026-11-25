@@ -58,7 +58,12 @@ export const STATIC_PAGES = [
   {
     path: "/features",
     title: "Features",
-    sources: ["app/routes/features.tsx", "app/lib/features.mjs"],
+    sources: [
+      "app/routes/features.tsx",
+      "app/lib/features.mjs",
+      "app/lib/features-publishing.mjs",
+      "app/lib/features-platform.mjs",
+    ],
   },
   {
     path: "/systems",
