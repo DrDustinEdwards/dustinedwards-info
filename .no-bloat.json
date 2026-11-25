@@ -24,7 +24,7 @@
     ]
   },
   "baseline": {
-    "measured_at": "fd9b749",
+    "measured_at": "827ea05",
     "knip": {},
     "jscpd": {
       "clones": 22,
@@ -68,16 +68,15 @@
       "scripts/check-contrast.mjs": 737,
       "scripts/check-links.mjs": 755,
       "scripts/machine-readable/microformats.mjs": 573,
-      "scripts/sync-content.mjs": 910,
-      "test/worker/carrel-site-api.test.ts": 1488
+      "scripts/sync-content.mjs": 910
     },
     "tests": {
-      "files": 171,
+      "files": 172,
       "cases": 1079
     },
     "comments": {
       "lines": 16836,
-      "code": 95006,
+      "code": 95034,
       "percentage": 15.05
     }
   }
