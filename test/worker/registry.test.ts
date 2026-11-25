@@ -2,7 +2,6 @@ import { env } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
-import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
 import { RegistryInvalid, saveRegistryItem } from "~/kb/registry/save.server";
 
@@ -14,6 +13,7 @@ import {
   writes,
   type SourceStub,
 } from "./source-stub";
+import { expectDrift, expectIdempotent, expectSynced, syncOf } from "./sync-harness";
 import { purgedTagsOf, recordPurges } from "./route-helpers";
 
 /* The registry framework, end to end, with no real kind: the registry ships with none (app/kb/registry/kinds.mjs),
@@ -52,8 +52,6 @@ vi.mock("~/kb/registry/kinds.mjs", () => ({
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
 recordPurges(purge);
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const carrel = { kind: "carrel", changeId: "chg-registry" } as const;
 const gitEnv = () => env as unknown as Parameters<typeof saveRegistryItem>[0];
 
@@ -82,9 +80,9 @@ const rowFor = (kind: string, id: string) =>
     }>();
 const count = async () =>
   (await env.DB.prepare("SELECT COUNT(*) AS n FROM registry").first<{ n: number }>())?.n ?? -1;
-const driftCheck = async () =>
-  (await runHealthChecks(env as never)).checks.find((c) => c.name === "registry-drift");
-const sync = () => runTool(operatorEnv(), operator, "sync_registry", {});
+const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
+const operator = { kind: "operator", id: "test" } as const;
+const { sync, driftCheck } = syncOf("sync_registry", "registry-drift");
 const purgedTags = () => purgedTagsOf(purge);
 const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
@@ -128,16 +126,7 @@ describe("sync_registry and the registry-drift check", () => {
       await putSource(PATHS.blue, BLUE);
       expect((await driftCheck())?.ok).toBe(false);
 
-      const first = await sync();
-      expect(first.ok, JSON.stringify(first)).toBe(true);
-      if (first.ok)
-        expect(first.data).toMatchObject({
-          repaired: 2,
-          removed: 0,
-          expected: 2,
-          present: 2,
-          converged: true,
-        });
+      await expectSynced(sync, { repaired: 2, removed: 0, expected: 2 });
       expect(await count()).toBe(2);
       const row = await rowFor("widget", "a-red");
       expect(row).toMatchObject({
@@ -152,9 +141,7 @@ describe("sync_registry and the registry-drift check", () => {
       expect(await purgedTags()).toEqual(["registry"]);
       expect((await driftCheck())?.ok).toBe(true);
 
-      const again = await sync();
-      expect(again.ok).toBe(true);
-      if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
+      await expectIdempotent(sync);
     },
   );
 
@@ -173,15 +160,9 @@ describe("sync_registry and the registry-drift check", () => {
         "---\nname: A new widget\ncolor: red\ndraft: true\n---\n",
       );
       await removeSource(PATHS.blue);
-      const drifted = await driftCheck();
-      expect(drifted?.ok).toBe(false);
-      expect(drifted?.detail).toContain("1 sha-changed");
-      expect(drifted?.detail).toContain("1 row(s) with no file");
+      await expectDrift(driftCheck, { changed: 1, gone: 1 });
 
-      const result = await sync();
-      expect(result.ok, JSON.stringify(result)).toBe(true);
-      if (result.ok)
-        expect(result.data).toMatchObject({ repaired: 2, removed: 1, converged: true });
+      await expectSynced(sync, { repaired: 2, removed: 1 });
       expect(await count()).toBe(2);
       expect(JSON.parse((await rowFor("widget", "a-red"))?.record ?? "{}")).toMatchObject({
         color: "blue",

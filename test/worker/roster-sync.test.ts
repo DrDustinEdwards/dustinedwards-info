@@ -3,11 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { cacheTags } from "~/lib/seo";
-import { runHealthChecks } from "~/lib/health/checks.server";
-import { runTool } from "~/lib/operator/api.server";
 import { rosterPath } from "~/lib/roster/compile.mjs";
 
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
+import { expectDrift, expectIdempotent, expectSynced, syncOf } from "./sync-harness";
 import { SYNTHETIC_COHORTS, cohortFile } from "./seed";
 import { purgedTagsOf, recordPurges } from "./route-helpers";
 
@@ -19,8 +18,6 @@ import { purgedTagsOf, recordPurges } from "./route-helpers";
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
 recordPurges(purge);
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const [CURRENT, EARLIER] = SYNTHETIC_COHORTS;
 const CURRENT_SLUG = String(CURRENT.year);
 const EARLIER_SLUG = String(EARLIER.year);
@@ -30,9 +27,7 @@ const rowFor = (slug: string) =>
   env.DB.prepare("SELECT slug, year, source_blob_sha FROM roster WHERE slug = ?1")
     .bind(slug)
     .first<{ slug: string; year: number; source_blob_sha: string }>();
-const driftCheck = async () =>
-  (await runHealthChecks(env as never)).checks.find((c) => c.name === "roster-drift");
-const sync = () => runTool(operatorEnv(), operator, "sync_roster", {});
+const { sync, driftCheck } = syncOf("sync_roster", "roster-drift");
 
 let gh: SourceStub;
 let current: string;
@@ -61,16 +56,7 @@ describe("sync_roster and the roster-drift check", () => {
     async () => {
       expect((await driftCheck())?.ok).toBe(false);
 
-      const first = await sync();
-      expect(first.ok, JSON.stringify(first)).toBe(true);
-      if (first.ok)
-        expect(first.data).toMatchObject({
-          repaired: 2,
-          removed: 0,
-          expected: 2,
-          present: 2,
-          converged: true,
-        });
+      await expectSynced(sync, { repaired: 2, removed: 0, expected: 2 });
       expect((await rowFor(CURRENT_SLUG))?.source_blob_sha).toBe(await gitBlobSha(current));
       expect((await rowFor(EARLIER_SLUG))?.year).toBe(EARLIER.year);
       expect((await driftCheck())?.ok).toBe(true);
@@ -80,9 +66,7 @@ describe("sync_roster and the roster-drift check", () => {
       expect(tags).toContain(cacheTags());
 
       purge.mockClear();
-      const again = await sync();
-      expect(again.ok).toBe(true);
-      if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
+      await expectIdempotent(sync);
       expect(purge).not.toHaveBeenCalled();
     },
   );
@@ -100,15 +84,9 @@ describe("sync_roster and the roster-drift check", () => {
       });
       await putSource(rosterPath(CURRENT_SLUG), edited);
       await removeSource(rosterPath(EARLIER_SLUG));
-      const drifted = await driftCheck();
-      expect(drifted?.ok).toBe(false);
-      expect(drifted?.detail).toContain("1 sha-changed");
-      expect(drifted?.detail).toContain("1 row(s) with no file");
+      await expectDrift(driftCheck, { changed: 1, gone: 1 });
 
-      const result = await sync();
-      expect(result.ok, JSON.stringify(result)).toBe(true);
-      if (result.ok)
-        expect(result.data).toMatchObject({ repaired: 1, removed: 1, converged: true });
+      await expectSynced(sync, { repaired: 1, removed: 1 });
       expect(await rowFor(EARLIER_SLUG)).toBeNull();
       expect((await rowFor(CURRENT_SLUG))?.source_blob_sha).toBe(await gitBlobSha(edited));
       const stored = await env.DB.prepare("SELECT record FROM roster WHERE slug = ?1")

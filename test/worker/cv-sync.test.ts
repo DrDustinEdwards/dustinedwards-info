@@ -4,10 +4,9 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { contentPageSearchUid } from "~/lib/content-pages.mjs";
 import { CV_FILES, cvSourcePath } from "~/lib/cv/parse.mjs";
-import { runHealthChecks } from "~/lib/health/checks.server";
-import { runTool } from "~/lib/operator/api.server";
 
 import { putSource, stubSources, type SourceStub } from "./source-stub";
+import { expectDrift, expectIdempotent, expectSynced, syncOf } from "./sync-harness";
 import { seedPublications } from "./seed";
 
 /* sync_cv and the cv-drift check: D1 converges to content/cv through the compile and write doors a CV save
@@ -27,8 +26,6 @@ const rawOf = (slug: string) => {
 const repository = () =>
   Object.fromEntries(CV_FILES.map(({ slug }) => [cvSourcePath(slug), rawOf(slug)]));
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 const ADDED = "Added Through Git Equipment Award";
 
 const rowFor = (slug: string) =>
@@ -43,9 +40,7 @@ const searchRows = async (needle?: string) =>
       .bind(contentPageSearchUid("/cv"), `%${needle ?? ""}%`)
       .first<{ n: number }>()
   )?.n;
-const driftCheck = async () =>
-  (await runHealthChecks(env as never)).checks.find((c) => c.name === "cv-drift");
-const sync = () => runTool(operatorEnv(), operator, "sync_cv", {});
+const { sync, driftCheck } = syncOf("sync_cv", "cv-drift");
 
 let gh: SourceStub;
 
@@ -72,24 +67,16 @@ describe("sync_cv and the cv-drift check", () => {
     async () => {
       expect((await driftCheck())?.ok).toBe(false);
 
-      const first = await sync();
-      expect(first.ok, JSON.stringify(first)).toBe(true);
-      if (first.ok) {
-        expect(first.data).toMatchObject({
-          repaired: CV_FILES.length,
-          removed: 0,
-          expected: CV_FILES.length,
-          present: CV_FILES.length,
-          converged: true,
-        });
-      }
+      await expectSynced(sync, {
+        repaired: CV_FILES.length,
+        removed: 0,
+        expected: CV_FILES.length,
+      });
       expect((await rowFor("grants"))?.source_blob_sha).toBe(await gitBlobSha(rawOf("grants")));
       expect(await searchRows()).toBeGreaterThan(0);
       expect((await driftCheck())?.ok).toBe(true);
 
-      const again = await sync();
-      expect(again.ok).toBe(true);
-      if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
+      await expectIdempotent(sync);
     },
   );
 
@@ -106,14 +93,9 @@ describe("sync_cv and the cv-drift check", () => {
         `entries:\n  - year: 2026\n    amount: 99\n    title: ${ADDED}\n    areas: []\n    role: recipient\n`,
       );
       await putSource(cvSourcePath("grants"), edited);
-      const drifted = await driftCheck();
-      expect(drifted?.ok).toBe(false);
-      expect(drifted?.detail).toContain("1 sha-changed");
+      await expectDrift(driftCheck, { changed: 1 });
 
-      const result = await sync();
-      expect(result.ok, JSON.stringify(result)).toBe(true);
-      if (result.ok)
-        expect(result.data).toMatchObject({ repaired: 1, removed: 0, converged: true });
+      await expectSynced(sync, { repaired: 1, removed: 0 });
       expect((await rowFor("grants"))?.source_blob_sha).toBe(await gitBlobSha(edited));
       expect(await searchRows(ADDED)).toBeGreaterThan(0);
     },

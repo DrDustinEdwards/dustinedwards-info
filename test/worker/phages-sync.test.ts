@@ -3,8 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { contentPageSearchUid } from "~/lib/content-pages.mjs";
-import { runHealthChecks } from "~/lib/health/checks.server";
-import { runTool } from "~/lib/operator/api.server";
 
 import phagesPage from "../../content/pages/research-phages.md?raw";
 // The pages that state a phage fact by token: a phage write re-derives each of them (PHAGE_FACT_PAGES).
@@ -13,6 +11,7 @@ import bacteriophagesPage from "../../content/pages/research-bacteriophages.md?r
 import scienceEducationPage from "../../content/pages/research-science-education.md?raw";
 
 import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
+import { expectDrift, expectIdempotent, expectSynced, syncOf } from "./sync-harness";
 import { seedPages } from "./seed";
 import { purgedTagsOf, recordPurges } from "./route-helpers";
 
@@ -46,9 +45,6 @@ const PATH = "/research/phages";
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
 recordPurges(purge);
 
-const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
-
 const rowFor = (slug: string) =>
   env.DB.prepare("SELECT slug, source_blob_sha FROM phages WHERE slug = ?1")
     .bind(slug)
@@ -67,9 +63,7 @@ const searchRows = async () =>
       .bind(contentPageSearchUid(PATH))
       .all<{ body: string }>()
   ).results;
-const driftCheck = async () =>
-  (await runHealthChecks(env as never)).checks.find((c) => c.name === "phage-drift");
-const sync = () => runTool(operatorEnv(), operator, "sync_phages", {});
+const { sync, driftCheck } = syncOf("sync_phages", "phage-drift");
 
 let gh: SourceStub;
 
@@ -98,16 +92,7 @@ describe("sync_phages and the phage-drift check", () => {
     async () => {
       expect((await driftCheck())?.ok).toBe(false);
 
-      const first = await sync();
-      expect(first.ok, JSON.stringify(first)).toBe(true);
-      if (first.ok)
-        expect(first.data).toMatchObject({
-          repaired: 75,
-          removed: 0,
-          expected: 75,
-          present: 75,
-          converged: true,
-        });
+      await expectSynced(sync, { repaired: 75, removed: 0, expected: 75 });
       expect(await count()).toBe(75);
       expect((await rowFor("acorn15"))?.source_blob_sha).toBe(
         await gitBlobSha(files["content/phages/acorn15.md"] ?? ""),
@@ -116,9 +101,7 @@ describe("sync_phages and the phage-drift check", () => {
       expect(await purgedTagsOf(purge)).toEqual(["content-pages"]);
       expect((await driftCheck())?.ok).toBe(true);
 
-      const again = await sync();
-      expect(again.ok).toBe(true);
-      if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
+      await expectIdempotent(sync);
     },
   );
 
@@ -140,15 +123,9 @@ describe("sync_phages and the phage-drift check", () => {
         "---\nname: Zeta\nyear: 2026\nhost: foliorum\ncounty: Erath County\nphagesdb: null\n---\n",
       );
       await removeSource("content/phages/allene.md");
-      const drifted = await driftCheck();
-      expect(drifted?.ok).toBe(false);
-      expect(drifted?.detail).toContain("1 sha-changed");
-      expect(drifted?.detail).toContain("1 row(s) with no file");
+      await expectDrift(driftCheck, { changed: 1, gone: 1 });
 
-      const result = await sync();
-      expect(result.ok, JSON.stringify(result)).toBe(true);
-      if (result.ok)
-        expect(result.data).toMatchObject({ repaired: 2, removed: 1, converged: true });
+      await expectSynced(sync, { repaired: 2, removed: 1 });
       expect(await count()).toBe(75);
       expect((await rowFor("acorn15"))?.source_blob_sha).toBe(await gitBlobSha(edited));
       expect(await rowFor("allene")).toBeNull();
