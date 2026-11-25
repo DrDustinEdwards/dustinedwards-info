@@ -154,7 +154,6 @@ export function registryHost(options) {
   /** @type {Map<string, Promise<Map<string, any>>>} */
   const byKinds = new Map();
   /**
-   * The ids asked for among one kind's stored records, the registry compiled once for every kind.
    * @param {string} kind
    * @param {(item: any) => any} stored
    * @param {string[]} ids

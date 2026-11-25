@@ -44,7 +44,6 @@ await test("a PCR protocol lists its reagents and its primers, each with the sou
   );
   assert.ok(groups.every((g) => g.rows.length > 0));
 
-  // The twin carries the same table.
   assert.ok(coi.markdown.includes("## Key resources"), "the twin has the table");
   assert.ok(
     coi.markdown.includes("| GoTaq® Flexi DNA polymerase | Promega | Cat# M8296 |"),

@@ -5,7 +5,6 @@
 
 import { sqlLiteral } from "./sql-literal.mjs";
 
-/** D1's cap on one statement, in bytes. */
 export const D1_STATEMENT_LIMIT = 100_000;
 
 /** A statement over this is rewritten. Well under the cap, so a small error in the estimate cannot reach it. */
@@ -74,7 +73,6 @@ function endOfQuoted(text, at) {
 }
 
 /**
- * Splits `text` at the top-level occurrences of `separator` (outside quotes and parentheses).
  * @param {string} text @param {string} separator
  * @returns {string[]}
  */

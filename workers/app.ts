@@ -83,7 +83,6 @@ const site = defineSite<Env>({
     // Carrel's site API under /api/carrel/v1 and its preview links (site-api's step); an accepted write purges.
     carrelStep,
   ],
-  // A webmention is a cross-site POST by design (W3C Webmention 3.2).
   crossSiteExempt: ["/webmention"],
   publicCookies: [THEME_COOKIE],
   // The signed-in planes are rendered for their reader alone. A request that negotiates away from HTML (a Markdown twin,

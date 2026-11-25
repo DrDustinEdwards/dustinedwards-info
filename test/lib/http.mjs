@@ -5,8 +5,6 @@
 import { createServer } from "node:http";
 
 /**
- * Runs `run` against a loopback server answering with `handler`, then closes it.
- *
  * @template T
  * @param {import("node:http").RequestListener} handler
  * @param {(base: string) => Promise<T>} run receives `http://127.0.0.1:<port>`

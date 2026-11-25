@@ -68,7 +68,6 @@ await test("every Search Console URL resolves: 200 kept, one 301, or 410, never 
  */
 const GONE = "410";
 const CUTOVER_PATTERN_EXAMPLES = /** @type {Array<[string, string | null]>} */ ([
-  // /discovery-of-{name}/ and /annotation-of-{name}/ -> 301 /research/phages#{name}
   ["/discovery-of-lucinda/", "/research/phages#lucinda"],
   ["/annotation-of-arlo/", "/research/phages#arlo"],
   // /phylogenetics-lysm/, /arlo-gene-67/, /arlo-gene-67-cloning/, /raspberry-pi-plaque-counter/ -> 301 /research/phages
@@ -76,11 +75,9 @@ const CUTOVER_PATTERN_EXAMPLES = /** @type {Array<[string, string | null]>} */ (
   ["/arlo-gene-67/", "/research/phages"],
   ["/arlo-gene-67-cloning/", "/research/phages"],
   ["/raspberry-pi-plaque-counter/", "/research/phages"],
-  // /directory-*/ -> 301 /teaching/phage-discovery
   ["/directory-2019-phage-researchers/", "/teaching/phage-discovery"],
   // /author/dustin/ -> 301 /about, before the /author/* rule
   ["/author/dustin/", "/about"],
-  // /user/*, other /author/* -> 301 /teaching/phage-discovery#roster
   ["/user/example-student/", "/teaching/phage-discovery#roster"],
   ["/author/example/", "/teaching/phage-discovery#roster"],
   // /register/, /members/, /logout/, /account/, /password-reset/, /user/ -> 410
@@ -94,7 +91,6 @@ const CUTOVER_PATTERN_EXAMPLES = /** @type {Array<[string, string | null]>} */ (
   ["/category/phage-isolation-notes/page/5/", "/research/phages"],
   ["/microbiomes/page/5/", "/research/phages"],
   ["/phages/page/2/", "/research/phages"],
-  // /knowledge-base/category/* -> 301 /research/protocols
   ["/knowledge-base/category/protocols/pcr/", "/research/protocols"],
   // other /category/*, /tag/* -> 410
   ["/category/uncategorized/", GONE],
@@ -104,7 +100,6 @@ const CUTOVER_PATTERN_EXAMPLES = /** @type {Array<[string, string | null]>} */ (
     "/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.pdf",
     "/research/protocols/phage-dna-extraction",
   ],
-  // all other /wp-content/uploads/* -> 410
   ["/wp-content/uploads/2023/11/Spot-Titer.png", GONE],
   // the two lab-protocol scans that still earn clicks or impressions
   ["/wp-content/uploads/2023/11/Electrophoresis.pdf", "/research/protocols"],

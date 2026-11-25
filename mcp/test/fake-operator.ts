@@ -93,7 +93,6 @@ type Reply =
 export interface FakeOperator {
   /** Requests to /api/operator. */
   calls: Recorded[];
-  /** Requests to /health. */
   healthCalls: Recorded[];
   logs: string[];
   /** The next operator reply, or one per call chosen by tool name. */

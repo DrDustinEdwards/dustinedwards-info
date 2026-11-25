@@ -186,7 +186,6 @@ export async function run({ page }) {
     );
   }
 
-  // A note is kept.
   await page.evaluate(() => document.querySelector(".cap-run-note")?.setAttribute("open", ""));
   await page.type(".cap-run-note textarea", "tube 3 cloudy");
   await page.evaluate(() =>
@@ -288,7 +287,6 @@ export async function run({ page }) {
     `${restored.checked} step(s) done, first note "${restored.note}".`,
   );
 
-  // Finish: the record.
   await page.click("[data-run=finish]");
   const record = await page.evaluate(() => ({
     visible: !document.querySelector(".cap-run-summary")?.hasAttribute("hidden"),
@@ -309,7 +307,6 @@ export async function run({ page }) {
     `summary visible ${record.visible}, buttons [${record.buttons.join(", ")}], says saved on this device ${record.saidSaved}.`,
   );
 
-  // Start over clears it.
   const startOver = await page.evaluateHandle(() =>
     [...document.querySelectorAll(".cap-run-summary button")].find(
       (b) => b.textContent === "Start over",

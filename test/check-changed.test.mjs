@@ -7,7 +7,6 @@ import { changedFiles, reachedModules } from "../scripts/check-changed.mjs";
 import { RELATED, gatesFor } from "../scripts/lib/changed-map.mjs";
 
 /**
- * A fake git answering by the joined argument list.
  * @param {Record<string, { status: number | null, stdout?: string, stderr?: string, error?: Error }>} answers
  */
 const fakeGit = (answers) => (/** @type {string[]} */ args) => {

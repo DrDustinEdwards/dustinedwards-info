@@ -20,7 +20,6 @@ export const CHECK_NAMES = [
 
 const pass = (name) => ({ name, status: "pass" });
 
-/** Every check passing. */
 export const HEALTHY = { status: "pass", ok: true, checks: [pass("db"), ...CHECK_NAMES.map(pass)] };
 
 /**

@@ -37,7 +37,6 @@ if (files.length === 0) {
   throw new Error("publications: the scope is empty; nothing below would mean anything");
 }
 
-/** The files that compiled, with what they compiled to. */
 export const compiled = files.flatMap((f) =>
   f.compiled.ok ? [{ file: f.file, slug: f.slug, raw: f.raw, ...f.compiled }] : [],
 );

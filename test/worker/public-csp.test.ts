@@ -196,6 +196,5 @@ it("gives a 404 a search form and the header's sections", async () => {
   const hrefs = [...sections.matchAll(/<a\b[^>]*\shref="([^"]*)"/g)].map((m) => m[1]);
   expect(hrefs).toEqual(NAV.map((item) => item.to));
 
-  /* The form submits to this origin, which the policy's form-action allows. */
   expect(policy).toContain("form-action 'self'");
 });

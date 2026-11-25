@@ -69,7 +69,6 @@ const agents = new Set(rows.map((r) => r.headers?.["user-agent"]).filter(Boolean
 for (const a of agents) console.log(`  ${a}`);
 if (!agents.size) console.log("  (none reported a user-agent)");
 
-// Question 1: era
 console.log("\nERA");
 const opened = rows.filter(
   (r) => r.rpcMethod === "initialize" || r.rpcMethod === "server/discover",
