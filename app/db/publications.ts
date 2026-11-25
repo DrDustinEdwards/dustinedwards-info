@@ -8,7 +8,7 @@ import { sortPublications } from "~/lib/publications/record.mjs";
 import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 
 import { getDb } from "./client";
-import { publications } from "./schema";
+import { publications } from "./schema-source";
 
 /** Every published paper, newest first: the order the index, the exports and the CSL file all follow. */
 export async function listPublishedPublications(env: Env): Promise<Publication[]> {

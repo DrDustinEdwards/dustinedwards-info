@@ -5,7 +5,7 @@ import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import type { MemberRow } from "@dustinedwards/site-runtime/members";
 
 import { getDb } from "./client";
-import { memberAudit, memberTerms, members } from "./schema";
+import { memberAudit, memberTerms, members } from "./schema-lab";
 
 export type SyncState = "pending" | "accepted" | "failed" | "not_needed";
 
