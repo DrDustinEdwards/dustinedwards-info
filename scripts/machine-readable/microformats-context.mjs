@@ -12,7 +12,8 @@ import { buildArtifact } from "../build-content.mjs";
 import { postPath } from "../../app/lib/content/pipeline.mjs";
 import { createTally } from "@dustinedwards/devkit/node";
 
-export const { mf2 } = await import("microformats-parser");
+/** @type {(html: string, options: { baseUrl: string }) => any} */
+export const mf2 = (await import("microformats-parser")).mf2;
 
 console.log("\n  microformats\n");
 
