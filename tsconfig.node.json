@@ -149,6 +149,7 @@
     "app/lib/cv/compile.mjs",
     "app/lib/cv/entries.mjs",
     "app/lib/cv/view.mjs",
+    "app/lib/cv/chart-data.mjs",
     "app/lib/cv/markdown.mjs",
     // The print document and the fingerprint, which the Worker and scripts/build-cv-pdf.mjs both draw from.
     "app/lib/cv/pdf-html.mjs",

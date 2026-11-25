@@ -104,7 +104,7 @@ line is an error) and a value that looks like an email, a phone number or a room
 ## What a save cannot do
 
 A file's ADDRESS is structure. `CV_FILES`, the page's path and its SEO text (`CV_PAGE`, `app/lib/cv/entries.mjs`),
-the section list and the filter vocabulary (`app/lib/cv/view.mjs`) stay in code. A save cannot create a file: an id
+the section list and the filter vocabulary (`app/lib/cv/view.mjs`, `chart-data.mjs`) stay in code. A save cannot create a file: an id
 no entry in `CV_FILES` names is refused, and the refusal says so. The CV has no draft state, so it cannot be
 unpublished.
 
