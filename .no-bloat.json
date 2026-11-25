@@ -61,7 +61,6 @@
       "mcp/scripts/check-wrapper.mjs": 722,
       "scripts/build-og.mjs": 541,
       "scripts/check-all.mjs": 594,
-      "scripts/check-ask-guards.mjs": 698,
       "scripts/check-changed.mjs": 520,
       "scripts/machine-readable/microformats.mjs": 573
     },
