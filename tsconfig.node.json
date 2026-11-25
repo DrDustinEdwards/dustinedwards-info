@@ -278,6 +278,9 @@
     "app/lib/dictionary/parse.mjs",
     "app/lib/dictionary/compile.mjs",
     "app/lib/phage-table.mjs",
+    "app/lib/phage-tools-base.mjs",
+    "app/lib/phage-tools-dilution.mjs",
+    "app/lib/phage-tools-lysate.mjs",
     "app/lib/phage-tools.mjs",
     // The roster's compile path: build:content and sync:content compile every cohort file with the SAME module
     // the Carrel adapter's roster save runs (docs/ROSTER.md). scripts/lib/roster.mjs is included by the scripts project.

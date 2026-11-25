@@ -5,18 +5,14 @@ import { readFileSync } from "node:fs";
 import {
   eop,
   floodYield,
-  formatNumber,
-  formatScientific,
   lysateForPlates,
   lysatePerPlate,
   moi,
-  parseNumber,
-  planDilution,
   platesForLysate,
-  runTool,
-  titer,
-  toolValues,
-} from "../app/lib/phage-tools.mjs";
+} from "../app/lib/phage-tools-lysate.mjs";
+import { formatNumber, formatScientific, parseNumber } from "../app/lib/phage-tools-base.mjs";
+import { planDilution, titer } from "../app/lib/phage-tools-dilution.mjs";
+import { runTool, toolValues } from "../app/lib/phage-tools.mjs";
 
 /** @param {string} slug */
 const procedure = (slug) =>
