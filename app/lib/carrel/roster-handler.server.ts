@@ -10,7 +10,7 @@ import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import { listRosterRows } from "~/db/roster";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { asSiteApiError, fileForSave } from "~/lib/carrel/errors.server";
 import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { ROSTER_PAGE_PATH, rosterPath } from "~/lib/roster/compile.mjs";
 import { COHORT_SLUG, saveRoster } from "~/lib/roster/save.server";
@@ -92,9 +92,7 @@ export function rosterHandler(env: RosterEnv): ContentKindHandler {
         throw new RefusedError(
           `"${slug}" is not a cohort file key; a cohort is named for its year, such as 2025.`,
         );
-      const file = await readFile(env, rosterPath(slug));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      await fileForSave(env, rosterPath(slug), input.expectedVersion);
       return write(slug, input.changeId, input.source, input.expectedVersion);
     },
 

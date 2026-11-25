@@ -32,3 +32,14 @@ export async function asSiteApiError(env: Env, error: unknown, path: string): Pr
   }
   throw error;
 }
+
+/**
+ * The file a save writes over, read under the save's version rule: no version means a new file, so one already there is
+ * a conflict; a version means an edit, so a file that is gone is a conflict. Null only for a new file.
+ */
+export async function fileForSave(env: Env, path: string, expectedVersion: string | null) {
+  const file = await readFile(env, path);
+  if (expectedVersion === null && file) throw new VersionConflictError(file.sha);
+  if (expectedVersion !== null && !file) throw new VersionConflictError(null);
+  return file;
+}

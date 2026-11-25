@@ -9,7 +9,7 @@ import { RefusedError, VersionConflictError } from "@dustinedwards/site-api";
 import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { asSiteApiError, fileForSave } from "~/lib/carrel/errors.server";
 import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { saveLlms } from "~/lib/llms/save.server";
 import { LLMS_PATH } from "~/lib/llms/validate.mjs";
@@ -64,10 +64,8 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
     input: { changeId: string; source?: string; expectedVersion: string | null },
   ) {
     target(slug);
-    const stored = await readFile(env, LLMS_PATH);
     // The file always exists, so a save that names no version is a conflict, as a page's is.
-    if (input.expectedVersion === null && stored) throw new VersionConflictError(stored.sha);
-    if (input.expectedVersion !== null && !stored) throw new VersionConflictError(null);
+    const stored = await fileForSave(env, LLMS_PATH, input.expectedVersion);
     if (!stored)
       throw new RefusedError(`${LLMS_PATH} is missing from the repository, so it cannot be saved.`);
     return write(slug, input.changeId, input.source ?? stored.content, input.expectedVersion);

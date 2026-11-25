@@ -5,20 +5,11 @@ import {
   listingHref,
   listingTrail,
   listingDescription,
-  redirectPastLastPage,
 } from "~/components/taxonomy-listing";
-import { getBlogSeries, listSeriesPosts, nextScheduledPublishAt } from "~/db";
-import { parsePage } from "capsomer/react/pagination";
-import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
+import { getBlogSeries, listSeriesPosts } from "~/db";
 import { getEnv } from "~/lib/context";
-import {
-  EDGE_CACHE_HEADER,
-  SITE,
-  siteHead,
-  cacheTags,
-  publicHtmlHeaders,
-  scheduledEdgeCacheControl,
-} from "~/lib/seo";
+import { SITE, siteHead } from "~/lib/seo";
+import { loadTaxonomyListing, taxonomyHeaders } from "~/lib/taxonomy-loader.server";
 import { seriesPath } from "~/lib/series-path.mjs";
 import type { Route } from "./+types/blog.series.$series";
 
@@ -26,36 +17,20 @@ import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
 import "~/styles/entry-list.css";
 
-/**
- * Ordered by part, the one listing that is not newest first. 404 rather than an empty page, which
- * would be a soft 404 and leak a series only a draft carries.
- */
+/** Ordered by part, the one listing that is not newest first. */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const url = new URL(request.url);
-  const page = parsePage(url.searchParams.get("page"));
-
-  const series = await getBlogSeries(env, params.series);
-  if (!series) throw data("Not found", { status: 404 });
-
-  const [listing, nextPublishAt] = await Promise.all([
-    listSeriesPosts(env, series.name, { page, perPage: POSTS_PER_PAGE }),
-    nextScheduledPublishAt(env),
-  ]);
-
-  redirectPastLastPage(page, listing.pageCount, seriesPath(series.name));
-
-  return data(
-    { ...listing, series },
-    { headers: { [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt) } },
+  const { item, listing, init } = await loadTaxonomyListing(
+    env,
+    request,
+    () => getBlogSeries(env, params.series),
+    (series, paging) => listSeriesPosts(env, series.name, paging),
+    (series) => seriesPath(series.name),
   );
+  return data({ ...listing, series: item }, init);
 }
 
-export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  return new Headers(
-    publicHtmlHeaders(cacheTags(), loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined),
-  );
-}
+export { taxonomyHeaders as headers };
 
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) {

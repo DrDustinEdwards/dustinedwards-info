@@ -5,20 +5,11 @@ import {
   listingHref,
   listingTrail,
   listingDescription,
-  redirectPastLastPage,
 } from "~/components/taxonomy-listing";
-import { getBlogTag, listBlogPosts, nextScheduledPublishAt } from "~/db";
-import { parsePage } from "capsomer/react/pagination";
-import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
+import { getBlogTag, listBlogPosts } from "~/db";
 import { getEnv } from "~/lib/context";
-import {
-  EDGE_CACHE_HEADER,
-  SITE,
-  siteHead,
-  cacheTags,
-  publicHtmlHeaders,
-  scheduledEdgeCacheControl,
-} from "~/lib/seo";
+import { SITE, siteHead } from "~/lib/seo";
+import { loadTaxonomyListing, taxonomyHeaders } from "~/lib/taxonomy-loader.server";
 import { tagPath } from "~/lib/tag-path.mjs";
 import type { Route } from "./+types/blog.tags.$tag";
 
@@ -26,35 +17,19 @@ import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
 import "~/styles/entry-list.css";
 
-/** 404 rather than an empty page, which would be a soft 404 and leak a tag only drafts carry. */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const url = new URL(request.url);
-  const page = parsePage(url.searchParams.get("page"));
-
-  /* Resolved before the list: an empty list cannot tell "no such tag" from "every post unpublished". */
-  const tag = await getBlogTag(env, params.tag);
-  if (!tag) throw data("Not found", { status: 404 });
-
-  const [listing, nextPublishAt] = await Promise.all([
-    listBlogPosts(env, { tag: tag.slug, page, perPage: POSTS_PER_PAGE }),
-    nextScheduledPublishAt(env),
-  ]);
-
-  redirectPastLastPage(page, listing.pageCount, tagPath(tag.slug));
-
-  return data(
-    { ...listing, tag },
-    { headers: { [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt) } },
+  const { item, listing, init } = await loadTaxonomyListing(
+    env,
+    request,
+    () => getBlogTag(env, params.tag),
+    (tag, paging) => listBlogPosts(env, { tag: tag.slug, ...paging }),
+    (tag) => tagPath(tag.slug),
   );
+  return data({ ...listing, tag: item }, init);
 }
 
-export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  /* Not `HTML_VARY_ACCEPT`: this page negotiates no twin representation on `Accept`. */
-  return new Headers(
-    publicHtmlHeaders(cacheTags(), loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined),
-  );
-}
+export { taxonomyHeaders as headers };
 
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) {

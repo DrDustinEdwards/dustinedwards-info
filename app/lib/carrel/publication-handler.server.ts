@@ -7,7 +7,7 @@ import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/
 
 import { listPublicationIdentities } from "~/db/publications";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { asSiteApiError, fileForSave } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { parsePublication, publicationPath } from "~/lib/publications/parse.mjs";
@@ -108,9 +108,7 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
     // Keeps the stored status, as a post does: a save to a live paper edits it live, and a new record
     // starts as a draft. First publication is a separate call, which Carrel's key may make.
     async saveDraft(slug, input) {
-      const file = await readFile(env, publicationPath(slug));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      const file = await fileForSave(env, publicationPath(slug), input.expectedVersion);
       const raw = withPublication(input.source, { draft: file ? fileIsDraft(file.content) : true });
       return write(slug, input.changeId, raw, input.expectedVersion);
     },

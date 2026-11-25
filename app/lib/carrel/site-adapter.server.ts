@@ -32,7 +32,7 @@ import { postPath, SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs"
 import { postPreviewContext } from "~/lib/context";
 import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { publicationHandler } from "~/lib/carrel/publication-handler.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { asSiteApiError, fileForSave } from "~/lib/carrel/errors.server";
 import {
   effectivePublishAt,
   forPreview,
@@ -279,9 +279,7 @@ export function carrelSiteAdapter(options: {
     // Keeps the stored status, as the contract's reference adapter does: a save to a live post
     // edits it live, and a new post starts as a draft.
     async saveDraft(id, input) {
-      const file = await readFile(env, postPath(id));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      const file = await fileForSave(env, postPath(id), input.expectedVersion);
       const raw = file
         ? withPublication(input.source, {
             draft: readState(file.content).draft,
