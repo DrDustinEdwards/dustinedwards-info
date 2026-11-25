@@ -18,22 +18,19 @@ import { runJobTool } from "@dustinedwards/site-runtime/cron";
 import { siteJobs } from "~/lib/cron-run.server";
 import type { OperatorEnv } from "./auth.server";
 import type { ToolName, ToolResult } from "./descriptors";
+import { syncAsk, syncMedia, syncPosts, syncStatus } from "./sync-tools.server";
 import {
-  syncAsk,
   syncDictionary,
-  syncMedia,
   syncLlms,
   syncCv,
   syncCvPdf,
   syncPages,
-  syncPosts,
   syncProcedures,
   syncPublications,
   syncPhages,
   syncRegistry,
   syncRoster,
-  syncStatus,
-} from "./sync-tools.server";
+} from "./sync-kinds.server";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { listProceduresForOperator } from "~/db/procedures";
 import { listPublishedPublications } from "~/db/publications";
