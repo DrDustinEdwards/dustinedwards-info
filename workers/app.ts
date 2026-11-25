@@ -8,7 +8,7 @@ import { cacheTags, ROBOTS_DISALLOW, SITE_ORIGIN } from "~/lib/seo";
 import { THEME_COOKIE } from "capsomer/theme-server";
 import { isApexHost, wordpressDisposition, wwwRedirectTarget } from "~/lib/wordpress-redirects.mjs";
 import { PUBLICATIONS_PREFIX, paperSlashTarget } from "~/lib/publications/pdf-redirect.mjs";
-import { isMediaPath, isPrivatePath } from "./csp.mjs";
+import { isMediaPath, isPrivateSitePath } from "./csp.mjs";
 import { UPLOAD_HEADERS } from "@dustinedwards/site-runtime/headers";
 import { privateRender } from "@dustinedwards/site-runtime/edge-cache";
 import { isWorkerPreview, redirectResponse } from "@dustinedwards/site-runtime/http";
@@ -91,7 +91,9 @@ const site = defineSite<Env>({
   // it was never a cache HIT. It is answered live by the gateway, its own immutable Cache-Control and the route's
   // caches.default copy (site-runtime ./image) keep it, as on germomics.com.
   cacheable: (request, url) =>
-    !isPrivatePath(url.pathname) && !isMediaPath(url.pathname) && !negotiatesAwayFromHtml(request),
+    !isPrivateSitePath(url.pathname) &&
+    !isMediaPath(url.pathname) &&
+    !negotiatesAwayFromHtml(request),
   preloads: PAGE_PRELOADS,
   // The admin's media and mentions kit (app/lib/admin-kit.server.ts) previews a post through the same routes in-process,
   // never through the Renderer, whose response is the one the edge stores. Carrel's own preview uses the step's kit.
@@ -111,7 +113,7 @@ const site = defineSite<Env>({
       origin: SITE_ORIGIN,
       llmsFull: false,
       siteMarkdown: false,
-      skip: isPrivatePath,
+      skip: isPrivateSitePath,
     });
     return async (request, env, ctx) => {
       const response = await copies(request, env, ctx);

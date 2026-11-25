@@ -313,6 +313,6 @@ export const scheduledPublishes = sqliteTable(
   (t) => [index("scheduled_publishes_due").on(t.publishAt)],
 );
 
-// The 404 counts (drizzle/0041_not_found.sql, site-runtime's NOT_FOUND_SQL), written by countNotFound in workers/app.ts
+// The 404 counts (drizzle/0041_not_found.sql, site-runtime's NOT_FOUND_SQL), counted by site-runtime's not-found wrapper in workers/app.ts
 // and read by Carrel's 404 report (notFoundReport). site-runtime's own mirror, re-exported so the schema test sees its index.
 export { page404Daily } from "@dustinedwards/site-runtime/drizzle";

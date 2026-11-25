@@ -49,7 +49,6 @@ const KEPT_HEADER_VALUES = new Set([
   "mcp-method",
   "mcp-name",
   "mcp-protocol-version",
-  "user-agent",
 ]);
 
 /** A kept value is a client's self-description; a longer one is cut, not stored whole. */

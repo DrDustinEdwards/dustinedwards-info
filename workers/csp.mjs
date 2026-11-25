@@ -35,7 +35,7 @@ function isLabPath(pathname) {
  * @param {string} pathname
  * @returns {boolean}
  */
-export function isPrivatePath(pathname) {
+export function isPrivateSitePath(pathname) {
   return isAdminPath(pathname) || isLabPath(pathname);
 }
 
