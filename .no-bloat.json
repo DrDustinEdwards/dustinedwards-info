@@ -46,7 +46,6 @@
       "app/db/schema.ts": 792,
       "app/kb/procedures/library.mjs": 568,
       "app/kb/procedures/render.mjs": 919,
-      "app/kb/procedures/validate.mjs": 1011,
       "app/lab/members.server.ts": 505,
       "app/lib/cv/view.mjs": 502,
       "app/lib/editor/publish.server.ts": 508,

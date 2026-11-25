@@ -20,7 +20,7 @@ import { proofFromFile } from "./proof.mjs";
 import { formatQuantity, readConditions, segmentText } from "./marks.mjs";
 import { statusLabel } from "./taxonomy.mjs";
 import { allSteps, PLATFORMS, procedurePath, readCalcs } from "./parse.mjs";
-import { HOWTO_TYPES } from "./validate.mjs";
+import { HOWTO_TYPES } from "./validate-profiles.mjs";
 import { storedLineage } from "./lineage.mjs";
 
 /** The slot a scalable quantity leaves in a step's HTML, filled at request time (fillQuantities). */

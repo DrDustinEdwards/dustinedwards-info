@@ -8,7 +8,7 @@
 // the strain are read from the protocols (which name their host strains by id), and the strain's full name is its organism and
 // designation, which the record's `name` must equal.
 
-import { BIOSAFETY_LEVELS } from "../procedures/validate.mjs";
+import { BIOSAFETY_LEVELS } from "../procedures/validate-profiles.mjs";
 import { httpsUrl, oneLine, stated } from "./primer.mjs";
 
 /** @type {import("./kinds.mjs").KindSpec} */

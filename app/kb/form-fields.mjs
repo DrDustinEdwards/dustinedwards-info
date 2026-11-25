@@ -3,7 +3,7 @@
 // (taxonomy.mjs, validate.mjs), so the form cannot offer a value the save would refuse. A field not named here is still
 // edited, as YAML, so nothing in a file is out of the form's reach.
 
-import { BIOSAFETY_LEVELS, HOWTO_TYPES } from "./procedures/validate.mjs";
+import { BIOSAFETY_LEVELS, HOWTO_TYPES } from "./procedures/validate-profiles.mjs";
 import {
   COURSES,
   METHODS,

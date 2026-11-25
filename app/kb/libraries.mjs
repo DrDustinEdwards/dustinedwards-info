@@ -9,7 +9,7 @@ import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavi
 import { BASES } from "./bases.mjs";
 import { libraryTable, stepCount } from "./procedures/library.mjs";
 import { courseLabel, methodLabel } from "./procedures/taxonomy.mjs";
-import { HOWTO_TYPES } from "./procedures/validate.mjs";
+import { HOWTO_TYPES } from "./procedures/validate-profiles.mjs";
 
 /** A how-to's type in words: "how-to" is "How-to". @param {string} id */
 export const howtoTypeLabel = (id) =>
