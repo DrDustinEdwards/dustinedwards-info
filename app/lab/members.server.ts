@@ -1,11 +1,8 @@
 /**
- * /lab-bench/members: who may sign in to the lab, and every change to that list (capsid docs/design/design-identity-roles.md,
- * "The members page"; docs/KNOWLEDGE-BASE.md step 5). The page is Capsomer's `people-roles`.
- *
- * Every rule is site-runtime's `checkChange`: nobody manages their own layer or anyone above it, and nobody grants a
- * permission they do not hold. The page offering an action is never permission to take it, so every post is checked
- * again here against the person's row as it is now. Each change is one batch (the row and its member_audit row), then
- * one Access sync through Capsid (app/lab/access-sync.server.ts), whose answer lands on the audit row.
+ * /lab-bench/members: every change to the lab's sign-in list (docs/KNOWLEDGE-BASE.md step 5). Every rule is
+ * site-runtime's `checkChange`, and every post is re-checked here against the person's row as it is now: the page
+ * offering an action is never permission to take it. Each change is one batch (the row and its member_audit row),
+ * then one Access sync (app/lab/access-sync.server.ts) whose answer lands on the audit row.
  */
 
 import { isEmail } from "@dustinedwards/site-runtime/email";
