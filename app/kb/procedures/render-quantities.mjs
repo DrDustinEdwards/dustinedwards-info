@@ -4,7 +4,7 @@ import { formatQuantity } from "./marks.mjs";
 
 /** The slot a scalable quantity leaves in a step's HTML, filled at request time (fillQuantities). */
 export const SLOT = (/** @type {number} */ i) => `QZQ${i}QZQ`;
-export const SLOT_PATTERN = /QZQ(\d+)QZQ/g;
+const SLOT_PATTERN = /QZQ(\d+)QZQ/g;
 
 /** @typedef {import("./render.mjs").ProcedureRecord} ProcedureRecord */
 

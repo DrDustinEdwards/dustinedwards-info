@@ -257,6 +257,7 @@ export const registry = sqliteTable(
 // repository path, `sha` its git blob sha, which is the version Carrel holds. Every version a file has had is a
 // source_revisions row, `content` NULL for a delete. source_guard holds no row outside a write: a guard that fails
 // its CHECK rolls the save's batch back.
+/** @public read by test/schema-invariants.test.mjs through the schema bundle */
 export const sourceFiles = sqliteTable("source_files", {
   path: text("path").primaryKey(),
   content: text("content").notNull(),
@@ -267,6 +268,7 @@ export const sourceFiles = sqliteTable("source_files", {
     .default(sql`(unixepoch())`),
 });
 
+/** @public read by test/schema-invariants.test.mjs through the schema bundle */
 export const sourceRevisions = sqliteTable(
   "source_revisions",
   {
@@ -283,6 +285,7 @@ export const sourceRevisions = sqliteTable(
   (t) => [index("source_revisions_path").on(t.path, t.id)],
 );
 
+/** @public read by test/schema-invariants.test.mjs through the schema bundle */
 export const sourceGuard = sqliteTable("source_guard", { ok: integer("ok").notNull() }, (t) => [
   check("source_guard_ok", sql`${t.ok} = 1`),
 ]);

@@ -15,6 +15,7 @@ import {
 // The Knowledge Base's inventory (docs/KNOWLEDGE-BASE.md step 4): D1 is the source, not a copy of a file, because a
 // lot changes daily and is private. A lot names a registry item by address,
 // with no foreign key: the registry is rewritten by sync:content.
+/** @public read by test/schema-invariants.test.mjs through the schema bundle */
 export const kbLocations = sqliteTable("kb_locations", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull().unique(),
@@ -22,6 +23,7 @@ export const kbLocations = sqliteTable("kb_locations", {
   note: text("note"),
 });
 
+/** @public read by test/schema-invariants.test.mjs through the schema bundle */
 export const kbLots = sqliteTable(
   "kb_lots",
   {
@@ -56,6 +58,7 @@ export const kbLots = sqliteTable(
 );
 
 /** Append-only: one row per write to a lot or a location, with the row before and after as JSON. */
+/** @public read by test/schema-invariants.test.mjs through the schema bundle */
 export const kbAudit = sqliteTable(
   "kb_audit",
   {
@@ -80,6 +83,7 @@ export const kbAudit = sqliteTable(
 // Run records (docs/KNOWLEDGE-BASE.md step 7, drizzle/0031_kb_runs.sql): append-only, so the migration's triggers
 // refuse any UPDATE or DELETE and a correction is a new run naming the one it replaces. A run's lot changes are writes to
 // kb_lots, each with its kb_audit row. Private to lab members.
+/** @public read by test/schema-invariants.test.mjs through the schema bundle */
 export const kbRuns = sqliteTable(
   "kb_runs",
   {
@@ -109,6 +113,7 @@ export const kbRuns = sqliteTable(
 );
 
 /** The lots one run used, how much of each, and whether it emptied one. Append-only, with its run. */
+/** @public read by test/schema-invariants.test.mjs through the schema bundle */
 export const kbRunLots = sqliteTable(
   "kb_run_lots",
   {

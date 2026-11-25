@@ -211,7 +211,7 @@ function audit(
 }
 
 /** The term review: Keep renews to the next term end, Remove removes; one batch, one sync. */
-export async function review(
+async function review(
   env: Env,
   actor: Actor,
   form: FormData,

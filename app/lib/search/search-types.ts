@@ -26,7 +26,7 @@ export interface SearchFacets {
 }
 
 /** No score field: bm25 across differently tokenized indexes is not comparable, so it never leaves SQL. */
-export interface SearchExplainRow {
+interface SearchExplainRow {
   uid: string;
   title: string;
   /** Records are section-grained, so a row's own title is often a bare heading. */

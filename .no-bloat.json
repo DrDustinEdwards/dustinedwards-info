@@ -24,12 +24,12 @@
     ]
   },
   "baseline": {
-    "measured_at": "827ea05",
+    "measured_at": "94027aa",
     "knip": {},
     "jscpd": {
-      "clones": 22,
-      "lines": 319,
-      "percentage": 0.25,
+      "clones": 6,
+      "lines": 117,
+      "percentage": 0.09,
       "unread": 0
     },
     "shared copies": {
@@ -38,31 +38,15 @@
     },
     "legacy": {},
     "size": {
-      "app/components/admin/kb-form-steps.tsx": 524,
-      "app/components/admin/kb-form.tsx": 501,
-      "app/db/posts.ts": 676,
-      "app/db/schema.ts": 792,
-      "app/lab/members.server.ts": 505,
-      "app/lib/cv/view.mjs": 502,
-      "app/lib/editor/publish.server.ts": 508,
-      "app/lib/features.mjs": 571,
-      "app/lib/nav.ts": 514,
-      "app/lib/operator/sync-tools.server.ts": 610,
-      "app/lib/search/search.server.ts": 541,
-      "app/routes/colophon.tsx": 605,
-      "app/routes/cv.tsx": 629,
-      "app/styles/katex.generated.css": 1124,
-      "mcp/scripts/check-wrapper.mjs": 722,
-      "scripts/build-og.mjs": 541,
-      "scripts/machine-readable/microformats.mjs": 573
+      "app/styles/katex.generated.css": 1124
     },
     "tests": {
-      "files": 172,
-      "cases": 1079
+      "files": 171,
+      "cases": 1063
     },
     "comments": {
-      "lines": 16836,
-      "code": 95034,
+      "lines": 16849,
+      "code": 95105,
       "percentage": 15.05
     }
   }
