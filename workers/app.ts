@@ -92,7 +92,9 @@ const site = defineSite<Env>({
   // it was never a cache HIT. It is answered live by the gateway, its own immutable Cache-Control and the route's
   // caches.default copy (site-runtime ./image) keep it, as on germomics.com.
   cacheable: (request, url) =>
-    !isPrivateSitePath(url.pathname) && !isMediaPath(url.pathname) && !negotiatesAwayFromHtml(request),
+    !isPrivateSitePath(url.pathname) &&
+    !isMediaPath(url.pathname) &&
+    !negotiatesAwayFromHtml(request),
   preloads: PAGE_PRELOADS,
   // The admin's media and mentions kit (app/lib/admin-kit.server.ts) previews a post through the same routes in-process,
   // never through the Renderer, whose response is the one the edge stores. Carrel's own preview uses the step's kit.
