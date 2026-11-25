@@ -46,6 +46,7 @@ describe("the nightly D1 dump", () => {
 
   it("PLANTED: a credential table left in refuses the marker, so the run is never the restore point", async () => {
     const before = await latestDump(testEnv.BACKUPS);
+    const runsBefore = await runs();
     await testEnv.DB.exec(
       "CREATE TABLE planted_session (id integer PRIMARY KEY, token text NOT NULL)",
     );
@@ -54,9 +55,8 @@ describe("the nightly D1 dump", () => {
       await expect(backupD1(backupEnv())).rejects.toThrow(/planted_session.*token/);
       const after = await latestDump(testEnv.BACKUPS);
       expect(after?.run_id).toBe(before?.run_id);
-      // The incomplete run is kept as evidence: objects, no marker.
-      const all = await runs();
-      expect(all.length).toBeGreaterThan(1);
+      // The credential check runs before anything is written, so the refused run leaves no object.
+      expect(await runs()).toEqual(runsBefore);
     } finally {
       await testEnv.DB.exec("DROP TABLE planted_session");
     }
