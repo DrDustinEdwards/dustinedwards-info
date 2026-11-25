@@ -64,7 +64,6 @@
       "scripts/check-ask-guards.mjs": 698,
       "scripts/check-changed.mjs": 520,
       "scripts/check-contrast.mjs": 737,
-      "scripts/check-links.mjs": 755,
       "scripts/machine-readable/microformats.mjs": 573
     },
     "tests": {
