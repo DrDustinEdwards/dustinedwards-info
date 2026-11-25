@@ -18,10 +18,7 @@ Every change lands by pull request; nothing is pushed to main.
    then `npm run lint` (a separate CI step no gate tier runs). Reach for a local
    `check:all` only when the change touches a network gate's subject.
 2. Scoped commits. Push the branch.
-3. Open the PR. Its body names the Capsid job it does (`Job: job_<12 hex>`), and that
-   job's `complete` (or `block`) names the PR. If no job was posted, post one in the
-   `dustinedwards` namespace first. That is how Capsid's merge tick and Dustin's
-   Portal see the PR. If it changes anything a visitor would see (copy, layout, a page, a
+3. Open the PR. If it changes anything a visitor would see (copy, layout, a page, a
    color, a menu), label it `visual` (`gh pr edit <n> --add-label visual`) and put after
    screenshots in the PR. It does not wait for Dustin's yes (Dustin, 2026-11-21: every
    repo merges on green).
