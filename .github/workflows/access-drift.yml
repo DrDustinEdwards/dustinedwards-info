@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   drift:
-    uses: DrDustinEdwards/devkit/.github/workflows/access-drift.yml@ffdb0473473df6eb30d902a6843107af42a4f706 # v0.59.5
+    uses: DrDustinEdwards/devkit/.github/workflows/access-drift.yml@e95385c2ad8ab530753a3ee45ea11329afac8415 # v0.62.0
     with:
       app: dustinedwards-login
       admins-url: https://dustinedwards.info/admin/access-drift
