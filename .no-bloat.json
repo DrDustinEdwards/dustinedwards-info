@@ -52,7 +52,6 @@
       "app/lib/search/search.server.ts": 541,
       "app/styles/cv.css": 613,
       "app/styles/katex.generated.css": 1124,
-      "mcp/scripts/check-wrapper.mjs": 722,
       "scripts/check-all.mjs": 594,
       "scripts/check-ask-guards.mjs": 698,
       "scripts/check-changed.mjs": 520,
