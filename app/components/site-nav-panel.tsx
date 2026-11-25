@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-import type { Menu, MenuLink, MenuRow, NavIcon } from "~/lib/nav";
+import type { Menu, MenuLink, MenuRow, NavIcon } from "~/lib/nav-menus";
 
 /*
  * The structured panel (app/lib/nav.ts): one shape for all five sections, top to bottom a header band, a

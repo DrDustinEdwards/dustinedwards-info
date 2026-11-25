@@ -3,7 +3,8 @@ import { useLocation, useMatches } from "react-router";
 
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SiteNavPanel } from "~/components/site-nav-panel";
-import { buildNav, type NavItem } from "~/lib/nav";
+import { buildNav } from "~/lib/nav";
+import type { NavItem } from "~/lib/nav-menus";
 import { type RunningHeadHandle, runningHeadSection } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
 import listboxCss from "capsomer/listbox.css?url";

@@ -31,7 +31,7 @@ import { listPublishedPublicationSummaries, type PublicationSummary } from "~/db
 import { isShowcase } from "~/lib/publications/showcase.mjs";
 import { rosterFactsFromDb } from "~/db/roster";
 import { unescapeHtml } from "@dustinedwards/site-runtime/html";
-import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
+import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav-menus";
 import type { Route } from "./+types/home";
 
 import "~/styles/home.css";
