@@ -1,121 +1,67 @@
 ---
 name: charts
-description: How to author a chart or a diagram on dustinedwards.info. Use whenever adding, editing or reviewing a chart, graph, plot, data figure, flowchart, sequence diagram or architecture drawing in a blog post, or when a post needs to show measured numbers or a structure. Covers the :::chart and :::diagram directives, the CSV and mermaid shapes, the mandatory alt rule, the palette-token rule, and the gates that enforce them.
+description: How to author a chart or a diagram on dustinedwards.info. Use whenever adding, editing or reviewing a chart, graph, plot, data figure, flowchart, sequence diagram or architecture drawing in a blog post, or when a post needs to show measured numbers or a structure. Covers the :::chart and :::diagram directives.
 ---
 
 # Charts and diagrams on dustinedwards.info
 
-Two directives, two different mechanisms, and the difference is worth knowing
-before you pick one.
-
-`:::chart` draws MEASUREMENTS from inline CSV, and its SVG lands inline in the
-rendered HTML that D1 stores. `:::diagram` draws a STRUCTURE from mermaid
-source, and its SVG is a build-time asset the rendered HTML only points at.
-Neither can do the other's
-job: `:::chart` cannot draw a flowchart, and `:::diagram` must not be used to
-plot numbers.
+`:::chart` draws MEASUREMENTS from inline CSV; its SVG lands inline in the rendered HTML
+that D1 stores. `:::diagram` draws a STRUCTURE from mermaid source; its SVG is a
+build-time asset the rendered HTML only points at. Neither does the other's job.
 
 # Charts
 
-Charts are CONTENT, not a widget. Enarratio (the shared charts package, also
-behind /cv) renders them to static SVG through the shared pipeline, so the SVG lands inline in the rendered HTML both
-writers produce (the local build product and the Worker's saves alike), it is
-covered by `check:content`'s determinism pass exactly like prose, and it works
-with scripting off. You never write SVG and you never pick a color.
-
-Directive:
-Prelum's `editorialPack` (`render-chart.mjs`), which validates the attributes, parses the CSV and
-hands the rows to Enarratio's `barChart`, `lineChart`, `areaChart` or
-`scatterPlot` (`dot`). Gate: `npm run check:content`.
+Charts are content: Enarratio renders them to static SVG through Prelum's
+`editorialPack`, so they work with scripting off. You never write SVG and you never
+pick a color. Gate: `npm run check:content`.
 
 ## Syntax
 
-A container directive whose body is exactly one fenced `csv` block, optionally
-followed by caption markdown.
+A container directive whose body is exactly one fenced `csv` block, optionally followed
+by caption markdown.
 
     :::chart{type=bar x=mechanism y=allowed,ceiling labels="Allowed,Ceiling" title="..." alt="..."}
     ```csv
     mechanism,allowed,ceiling
     GA ratelimit,11,5
     async DO storage,8,3
-    sync SQLite DO,3,3
     ```
     An optional caption, rendered as markdown.
     :::
 
-### Attributes
-
 | Attribute | Required | Meaning                                                              |
 | --------- | -------- | -------------------------------------------------------------------- |
-| `type`    | yes      | `bar`, `line`, `dot` or `area`. Anything else fails the build.       |
+| `type`    | yes      | `bar`, `line`, `dot` or `area`.                                      |
 | `x`       | yes      | The column for the x axis. Also becomes the x axis label.            |
 | `y`       | yes      | One column, or several comma separated for multi-series.             |
 | `alt`     | **yes**  | Prose describing what the chart shows, including the finding.        |
 | `title`   | no       | Rendered above the chart. Not a heading, so it stays out of the TOC. |
 | `labels`  | no       | Comma separated display names overriding the y column headers.       |
 
-Captions come from the directive BODY, not an attribute, so they can carry
-markdown.
+CSV: first line is the header, one row per x value, every `y` cell a finite number;
+quote a field that contains a comma. `line`, `area` and `dot` read x as a number or a
+date. Text x columns keep the order written.
 
-### CSV shape
+## Rules
 
-First line is the header, one row per x value. Fields are trimmed; quote a field
-that contains a comma. Every `y` cell must parse as a finite number. A ragged
-row, a duplicate or empty column name, an empty body or a header with no rows
-all fail the build naming the problem.
+1. **`alt` is mandatory.** Write what the chart SHOWS, including the finding, because
+   for a screen reader user it replaces the chart. "Bar chart of refusals" is a
+   failure. "Four runs against a limit of five refused 1, then 2, then 9, then 0,
+   where a limiter honoring the limit refuses 7 every time" is the standard.
+2. **Never write a color.** Enarratio's theme assigns them from the family tokens, and
+   one stored SVG serves light and dark.
+3. **Data must be real and recorded.** Every quantitative claim is computed and
+   reproducible; no illustrative or shaped numbers. If the measurement does not exist,
+   the chart does not exist.
+4. If prose has a colon followed by a word, escape it as `\:` or use a code span.
 
-Numeric x columns get a linear scale automatically. Text x columns keep the
-order they are written in, so the chart reads in the order the markdown does.
+The caption carries the method and the caveat, not the numbers the chart already shows.
 
-## The rules that fail the build
+## Example
 
-1. **`alt` is mandatory**, exactly as on `:::figure`. Write what the chart SHOWS,
-   including the finding, because for a screen reader user it replaces the chart.
-   "Bar chart of refusals" is a failure. "Four runs against a limit of five
-   refused 1, then 2, then 9, then 0, where a limiter honoring the limit refuses
-   7 every time" is the standard.
-2. **Every series must be labeled, and labels must be unique**, on any chart
-   with more than one `y` column. Enarratio prints a legend and, on a line
-   chart, labels each line at its end; series also differ by shape or position,
-   so hue is never the sole channel.
-3. **Colors come from Enarratio's theme, assigned automatically.** The theme is
-   Capsomer's: `capsomer/tokens.css` maps every `--enarratio-*` property onto the
-   family tokens, beside `enarratio/base.css`. NEVER write a hex, and never ask for a specific
-   color. One stored SVG serves light and dark because the custom property
-   resolves per theme in the browser. More than eight series fails the build.
-4. **Data must be real and recorded.** House voice standard: every quantitative
-   claim is computed and reproducible. No illustrative or shaped numbers. If the
-   measurement does not exist, the chart does not exist.
-5. **Unknown directives fail closed.** `:::figrue` is a build error naming the
-   post, the line and the known directive list, not a silent empty div. If prose
-   genuinely contains a colon followed by a word, escape it as `\:` or use a code
-   span. Bare ratios like `4.5:1` and `12:30` are handled automatically and need
-   no escaping.
+From `content/posts/charts-on-workers-fixture.md`:
 
-## What you get, automatically
-
-    <figure class="chart-figure enarratio" data-enarratio="bar">
-      <figcaption class="enarratio-head">     the title, and the alt shown as the finding
-      <svg role="img" aria-label="{alt}">     the accessible name lives HERE
-      <div class="enarratio-caption">         when the body has a caption
-      <details class="enarratio-data">        "Show data": the generated data table
-    </figure>
-
-The name goes on the SVG and NEVER on the figure. `role="img"` makes its
-descendants presentational per WAI-ARIA, so naming the figure would generate the
-caption and data table and then hide both from the readers they exist for. The
-gate asserts this in both directions.
-
-The data table is generated by Enarratio from the same inline CSV, so it cannot
-drift. `line`, `area` and `dot` read x as a number or a date; `dot` refuses a
-non-numeric x column.
-
-## Worked example
-
-From `content/posts/charts-on-workers-fixture.md`, using the real rate limiter
-measurements taken while building the Ask guards:
-
-    :::chart{type=bar x=run y=refused title="Requests refused by the GA ratelimit binding" alt="Bar chart of four runs against a limit of five, twelve concurrent requests each. The binding refused 1, then 2, then 9, then 0 requests. A limiter honoring the limit would refuse 7 every time."}
+    :::chart{type=bar x=run y=refused title="Requests refused by the GA ratelimit binding" alt="Four runs against a limit of five, twelve concurrent requests each. The binding refused 1, then 2, then 9, then 0 requests. A limiter honoring the limit would refuse 7 every time."}
     ```csv
     run,refused
     run 1,1
@@ -124,54 +70,26 @@ measurements taken while building the Ask guards:
     run 4,0
     ```
     Four consecutive runs, twelve concurrent requests, limit of five. Cloudflare
-    documents the binding as permissive and eventually consistent; under
-    sustained load it sheds rather than counts.
+    documents the binding as permissive and eventually consistent.
     :::
-
-Note what the caption does: the numbers are already on the chart and in the
-table, so the caption carries the METHOD and the caveat instead of repeating them.
-
-## After editing a chart
-
-The ordinary content workflow applies (markdown is the only committed form;
-posts.json is a gitignored local build product):
-
-    npm run build:content     # regenerate the local build product, SVG included
-    npm run check:content     # validity and render determinism
-
-Commit the markdown alone; `sync:content` or the next ship lands the render in
-D1, and the content-drift health check repairs any gap within one poll.
-
-If you bump `enarratio`, compare a chart's
-SVG from `build:content` against the one the Worker stores after a save:
-Node-versus-workerd byte parity is a property of its pinned Plot and linkedom,
-and no gate proves it.
 
 # Diagrams
 
-Built 2026-07-30. A diagram is a picture of a STRUCTURE: a flow, a sequence, a
-layering. It is mermaid source in the markdown, rendered to a pair of static SVG
-assets at build time.
+A diagram is mermaid source in the markdown, rendered to a pair of static SVG assets in
+`public/diagrams/` at build time under a key that is a hash of the source. The SVG is
+NOT in the rendered HTML (mermaid needs a real browser engine, which a Worker lacks), so
+**a new or edited diagram has no picture until someone runs `build:diagrams`.**
 
-**The one structural difference from charts, and everything follows from it:**
-the SVG is NOT in the rendered HTML. Diagram layout needs real font metrics, so
-mermaid needs a real browser engine, which a Worker does not have. The assets
-live in `public/diagrams/` under a key that is a hash of the source, and the
-rendered HTML carries the key. Same pattern as the social cards, and the same gap: **a
-new or edited diagram has no picture until someone runs `build:diagrams`.**
-
-Three posts do not use that pair. `policy-in-the-api-not-the-mcp`,
-`mcp-server-on-workers-with-oauth` and `agent-write-access-to-a-live-site` keep
-their `:::diagram` block, and `app/lib/content/blog-diagrams.mjs` replaces the
-images with one inline SVG (`figure.blog-diagram`). The fills are this site's
-tokens, so the same drawing works in both themes. `build:diagrams` does not
-draw these three. A change to their mermaid source changes the key, and
-`check:content` refuses it until the inline drawing is updated to match.
+Three posts (`policy-in-the-api-not-the-mcp`, `mcp-server-on-workers-with-oauth`,
+`agent-write-access-to-a-live-site`) keep their `:::diagram` block, and
+`app/lib/content/blog-diagrams.mjs` replaces the images with one inline SVG.
+`build:diagrams` does not draw these three, and `check:content` refuses a change to
+their mermaid source until the inline drawing is updated to match.
 
 ## Syntax
 
-A container directive whose body is exactly one fenced `mermaid` block,
-optionally followed by caption markdown.
+A container directive whose body is exactly one fenced `mermaid` block, optionally
+followed by caption markdown.
 
     :::diagram{title="..." alt="..."}
     ```mermaid
@@ -181,37 +99,23 @@ optionally followed by caption markdown.
     An optional caption, rendered as markdown.
     :::
 
-| Attribute | Required | Meaning                                                                |
-| --------- | -------- | ---------------------------------------------------------------------- |
-| `alt`     | **yes**  | Prose describing the structure, including what it shows.               |
-| `title`   | no       | Rendered above the diagram. Not a heading, so it stays out of the TOC. |
+`alt` is required, `title` is optional. The fence language must be `mermaid`.
 
-The fence language must be `mermaid`. That is checked, and not only for typos:
-the fence is what makes the source render as a diagram in the `.md` twin, on
-GitHub, and anywhere else reading the markdown instead of the page.
+## Rules
 
-## The rules that fail the build
+1. **`alt` is mandatory, and it IS the structure:** name the boxes and the arrows, in
+   reading order. "Flowchart of the save path" is a failure.
+2. **Never choose a color.** Colors come from the palette tokens in
+   `app/lib/content/diagram.mjs`. Say what a thing means with shape and label: a
+   refusal is an edge labeled `403`, not a red arrow.
+3. **Keep it narrow.** The prose column is 44rem; a drawing wider than about 700px is
+   scaled down with its type. Prefer `flowchart TB` over `LR`, keep labels short, and
+   drop a participant before you accept a wide drawing. `build:diagrams` prints each
+   asset's size.
 
-1. **`alt` is mandatory**, as on `:::chart` and `:::figure`. For a diagram the
-   alt IS the structure: name the boxes and the arrows. "Flowchart of the save
-   path" is a failure. The worked example below is the standard.
-2. **You never choose a color, and there is no color vocabulary.** Every
-   color comes from the palette tokens, mapped once in
-   `app/lib/content/diagram.mjs` and resolved from `app.css` at build time.
-   A diagram says what it means with SHAPE and LABEL: a refusal is an edge
-   labeled `403`, not a red arrow. A color mermaid derives rather than takes
-   from the palette fails `build:diagrams` naming the rule that carried it.
-3. **Keep it narrow.** The prose column is 44rem. A drawing wider than about
-   700px is scaled down and takes its type with it, so a default
-   five-participant sequence diagram lands 16px text at an effective 9px. Prefer
-   `flowchart TB` over `LR`, keep message labels short, and drop a participant
-   before you accept a wide drawing. `build:diagrams` prints each asset's size.
-4. **Unknown directives fail closed**, and `diagram` is a known one. If you add
-   another, it is a Prelum pack, which lists its names.
+## Example
 
-## Worked example
-
-    :::diagram{title="Two credentials, two questions, two different failures" alt="A sequence diagram with four participants: the AI client, the MCP server, the identity provider, and the publish API. The client calls a tool and the MCP server answers with an authorization challenge. The client completes an OAuth walk at the identity provider, which returns an identity restricted to the site owner, and calls the tool again carrying it. A note records that this leg answers who is operating and that its failure is a 401. The MCP server then makes the same bearer-authenticated request a script would make to the publish API, and a second note records that this leg answers what operators may do and that its failure is a 403 naming the policy."}
+    :::diagram{title="Two credentials, two questions, two different failures" alt="A sequence diagram with three participants: the AI client, the MCP server and the publish API. The client calls a tool and the MCP server verifies the request; a note records that this leg answers who is operating and fails with a 401. The server then makes the request a script would make to the publish API; a second note records that this leg answers what operators may do and fails with a 403."}
     ```mermaid
     sequenceDiagram
       participant C as AI client
@@ -226,26 +130,13 @@ GitHub, and anywhere else reading the markdown instead of the page.
     The MCP server holds no policy.
     :::
 
-Note what the alt does: it walks the diagram in reading order and states the
-finding, because for a reader who cannot see it, that prose is the diagram.
+## After editing a chart or a diagram
 
-## After adding or editing a diagram
+    npm run build:content     # regenerate the local build product, SVG included
+    npm run build:diagrams    # diagrams only: renders anything whose key has no asset yet
+    npm run check:content     # validity, render determinism, every diagram asset exists
 
-    npm run build:content     # the key changes with the source
-    npm run build:diagrams    # renders anything whose key has no asset yet
-    npm run check:content     # validity, render determinism, and every diagram asset exists with token colors
-
-Commit the markdown and the assets TOGETHER (posts.json is a gitignored local
-build product and is never committed). `build:diagrams` is
-idempotent (an unchanged diagram is skipped) and prunes assets the corpus no
-longer references, so a re-render is only paid for by what actually changed.
-
-**Editing through the admin editor or the operator API is fine and needs no
-special care**, because the reference is derived from the source rather than
-stored: an unchanged diagram computes the same key on every writer. But a NEW or
-CHANGED diagram saved that way has no asset until `build:diagrams` runs from a
-clone, exactly like a retitled post has no social card. `check:content` is what
-tells you, and it is red on purpose in that window.
-
-Do not hand-edit an SVG in `public/diagrams/`. `check:content` audits every
-color in every committed asset and exists to catch precisely that.
+Commit the markdown, and for a diagram the assets TOGETHER; `posts.json` is a gitignored
+build product. A diagram saved through the admin editor or the operator API has no asset
+until `build:diagrams` runs from a clone; `check:content` is red on purpose in that
+window. Do not hand-edit an SVG in `public/diagrams/`.

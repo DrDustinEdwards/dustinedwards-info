@@ -5,20 +5,13 @@ description: Use before committing or opening a pull request that changes what d
 
 # Verify a change
 
-The gates prove what someone thought to test. This skill proves the change itself: run
-the real site, use the changed flow as a visitor would, and look at the result. Do it
-before the commit and before the pull request. What comes after (gate tiers, the PR,
-CI, the deploy, `verify-live`) is `.claude/skills/ship/SKILL.md`; nothing here repeats it.
-
-The site stores no visitor data (CLAUDE.md). Drive it with no sign-in, no cookie
-set on purpose and nothing typed that is a real person's. Never deploy:
-`.claude/hooks/no-direct-deploy.sh` refuses it, and so does this skill.
+Do it before the commit and before the pull request. What comes after is
+`.claude/skills/ship/SKILL.md`.
 
 ## 1. Boot the preview build
 
-On the repo's Node (`.nvmrc`, 26.13.1; in a cloud session
-`export PATH=$HOME/.cache/capsid-node/node-v26.13.1-linux-x64/bin:$PATH`).
-`wrangler.jsonc` is never touched.
+On the repo's Node (`.nvmrc`; in a cloud session put the Node 26 the SessionStart
+hook installs on PATH).
 
 ```sh
 npm ci
@@ -26,7 +19,7 @@ npx wrangler d1 migrations apply dustinedwards --local
 npm run build:stack
 npm run build:content
 npm run sync:content -- --local
-npm run preview:local   # run in the background, log to the scratchpad
+npm run preview:local   # run in the background, log to the scratchpad; note its PID
 ```
 
 The middle four are the CI order (`.github/workflows/systems-map.yml`); a fresh
@@ -89,13 +82,12 @@ try {
 }
 ```
 
-Drive the whole flow, not just the load: act, see the result change, reload and see
-it hold. For a layout or style change repeat the end state at 390 px wide
-(`page.setViewport`) and dark (`page.emulateMedia({ colorScheme: "dark" })`). For
-anything that must work without script, use
-`browser.createBrowserContext()` and `page.setJavaScriptEnabled(false)`. The
-header's section links sit behind a menu button at some widths, so click what
-a visitor can see, not a selector read off the HTML.
+Drive the whole flow (act, see the result, reload and see it hold); repeat the end
+state at 390 px (`page.setViewport`) and dark (`page.emulateMedia({ colorScheme:
+"dark" })`) for a layout or style change. For anything that must work without script,
+use `page.setJavaScriptEnabled(false)`. The header's section links sit behind a menu
+button at some widths, so click what a visitor can see, not a selector read off the
+HTML.
 
 Chrome: puppeteer's own download may be missing in a cloud session. Puppeteer
 honors `PUPPETEER_EXECUTABLE_PATH` (the container sets it to `/usr/bin/google-chrome`;
@@ -138,7 +130,8 @@ process.exitCode = tally.failures > 0 ? 1 : 0;
 Run `cd <scratchpad> && REPO=<repo> node case.mjs header-menus`. It prints a FAIL
 line for each failed check and ends with the count. The cases share one page and
 a case that navigates voids the ones after it, so name only the groups you need,
-in the gate's order. Groups in `scripts/lib/browser/cases/` and what they cover:
+in the gate's order. Groups are in `scripts/lib/browser/cases/`, named for the area (`layout`, `lightbox`,
+`offline`, `cv`, `systems`); the less obvious ones:
 
 | Change touches                           | Case               |
 | ---------------------------------------- | ------------------ |
@@ -146,14 +139,9 @@ in the gate's order. Groups in `scripts/lib/browser/cases/` and what they cover:
 | page-to-page transitions, reduced motion | `navigation`       |
 | hover prefetch, speculation rules        | `speculation`      |
 | sitemap, old feed addresses              | `sitemap-feeds`    |
-| layout, shift, widths                    | `layout`           |
-| image lightbox                           | `lightbox`         |
 | protocol run mode                        | `run-mode`         |
-| keep on this device, offline             | `offline`          |
 | step calculators                         | `step-calculators` |
 | /media scripts and SVG                   | `media-svg`        |
-| the CV page and filters                  | `cv`               |
-| /systems                                 | `systems`          |
 
 Not runnable alone: `enhancements`, `post-controls`, `math` and `script-set` take
 what an earlier case returns, `theme-cache` and `admin` run in their own lanes. For
@@ -163,16 +151,10 @@ group, step 2 is the proof.
 ## 4. When local cannot show it
 
 `preview:local` leaves the `AI_SEARCH` and `IMAGES` bindings out, so Ask is off and
-`/media` images are not resized. Admin is behind Cloudflare Access and a token is
-never minted for localhost or a preview address (docs/RUNBOOK.md), so no
-signed-in screen can be driven. For these, say "not verified locally" and name
-them; the proof is the live check after the merge deploys, `npm run verify-live`,
-in ship step 6. For a page that needs the real bindings (Ask, resized images),
-use the Worker Preview link when ship's visual-change step has one for the PR:
-pass it to the same script as the base URL (`node drive.mjs <preview-url>`), and
-drive public pages only. The repo has no workflow that posts such a link, so if
-none exists, do not invent one; say the PR has no preview and leave the check to
-`verify-live`.
+`/media` images are not resized. Admin is behind Cloudflare Access and no token is
+minted for localhost (docs/RUNBOOK.md), so no signed-in screen can be driven. Say
+"not verified locally" and name them; the proof is `npm run verify-live` after the
+merge deploys (ship step 6).
 
 ## Rules and report
 
