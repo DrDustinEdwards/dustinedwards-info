@@ -53,7 +53,7 @@ import { buildProcedures } from "./lib/procedures.mjs";
 import { buildRegistry } from "./lib/registry.mjs";
 import { hasItemPage, itemPath, kindPath } from "../app/kb/registry/address.mjs";
 import { buildPublications } from "./lib/publications.mjs";
-import { fixedSectionIds } from "../app/kb/procedures/render.mjs";
+import { fixedSectionIds } from "../app/kb/procedures/render-sections.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";
 import { parseSource, ts } from "@dustinedwards/devkit/node/syntax";
 import { createTally } from "@dustinedwards/devkit/node";

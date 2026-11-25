@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { compileProcedure } from "../app/kb/procedures/compile.mjs";
 import { parseProcedure } from "../app/kb/procedures/parse.mjs";
-import { procedureMarkdown } from "../app/kb/procedures/render.mjs";
+import { procedureMarkdown } from "../app/kb/procedures/render-markdown.mjs";
 import { sentenceCount } from "../app/kb/procedures/validate-steps.mjs";
 import { validateProcedure } from "../app/kb/procedures/validate.mjs";
 import * as pipeline from "../app/lib/content/pipeline.mjs";

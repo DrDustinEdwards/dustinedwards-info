@@ -12,7 +12,7 @@ import type {
   StoredPrimer,
   StoredReagent,
   StoredStrain,
-} from "~/kb/procedures/render.mjs";
+} from "~/kb/procedures/render-stored.mjs";
 
 import { compileRegistryItem, registryPath, registrySlug } from "./compile.mjs";
 import { KINDS, type KindSpec } from "./kinds.mjs";

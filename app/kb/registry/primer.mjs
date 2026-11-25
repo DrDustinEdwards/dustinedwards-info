@@ -180,12 +180,12 @@ export function missingReason(value) {
 }
 
 /**
- * A primer as a protocol carries it (`StoredPrimer` in app/kb/procedures/render.mjs): the registry's stated facts, none
+ * A primer as a protocol carries it (`StoredPrimer` in app/kb/procedures/render-stored.mjs): the registry's stated facts, none
  * computed. The protocol's record holds these so its page, sheet, twin and frozen versions print one sequence, and a pair's
  * product is computed from them where it is shown.
  *
  * @param {import("./kinds.mjs").RegistryItem} item
- * @returns {import("../procedures/render.mjs").StoredPrimer}
+ * @returns {import("../procedures/render-stored.mjs").StoredPrimer}
  */
 export function storedPrimer(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);

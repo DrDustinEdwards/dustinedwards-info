@@ -25,12 +25,12 @@ export const EQUIPMENT = {
 };
 
 /**
- * An equipment item as a protocol carries it (`StoredEquipment` in app/kb/procedures/render.mjs): the registry's stated facts, none
+ * An equipment item as a protocol carries it (`StoredEquipment` in app/kb/procedures/render-stored.mjs): the registry's stated facts, none
  * computed, so the protocol's Equipment table, twin and frozen versions say who makes each as it was when the protocol was published.
  * `rotorGap` is whether a rotor is recorded as missing, so a centrifuge's table says so rather than leaving it blank.
  *
  * @param {import("./kinds.mjs").RegistryItem} item
- * @returns {import("../procedures/render.mjs").StoredEquipment}
+ * @returns {import("../procedures/render-stored.mjs").StoredEquipment}
  */
 export function storedEquipment(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);

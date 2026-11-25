@@ -10,7 +10,7 @@ import { runTool } from "~/lib/operator/api.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { procedurePath } from "~/kb/procedures/parse.mjs";
-import { procedureSearchUid } from "~/kb/procedures/render.mjs";
+import { procedureSearchUid } from "~/kb/procedures/render-markdown.mjs";
 import { loader as pageLoader } from "~/routes/procedure";
 import { loader as twinLoader } from "~/routes/procedure[.md]";
 

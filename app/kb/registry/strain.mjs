@@ -62,11 +62,11 @@ export function designationOf(fields) {
 }
 
 /**
- * A strain as a protocol carries it (`StoredStrain` in app/kb/procedures/render.mjs): the stated facts, none computed, so the
+ * A strain as a protocol carries it (`StoredStrain` in app/kb/procedures/render-stored.mjs): the stated facts, none computed, so the
  * protocol's page, twin and frozen versions name one strain.
  *
  * @param {import("./kinds.mjs").RegistryItem} item
- * @returns {import("../procedures/render.mjs").StoredStrain}
+ * @returns {import("../procedures/render-stored.mjs").StoredStrain}
  */
 export function storedStrain(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);

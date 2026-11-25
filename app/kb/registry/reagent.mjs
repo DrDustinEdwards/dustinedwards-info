@@ -76,11 +76,11 @@ export const REAGENT = {
 };
 
 /**
- * A reagent as a protocol carries it (`StoredReagent` in app/kb/procedures/render.mjs): the registry's stated facts, none computed,
+ * A reagent as a protocol carries it (`StoredReagent` in app/kb/procedures/render-stored.mjs): the registry's stated facts, none computed,
  * so the protocol's Reagents table, twin and frozen versions say where each came from as it was when the protocol was published.
  *
  * @param {import("./kinds.mjs").RegistryItem} item
- * @returns {import("../procedures/render.mjs").StoredReagent}
+ * @returns {import("../procedures/render-stored.mjs").StoredReagent}
  */
 export function storedReagent(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);
