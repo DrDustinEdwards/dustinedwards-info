@@ -11,7 +11,7 @@ import { loader as csvLoader } from "~/routes/protocols[.csv]";
 import privacy from "../../content/pages/privacy.md?raw";
 import terms from "../../content/pages/terms.md?raw";
 
-import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import { source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
 import { routeContext, carrelSend } from "./route-helpers";
 import { seedPages, seedProcedures } from "./seed";
 import { testEnv } from "./test-env";
@@ -28,7 +28,6 @@ const PRIVACY_FILE = pageSourcePath("privacy");
 
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
 const pageData = (path: string) => pageLoader(argsFor(new Request(`${ORIGIN}${path}`)));
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const termsRow = () =>
   testEnv.DB.prepare("SELECT status FROM pages WHERE path = ?1")
     .bind(TERMS_PATH)

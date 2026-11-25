@@ -12,6 +12,8 @@ import {
   getEnv,
   getExecutionContext,
 } from "~/lib/context";
+import { loader as sitemapLoader } from "~/routes/sitemap";
+import { SITE_ORIGIN } from "~/lib/seo";
 import { testEnv } from "./test-env";
 
 /**
@@ -187,4 +189,16 @@ export async function untilRefused<T>(
     if (isRefusal(result)) return { refusal: result, results };
   }
   return { refusal: null, results };
+}
+
+/** The paths the sitemap lists, relative to the site origin. */
+export async function sitemapPaths() {
+  const res = (await sitemapLoader({
+    request: new Request(`${SITE_ORIGIN}/sitemap.xml`),
+    context: routeContext(),
+    params: {},
+  } as never)) as Response;
+  return [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+    (m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/",
+  );
 }

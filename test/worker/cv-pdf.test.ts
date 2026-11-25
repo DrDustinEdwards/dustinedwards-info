@@ -17,7 +17,7 @@ import {
   fakePdf,
   workingBrowser,
 } from "./cv-pdf-fixtures";
-import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import { source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
 import { routeContext, carrelRequest } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
@@ -86,7 +86,6 @@ function world(browser: Env["BROWSER"]) {
 
 const stored = () => env.OG.head(CV_PDF_KEY);
 const fingerprintOfD1 = async () => cvPdfStamp(await readCv(env as never));
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const check = async (w: { env: Env }) =>
   (await runHealthChecks(w.env)).checks.find((c) => c.name === "cv-pdf-drift");
 const grantsRow = () =>

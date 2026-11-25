@@ -22,6 +22,7 @@ import {
   versionOf,
   writes,
   type SourceStub,
+  commits,
 } from "./source-stub";
 import { routeContext, carrelRequest } from "./route-helpers";
 import { seedPost } from "./seed";
@@ -434,7 +435,6 @@ describe("content delete", () => {
       `${PREFIX}/content/${id}?expectedVersion=${encodeURIComponent(expectedVersion)}&changeId=${changeId}`,
       key ? { key } : {},
     );
-  const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
   it("deletes the post at its current version, records the change id, and clears its rows", async () => {
     const raw = post("del-ok");

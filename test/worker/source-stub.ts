@@ -87,3 +87,6 @@ export async function stubSources(seed: Record<string, string> = {}): Promise<So
     },
   };
 }
+
+/** The commit messages written so far, as the site API's write calls carry them. */
+export const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));

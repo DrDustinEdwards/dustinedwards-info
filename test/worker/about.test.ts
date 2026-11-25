@@ -1,14 +1,12 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { pageSourcePath } from "~/lib/pages/compile.mjs";
-import { SITE_ORIGIN } from "~/lib/seo";
 import About, { headers, loader as aboutLoader, meta as aboutMeta } from "~/routes/about";
-import { loader as sitemapLoader } from "~/routes/sitemap";
 
 import aboutFile from "../../content/pages/about.md?raw";
 
-import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext, carrelSend } from "./route-helpers";
+import { source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
+import { renderRoute, routeContext, carrelSend, sitemapPaths } from "./route-helpers";
 import { seedPages } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -32,17 +30,6 @@ const aboutData = () =>
     params: {},
   } as never);
 const aboutHtml = async () => renderRoute("/about", About, { loaderData: await aboutData() });
-async function sitemapPaths() {
-  const res = (await sitemapLoader({
-    request: new Request(`${ORIGIN}/sitemap.xml`),
-    context: routeContext(),
-    params: {},
-  } as never)) as Response;
-  return [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(
-    (m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/",
-  );
-}
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
 let gh: SourceStub;
 

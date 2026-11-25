@@ -12,7 +12,7 @@ import { loader as twinLoader } from "~/routes/cv[.md]";
 import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
-import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import { putSource, source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
 import { collectingContext, fakeAssets, workingBrowser } from "./cv-pdf-fixtures";
 import { renderRoute, routeContext, carrelRequest } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
@@ -104,7 +104,6 @@ const charts = async () =>
       params: {},
     } as never)
   ).text();
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const cvSearchHits = async (needle: string) =>
   (
     await testEnv.DB.prepare(

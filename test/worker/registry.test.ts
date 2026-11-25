@@ -10,8 +10,8 @@ import {
   removeSource,
   source,
   stubSources,
-  writes,
   type SourceStub,
+  commits,
 } from "./source-stub";
 import { expectDrift, expectIdempotent, expectSynced, syncOf } from "./sync-harness";
 import { purgedTagsOf, recordPurges } from "./route-helpers";
@@ -84,7 +84,6 @@ const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 const operator = { kind: "operator", id: "test" } as const;
 const { sync, driftCheck } = syncOf("sync_registry", "registry-drift");
 const purgedTags = () => purgedTagsOf(purge);
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
 let gh: SourceStub;
 

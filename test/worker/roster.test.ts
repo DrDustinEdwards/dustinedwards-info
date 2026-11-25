@@ -9,7 +9,7 @@ import ContentPage, {
 import { headers as homeHeaders, loader as homeLoader } from "~/routes/home";
 
 import { versionCases } from "./carrel-version-cases";
-import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import { source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
 import {
   renderRoute,
   routeContext,
@@ -63,7 +63,6 @@ async function homeFacts() {
     }
   ).data.discovery;
 }
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const purgedTags = () => purge.mock.calls.flatMap(([options]) => options.tags);
 
 let gh: SourceStub;

@@ -7,7 +7,7 @@ import { action as previewAction } from "~/routes/admin.kb.preview";
 
 import protocol from "../../content/procedures/phage-dna-extraction.md?raw";
 
-import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import { source, stubSources, versionOf, type SourceStub, commits } from "./source-stub";
 import { renderRoute, routeContext, recordPurges } from "./route-helpers";
 import {
   equipmentRepoFiles,
@@ -40,7 +40,6 @@ const context = () => {
 const entryUrl = (search = "") => `https://example.com/admin/kb/entry/${SLUG}${search}`;
 const post = (url: string, fields: Record<string, string>) =>
   new Request(url, { method: "POST", body: new URLSearchParams(fields) });
-const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 /** The payload of a data() answer, or the Response a redirect is. */
 const payload = (result: unknown) =>
   result instanceof Response ? result : (result as { data: Record<string, unknown> }).data;
