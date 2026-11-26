@@ -103,6 +103,7 @@ jobs:
       gradual-percent: 10
       gradual-minutes: 10
       health-url: https://dustinedwards.info/health
+      keep-assets: build/client
       sha-var: DEPLOY_SHA
       verify-command: node "$DEVKIT_DIR/bin/verify-deploy.mjs" https://dustinedwards.info --page / --page /colophon --health /health
       # The config's redacted values, any new queue, the additive migrations, then the build from D1's content (a path
