@@ -39,7 +39,7 @@ const LAB_CSS_PATH = join(root, "app", "lab.css");
  * @param {string} css
  * @returns {string[]}
  */
-function cssRelativeImports(css) {
+export function cssRelativeImports(css) {
   const code = stripCss(css);
   return [...code.matchAll(/@import\s+(?:url\(\s*)?(["']?)(\.[^"')\s;]+)\1\s*\)?/g)].map(
     (m) => m[2],

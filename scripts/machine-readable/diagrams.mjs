@@ -23,7 +23,7 @@ import {
 import { DIAGRAM_ROLE_TOKENS } from "../../app/lib/content/diagram.mjs";
 import { ASSET_PREFIX } from "../../app/lib/media/classify.mjs";
 import { renderBody } from "../../app/lib/content/pipeline.mjs";
-import { resolveTokens, THEME_SELECTORS, tokenBlock } from "../lib/tokens.mjs";
+import { cssRelativeImports, resolveTokens, THEME_SELECTORS, tokenBlock } from "../lib/tokens.mjs";
 import { assertFloor } from "@dustinedwards/devkit/node";
 import { createTally } from "@dustinedwards/devkit/node";
 
@@ -108,11 +108,16 @@ const proseCss = readFileSync(join(root, "app/styles/prose.css"), "utf8");
 for (const tone of TONES) {
   assert(`prose.css defines --diagram-${tone}`, proseCss.includes(`--diagram-${tone}:`));
 }
-// The SVG is sized by Capsomer's prose blocks (the `.blog-diagram` rule's nested `& svg`), which prose.css imports.
-const blocksCss = readFileSync(
-  join(root, "node_modules/capsomer/components/prose-blocks/prose-blocks.css"),
-  "utf8",
-);
+// The SVG is sized by Capsomer's prose blocks (the `.blog-diagram` rule's nested `& svg`), which prose.css imports; the
+// rule may sit in a sheet prose-blocks.css itself imports.
+const blocksPath = join(root, "node_modules/capsomer/components/prose-blocks/prose-blocks.css");
+const blocksEntry = readFileSync(blocksPath, "utf8");
+const blocksCss = [
+  blocksEntry,
+  ...cssRelativeImports(blocksEntry).map((rel) =>
+    readFileSync(join(dirname(blocksPath), rel), "utf8"),
+  ),
+].join("\n");
 const svgRule = blocksCss.match(/:where\(\.blog-diagram\)\s*\{[^]*?& svg\s*\{([^}]*)\}/)?.[1] ?? "";
 assert(
   "an inline diagram keeps its natural width and only shrinks",
