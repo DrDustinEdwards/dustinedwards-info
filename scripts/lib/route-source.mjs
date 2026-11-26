@@ -23,12 +23,13 @@ function routesMatching(pattern) {
 }
 
 /**
- * The shared-cached HTML pages: every `.tsx` route that calls `publicHtmlHeaders()` or names
- * `SHARED_CACHE_CONTROL`. The feeds, twins and sitemap that share the header are `.ts` resource
- * routes with no document, so the extension is the HTML boundary and no exclusion list can drift.
+ * The shared-cached HTML pages: every `.tsx` route that calls `publicHtmlHeaders()`, re-exports
+ * `taxonomyHeaders` (which calls it) or names `SHARED_CACHE_CONTROL`. The feeds, twins and sitemap
+ * that share the header are `.ts` resource routes with no document, so the extension is the HTML
+ * boundary and no exclusion list can drift.
  *
  * @returns {string[]}
  */
 export function sharedCacheHtmlRoutes() {
-  return routesMatching(/publicHtmlHeaders\(|SHARED_CACHE_CONTROL/);
+  return routesMatching(/publicHtmlHeaders\(|taxonomyHeaders|SHARED_CACHE_CONTROL/);
 }
