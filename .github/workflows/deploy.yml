@@ -90,7 +90,7 @@ jobs:
   site:
     needs: decide
     if: needs.decide.outputs.deploy == 'true'
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@19b78ba55081c1e032a87b71e6270aa8e64235ea # v0.66.0
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@22893f4b81049f7eeb019864e7e73257b1b7892f # v0.67.0
     with:
       worker-name: dustinedwards
       # site-runtime withAdminIdle's key, minted once by the deploy and never shown (devkit "generated-secrets").
@@ -173,7 +173,7 @@ jobs:
   # example and the live Worker's own bindings (mcp/scripts/apply-config.mjs).
   mcp:
     needs: site
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@19b78ba55081c1e032a87b71e6270aa8e64235ea # v0.66.0
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@22893f4b81049f7eeb019864e7e73257b1b7892f # v0.67.0
     with:
       worker-name: dustinedwards-admin-mcp
       # site-runtime audit-log's signing key (0.85), minted once by the deploy and never shown (devkit "generated-secrets").
