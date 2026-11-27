@@ -101,7 +101,6 @@ jobs:
       # applied, and `exports` holds only worker entrypoints, so no Durable Object change needs a plain deploy; a deploy that
       # adds one sets gradual-percent to 0 for that deploy.
       gradual-percent: 10
-      gradual-minutes: 10
       health-url: https://dustinedwards.info/health
       keep-assets: build/client
       sha-var: DEPLOY_SHA
